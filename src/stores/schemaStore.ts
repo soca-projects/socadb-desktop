@@ -22,6 +22,10 @@ function createEmptySchema(): Schema {
   };
 }
 
+function patchSchema(schema: Schema, patch: Partial<Schema>): Schema {
+  return { ...schema, ...patch, updatedAt: new Date().toISOString() };
+}
+
 export const useSchemaStore = create<SchemaState>((set) => ({
   schema: createEmptySchema(),
 
@@ -29,51 +33,39 @@ export const useSchemaStore = create<SchemaState>((set) => ({
 
   addTable: (table) =>
     set((state) => ({
-      schema: {
-        ...state.schema,
-        updatedAt: new Date().toISOString(),
+      schema: patchSchema(state.schema, {
         tables: [...state.schema.tables, table],
-      },
+      }),
     })),
 
   updateTable: (id, updates) =>
     set((state) => ({
-      schema: {
-        ...state.schema,
-        updatedAt: new Date().toISOString(),
-        tables: state.schema.tables.map((t) =>
-          t.id === id ? { ...t, ...updates } : t
-        ),
-      },
+      schema: patchSchema(state.schema, {
+        tables: state.schema.tables.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+      }),
     })),
 
   deleteTable: (id) =>
     set((state) => ({
-      schema: {
-        ...state.schema,
-        updatedAt: new Date().toISOString(),
+      schema: patchSchema(state.schema, {
         tables: state.schema.tables.filter((t) => t.id !== id),
         relations: state.schema.relations.filter(
-          (r) => r.from.tableId !== id && r.to.tableId !== id
+          (r) => r.from.tableId !== id && r.to.tableId !== id,
         ),
-      },
+      }),
     })),
 
   addRelation: (relation) =>
     set((state) => ({
-      schema: {
-        ...state.schema,
-        updatedAt: new Date().toISOString(),
+      schema: patchSchema(state.schema, {
         relations: [...state.schema.relations, relation],
-      },
+      }),
     })),
 
   deleteRelation: (id) =>
     set((state) => ({
-      schema: {
-        ...state.schema,
-        updatedAt: new Date().toISOString(),
+      schema: patchSchema(state.schema, {
         relations: state.schema.relations.filter((r) => r.id !== id),
-      },
+      }),
     })),
 }));
