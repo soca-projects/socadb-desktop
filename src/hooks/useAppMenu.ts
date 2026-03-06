@@ -6,6 +6,7 @@ import {
   saveSchemaFile,
   saveSchemaFileAs,
 } from "../utils/fileOperations";
+import { exportCanvasPng } from "../utils/exportPng";
 
 async function handleSave() {
   const { schema, filePath, setFilePath } = useSchemaStore.getState();
@@ -99,6 +100,13 @@ async function setupMenu() {
         text: "Save As...",
         accelerator: "CmdOrCtrl+Shift+S",
         action: () => void handleSaveAs(),
+      }),
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      await MenuItem.new({
+        id: "export_png",
+        text: "Export PNG...",
+        accelerator: "CmdOrCtrl+E",
+        action: () => void exportCanvasPng(),
       }),
     ],
   });
