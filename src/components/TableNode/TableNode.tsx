@@ -12,7 +12,7 @@ type TableNodeProps = NodeProps & { data: TableNodeData };
 export function TableNode({ data, selected }: TableNodeProps) {
   return (
     <div
-      className={`min-w-[220px] rounded-lg border bg-white shadow-sm ${
+      className={`min-w-[220px] select-none rounded-lg border bg-white shadow-sm ${
         selected ? "border-blue-500 ring-2 ring-blue-200" : "border-gray-200"
       }`}
     >

@@ -58,19 +58,24 @@ export function Canvas() {
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [dragNodes, setDragNodes] = useState<Node[] | null>(null);
+  const [localNodes, setLocalNodes] = useState<Node[] | null>(null);
+  const [lastStoreNodes, setLastStoreNodes] = useState<Node[]>([]);
 
   const storeNodes = useMemo(() => tablesToNodes(tables), [tables]);
   const edges = useMemo(() => relationsToEdges(relations), [relations]);
 
-  const nodes = dragNodes ?? storeNodes;
+  if (storeNodes !== lastStoreNodes) {
+    setLastStoreNodes(storeNodes);
+    if (localNodes !== null) {
+      setLocalNodes(null);
+    }
+  }
+
+  const nodes = localNodes ?? storeNodes;
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      const hasDrag = changes.some((c) => c.type === "position" && c.dragging);
-      if (!hasDrag) return;
-
-      setDragNodes((prev) => applyNodeChanges(changes, prev ?? storeNodes));
+      setLocalNodes((prev) => applyNodeChanges(changes, prev ?? storeNodes));
     },
     [storeNodes],
   );
@@ -78,7 +83,7 @@ export function Canvas() {
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       updateTable(node.id, { position: node.position });
-      setDragNodes(null);
+      setLocalNodes(null);
     },
     [updateTable],
   );

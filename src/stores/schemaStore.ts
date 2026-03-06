@@ -9,6 +9,7 @@ interface SchemaState {
   setFilePath: (path: string | null) => void;
   addTable: (table: Table) => void;
   updateTable: (id: string, updates: Partial<Table>) => void;
+  updateTablePositions: (positions: Record<string, { x: number; y: number }>) => void;
   deleteTable: (id: string) => void;
   addColumn: (tableId: string, column: Column) => void;
   updateColumn: (tableId: string, columnId: string, updates: Partial<Column>) => void;
@@ -53,6 +54,15 @@ export const useSchemaStore = create<SchemaState>()(
           schema: patchSchema(state.schema, {
             tables: state.schema.tables.map((t) =>
               t.id === id ? { ...t, ...updates } : t,
+            ),
+          }),
+        })),
+
+      updateTablePositions: (positions) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            tables: state.schema.tables.map((t) =>
+              positions[t.id] ? { ...t, position: positions[t.id] } : t,
             ),
           }),
         })),

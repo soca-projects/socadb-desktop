@@ -1,8 +1,8 @@
 import { Canvas } from "./components/Canvas/Canvas";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useAppMenu } from "./hooks/useAppMenu";
 
 function App() {
-  useKeyboardShortcuts();
+  useAppMenu();
   return <Canvas />;
 }
 

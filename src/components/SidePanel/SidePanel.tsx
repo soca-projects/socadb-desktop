@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { genId } from "../../utils/id";
+import { computeAutoLayout } from "../../utils/autoLayout";
 import type { ColumnType, Table } from "../../types/schema";
 
 const COLUMN_TYPES: ColumnType[] = [
@@ -79,6 +80,8 @@ function TableItem({
           <div className="mb-2">
             <input
               type="text"
+              spellCheck={false}
+              autoCorrect="off"
               defaultValue={table.name}
               onBlur={(e) => updateTable(table.id, { name: e.target.value })}
               onKeyDown={(e) => {
@@ -95,11 +98,11 @@ function TableItem({
                 <div className="mb-1.5 flex items-center gap-1">
                   <input
                     type="text"
+                    spellCheck={false}
+                    autoCorrect="off"
                     defaultValue={col.name}
                     onBlur={(e) =>
-                      updateColumn(table.id, col.id, {
-                        name: e.target.value,
-                      })
+                      updateColumn(table.id, col.id, { name: e.target.value })
                     }
                     onKeyDown={(e) => {
                       if (e.key === "Enter") e.currentTarget.blur();
@@ -177,6 +180,8 @@ function TableItem({
                   </label>
                   <input
                     type="text"
+                    spellCheck={false}
+                    autoCorrect="off"
                     placeholder="default"
                     defaultValue={col.defaultValue ?? ""}
                     onBlur={(e) =>
@@ -213,8 +218,15 @@ interface SidePanelProps {
 
 export function SidePanel({ isOpen, onToggle }: SidePanelProps) {
   const tables = useSchemaStore((s) => s.schema.tables);
+  const relations = useSchemaStore((s) => s.schema.relations);
   const addTable = useSchemaStore((s) => s.addTable);
+  const updateTablePositions = useSchemaStore((s) => s.updateTablePositions);
   const [openTableId, setOpenTableId] = useState<string | null>(null);
+
+  const handleAutoLayout = async () => {
+    const positions = await computeAutoLayout(tables, relations);
+    updateTablePositions(positions);
+  };
 
   const handleAddTable = () => {
     const newId = genId();
@@ -271,12 +283,19 @@ export function SidePanel({ isOpen, onToggle }: SidePanelProps) {
         ))}
       </div>
 
-      <div className="border-t border-gray-200 p-3">
+      <div className="flex gap-2 border-t border-gray-200 p-3">
         <button
           onClick={handleAddTable}
-          className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+          className="flex-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
         >
           + New Table
+        </button>
+        <button
+          onClick={() => void handleAutoLayout()}
+          disabled={tables.length === 0}
+          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+        >
+          Auto-layout
         </button>
       </div>
     </div>
