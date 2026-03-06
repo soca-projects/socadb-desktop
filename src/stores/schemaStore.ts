@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { temporal } from "zundo";
 import type { Column, Table, Relation, Schema } from "../types/schema";
 
 interface SchemaState {
@@ -31,89 +32,102 @@ function patchSchema(schema: Schema, patch: Partial<Schema>): Schema {
   return { ...schema, ...patch, updatedAt: new Date().toISOString() };
 }
 
-export const useSchemaStore = create<SchemaState>((set) => ({
-  schema: createEmptySchema(),
-  filePath: null,
+export const useSchemaStore = create<SchemaState>()(
+  temporal(
+    (set) => ({
+      schema: createEmptySchema(),
+      filePath: null,
 
-  setSchema: (schema) => set({ schema }),
-  setFilePath: (path) => set({ filePath: path }),
+      setSchema: (schema) => set({ schema }),
+      setFilePath: (path) => set({ filePath: path }),
 
-  addTable: (table) =>
-    set((state) => ({
-      schema: patchSchema(state.schema, {
-        tables: [...state.schema.tables, table],
-      }),
-    })),
+      addTable: (table) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            tables: [...state.schema.tables, table],
+          }),
+        })),
 
-  updateTable: (id, updates) =>
-    set((state) => ({
-      schema: patchSchema(state.schema, {
-        tables: state.schema.tables.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-      }),
-    })),
+      updateTable: (id, updates) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            tables: state.schema.tables.map((t) =>
+              t.id === id ? { ...t, ...updates } : t,
+            ),
+          }),
+        })),
 
-  deleteTable: (id) =>
-    set((state) => ({
-      schema: patchSchema(state.schema, {
-        tables: state.schema.tables.filter((t) => t.id !== id),
-        relations: state.schema.relations.filter(
-          (r) => r.from.tableId !== id && r.to.tableId !== id,
-        ),
-      }),
-    })),
+      deleteTable: (id) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            tables: state.schema.tables.filter((t) => t.id !== id),
+            relations: state.schema.relations.filter(
+              (r) => r.from.tableId !== id && r.to.tableId !== id,
+            ),
+          }),
+        })),
 
-  addColumn: (tableId, column) =>
-    set((state) => ({
-      schema: patchSchema(state.schema, {
-        tables: state.schema.tables.map((t) =>
-          t.id === tableId ? { ...t, columns: [...t.columns, column] } : t,
-        ),
-      }),
-    })),
+      addColumn: (tableId, column) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            tables: state.schema.tables.map((t) =>
+              t.id === tableId ? { ...t, columns: [...t.columns, column] } : t,
+            ),
+          }),
+        })),
 
-  updateColumn: (tableId, columnId, updates) =>
-    set((state) => ({
-      schema: patchSchema(state.schema, {
-        tables: state.schema.tables.map((t) =>
-          t.id === tableId
-            ? {
-                ...t,
-                columns: t.columns.map((c) =>
-                  c.id === columnId ? { ...c, ...updates } : c,
-                ),
-              }
-            : t,
-        ),
-      }),
-    })),
+      updateColumn: (tableId, columnId, updates) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            tables: state.schema.tables.map((t) =>
+              t.id === tableId
+                ? {
+                    ...t,
+                    columns: t.columns.map((c) =>
+                      c.id === columnId ? { ...c, ...updates } : c,
+                    ),
+                  }
+                : t,
+            ),
+          }),
+        })),
 
-  deleteColumn: (tableId, columnId) =>
-    set((state) => ({
-      schema: patchSchema(state.schema, {
-        tables: state.schema.tables.map((t) =>
-          t.id === tableId
-            ? { ...t, columns: t.columns.filter((c) => c.id !== columnId) }
-            : t,
-        ),
-        relations: state.schema.relations.filter(
-          (r) =>
-            !(r.from.tableId === tableId && r.from.columnId === columnId) &&
-            !(r.to.tableId === tableId && r.to.columnId === columnId),
-        ),
-      }),
-    })),
+      deleteColumn: (tableId, columnId) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            tables: state.schema.tables.map((t) =>
+              t.id === tableId
+                ? {
+                    ...t,
+                    columns: t.columns.filter((c) => c.id !== columnId),
+                  }
+                : t,
+            ),
+            relations: state.schema.relations.filter(
+              (r) =>
+                !(r.from.tableId === tableId && r.from.columnId === columnId) &&
+                !(r.to.tableId === tableId && r.to.columnId === columnId),
+            ),
+          }),
+        })),
 
-  addRelation: (relation) =>
-    set((state) => ({
-      schema: patchSchema(state.schema, {
-        relations: [...state.schema.relations, relation],
-      }),
-    })),
+      addRelation: (relation) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            relations: [...state.schema.relations, relation],
+          }),
+        })),
 
-  deleteRelation: (id) =>
-    set((state) => ({
-      schema: patchSchema(state.schema, {
-        relations: state.schema.relations.filter((r) => r.id !== id),
-      }),
-    })),
-}));
+      deleteRelation: (id) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            relations: state.schema.relations.filter((r) => r.id !== id),
+          }),
+        })),
+    }),
+    {
+      partialize: (state) => ({ schema: state.schema }),
+      limit: 50,
+    },
+  ),
+);

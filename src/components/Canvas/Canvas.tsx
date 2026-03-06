@@ -1,11 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  applyNodeChanges,
-} from "@xyflow/react";
+import { ReactFlow, Background, Controls, applyNodeChanges } from "@xyflow/react";
 import type { Node, NodeChange, EdgeChange, Connection } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -64,19 +58,19 @@ export function Canvas() {
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [localNodes, setLocalNodes] = useState<Node[]>([]);
+  const [dragNodes, setDragNodes] = useState<Node[] | null>(null);
 
   const storeNodes = useMemo(() => tablesToNodes(tables), [tables]);
   const edges = useMemo(() => relationsToEdges(relations), [relations]);
 
-  const nodes = localNodes.length > 0 ? localNodes : storeNodes;
+  const nodes = dragNodes ?? storeNodes;
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setLocalNodes((prev) => {
-        const base = prev.length > 0 ? prev : storeNodes;
-        return applyNodeChanges(changes, base);
-      });
+      const hasDrag = changes.some((c) => c.type === "position" && c.dragging);
+      if (!hasDrag) return;
+
+      setDragNodes((prev) => applyNodeChanges(changes, prev ?? storeNodes));
     },
     [storeNodes],
   );
@@ -84,7 +78,7 @@ export function Canvas() {
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       updateTable(node.id, { position: node.position });
-      setLocalNodes([]);
+      setDragNodes(null);
     },
     [updateTable],
   );
@@ -166,7 +160,6 @@ export function Canvas() {
         >
           <Background gap={16} size={1} color="#f1f5f9" />
           <Controls />
-          <MiniMap nodeColor="#e2e8f0" maskColor="rgba(255, 255, 255, 0.7)" />
         </ReactFlow>
       </div>
 

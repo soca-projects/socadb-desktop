@@ -44,18 +44,26 @@ export function useKeyboardShortcuts() {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
 
-      if (e.key === "s" && e.shiftKey) {
+      const key = e.key.toLowerCase();
+
+      if (key === "s" && e.shiftKey) {
         e.preventDefault();
         void handleSaveAs();
-      } else if (e.key === "s") {
+      } else if (key === "s") {
         e.preventDefault();
         void handleSave();
-      } else if (e.key === "o") {
+      } else if (key === "o") {
         e.preventDefault();
         void handleOpen();
-      } else if (e.key === "n") {
+      } else if (key === "n") {
         e.preventDefault();
         handleNew();
+      } else if (key === "z" && e.shiftKey) {
+        e.preventDefault();
+        useSchemaStore.temporal.getState().redo();
+      } else if (key === "z") {
+        e.preventDefault();
+        useSchemaStore.temporal.getState().undo();
       }
     };
 
