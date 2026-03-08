@@ -11,13 +11,13 @@ import { Toolbar } from "../Toolbar/Toolbar";
 import { CanvasControls } from "../CanvasControls/CanvasControls";
 import { ContextMenu } from "../ContextMenu/ContextMenu";
 import { genId } from "../../utils/id";
+import { SIDE_PANEL_WIDTH } from "../../utils/layout";
 import type { Table, Relation } from "../../types/schema";
 
 const nodeTypes = { table: TableNode };
 const edgeTypes = { relation: RelationEdge };
-
-export const SIDE_PANEL_WIDTH = 280;
-export const TOOLBAR_HEIGHT = 48;
+const PRO_OPTIONS = { hideAttribution: true };
+const DELETE_KEY_CODE = ["Delete", "Backspace"];
 
 function tablesToNodes(tables: Table[]) {
   return tables.map((table) => ({
@@ -195,8 +195,8 @@ export function Canvas() {
             fitView
             minZoom={0.1}
             maxZoom={2}
-            deleteKeyCode={["Delete", "Backspace"]}
-            proOptions={{ hideAttribution: true }}
+            deleteKeyCode={DELETE_KEY_CODE}
+            proOptions={PRO_OPTIONS}
           >
             <Background gap={20} size={1} color="#e5e7eb" />
             <CanvasControls />

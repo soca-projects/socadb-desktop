@@ -13,7 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { genId } from "../../utils/id";
-import { TOOLBAR_HEIGHT } from "../Canvas/Canvas";
+import { TOOLBAR_HEIGHT } from "../../utils/layout";
 import type { ColumnType, Table, Column } from "../../types/schema";
 
 const COLUMN_TYPES: ColumnType[] = [
@@ -40,6 +40,14 @@ const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
   if (e.key === "Enter") e.currentTarget.blur();
 };
 
+const BADGE_INACTIVE =
+  "bg-transparent text-gray-400 border-transparent hover:bg-gray-100 hover:text-gray-500";
+const BADGE_ACTIVE = {
+  default: "bg-accent/10 text-accent border-accent/20",
+  amber: "bg-amber-50 text-amber-600 border-amber-200/60",
+  blue: "bg-blue-50 text-blue-600 border-blue-200/60",
+} as const;
+
 function ConstraintBadge({
   label,
   active,
@@ -53,14 +61,7 @@ function ConstraintBadge({
   onClick: () => void;
   variant?: "default" | "amber" | "blue";
 }) {
-  const inactive =
-    "bg-transparent text-gray-400 border-transparent hover:bg-gray-100 hover:text-gray-500";
-  const activeStyles = {
-    default: "bg-accent/10 text-accent border-accent/20",
-    amber: "bg-amber-50 text-amber-600 border-amber-200/60",
-    blue: "bg-blue-50 text-blue-600 border-blue-200/60",
-  };
-  const colorClass = active ? activeStyles[variant] : inactive;
+  const colorClass = active ? BADGE_ACTIVE[variant] : BADGE_INACTIVE;
 
   return (
     <button
@@ -166,7 +167,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
             label="UNIQUE"
             active={col.isUnique}
             disabled={col.isPrimaryKey}
-            variant={col.isUnique ? "blue" : "default"}
+            variant="blue"
             onClick={() => updateColumn(tableId, col.id, { isUnique: !col.isUnique })}
           />
         </div>

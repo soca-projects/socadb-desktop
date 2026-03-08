@@ -1,14 +1,16 @@
-import { useReactFlow, useViewport, Panel } from "@xyflow/react";
+import { useReactFlow, useStore, Panel } from "@xyflow/react";
+import type { ReactFlowState } from "@xyflow/react";
 import {
   MinusIcon as Minus,
   PlusIcon as Plus,
   CornersOutIcon as CornersOut,
 } from "@phosphor-icons/react";
 
+const zoomSelector = (s: ReactFlowState) => Math.round(s.transform[2] * 100);
+
 export function CanvasControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const { zoom } = useViewport();
-  const percentage = Math.round(zoom * 100);
+  const percentage = useStore(zoomSelector);
 
   return (
     <Panel position="bottom-left">
