@@ -15,6 +15,7 @@ interface SchemaState {
   updateColumn: (tableId: string, columnId: string, updates: Partial<Column>) => void;
   deleteColumn: (tableId: string, columnId: string) => void;
   addRelation: (relation: Relation) => void;
+  updateRelation: (id: string, updates: Partial<Relation>) => void;
   deleteRelation: (id: string) => void;
 }
 
@@ -125,6 +126,15 @@ export const useSchemaStore = create<SchemaState>()(
         set((state) => ({
           schema: patchSchema(state.schema, {
             relations: [...state.schema.relations, relation],
+          }),
+        })),
+
+      updateRelation: (id, updates) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            relations: state.schema.relations.map((r) =>
+              r.id === id ? { ...r, ...updates } : r,
+            ),
           }),
         })),
 

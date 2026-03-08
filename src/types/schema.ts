@@ -17,7 +17,7 @@ export type ColumnType =
   | "jsonb"
   | "blob";
 
-export type RelationType = "1:1" | "1:N" | "N:N";
+export type RelationType = "1:1" | "1:N" | "N:1";
 
 export type ReferentialAction = "CASCADE" | "SET NULL" | "RESTRICT" | "NO ACTION";
 

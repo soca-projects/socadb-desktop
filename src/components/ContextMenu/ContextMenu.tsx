@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { TrashIcon as Trash } from "@phosphor-icons/react";
 
 interface ContextMenuProps {
   x: number;
@@ -24,12 +25,13 @@ export function ContextMenu({ x, y, onDelete, onClose }: ContextMenuProps) {
     <div
       ref={ref}
       style={{ position: "fixed", left: x, top: y }}
-      className="z-50 min-w-[140px] rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+      className="z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-white py-1 shadow-float"
     >
       <button
         onClick={onDelete}
-        className="w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-50"
       >
+        <Trash size={14} />
         Delete Table
       </button>
     </div>

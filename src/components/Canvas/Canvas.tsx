@@ -1,12 +1,14 @@
 import { useState, useMemo, useCallback } from "react";
-import { ReactFlow, Background, Controls, applyNodeChanges } from "@xyflow/react";
-import type { Node, NodeChange, EdgeChange, Connection } from "@xyflow/react";
+import { ReactFlow, Background, applyNodeChanges, applyEdgeChanges } from "@xyflow/react";
+import type { Node, Edge, NodeChange, EdgeChange, Connection } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { useSchemaStore } from "../../stores/schemaStore";
 import { TableNode } from "../TableNode/TableNode";
 import { RelationEdge } from "../RelationEdge/RelationEdge";
 import { SidePanel } from "../SidePanel/SidePanel";
+import { Toolbar } from "../Toolbar/Toolbar";
+import { CanvasControls } from "../CanvasControls/CanvasControls";
 import { ContextMenu } from "../ContextMenu/ContextMenu";
 import { genId } from "../../utils/id";
 import type { Table, Relation } from "../../types/schema";
@@ -14,7 +16,8 @@ import type { Table, Relation } from "../../types/schema";
 const nodeTypes = { table: TableNode };
 const edgeTypes = { relation: RelationEdge };
 
-const SIDE_PANEL_WIDTH = 280;
+export const SIDE_PANEL_WIDTH = 280;
+export const TOOLBAR_HEIGHT = 48;
 
 function tablesToNodes(tables: Table[]) {
   return tables.map((table) => ({
@@ -57,12 +60,15 @@ export function Canvas() {
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [openTableId, setOpenTableId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [localNodes, setLocalNodes] = useState<Node[] | null>(null);
+  const [localEdges, setLocalEdges] = useState<Edge[] | null>(null);
   const [lastStoreNodes, setLastStoreNodes] = useState<Node[]>([]);
+  const [lastStoreEdges, setLastStoreEdges] = useState<Edge[]>([]);
 
   const storeNodes = useMemo(() => tablesToNodes(tables), [tables]);
-  const edges = useMemo(() => relationsToEdges(relations), [relations]);
+  const storeEdges = useMemo(() => relationsToEdges(relations), [relations]);
 
   if (storeNodes !== lastStoreNodes) {
     setLastStoreNodes(storeNodes);
@@ -71,7 +77,15 @@ export function Canvas() {
     }
   }
 
+  if (storeEdges !== lastStoreEdges) {
+    setLastStoreEdges(storeEdges);
+    if (localEdges !== null) {
+      setLocalEdges(null);
+    }
+  }
+
   const nodes = localNodes ?? storeNodes;
+  const edges = localEdges ?? storeEdges;
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -90,13 +104,15 @@ export function Canvas() {
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      for (const change of changes) {
-        if (change.type === "remove") {
-          deleteRelation(change.id);
-        }
+      const removes = changes.filter((c) => c.type === "remove");
+      if (removes.length > 0) {
+        for (const r of removes) deleteRelation(r.id);
+        setLocalEdges(null);
+        return;
       }
+      setLocalEdges((prev) => applyEdgeChanges(changes, prev ?? storeEdges));
     },
-    [deleteRelation],
+    [deleteRelation, storeEdges],
   );
 
   const onConnect = useCallback(
@@ -133,39 +149,59 @@ export function Canvas() {
     });
   }, []);
 
+  const onNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      if (sidePanelOpen) {
+        setOpenTableId(node.id);
+      }
+    },
+    [sidePanelOpen],
+  );
+
   const handleCloseContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
 
   return (
-    <div className="flex h-screen w-screen">
-      <SidePanel
-        isOpen={sidePanelOpen}
-        onToggle={() => setSidePanelOpen(!sidePanelOpen)}
+    <div className="flex flex-col w-screen h-screen bg-surface-canvas">
+      <Toolbar
+        isSidePanelOpen={sidePanelOpen}
+        onToggleSidePanel={() => setSidePanelOpen(!sidePanelOpen)}
       />
 
-      <div
-        className="flex-1"
-        style={{ marginLeft: sidePanelOpen ? SIDE_PANEL_WIDTH : 0 }}
-      >
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodesChange={onNodesChange}
-          onNodeDragStop={onNodeDragStop}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeContextMenu={onNodeContextMenu}
-          onPaneClick={handleCloseContextMenu}
-          fitView
-          deleteKeyCode="Delete"
-          proOptions={{ hideAttribution: true }}
+      <div className="relative flex flex-1">
+        <SidePanel
+          isOpen={sidePanelOpen}
+          openTableId={openTableId}
+          onOpenTable={setOpenTableId}
+        />
+
+        <div
+          className="flex-1"
+          style={{ marginLeft: sidePanelOpen ? SIDE_PANEL_WIDTH : 0 }}
         >
-          <Background gap={16} size={1} color="#f1f5f9" />
-          <Controls />
-        </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onNodesChange}
+            onNodeDragStop={onNodeDragStop}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            onNodeContextMenu={onNodeContextMenu}
+            onPaneClick={handleCloseContextMenu}
+            fitView
+            minZoom={0.1}
+            maxZoom={2}
+            deleteKeyCode={["Delete", "Backspace"]}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background gap={20} size={1} color="#e5e7eb" />
+            <CanvasControls />
+          </ReactFlow>
+        </div>
       </div>
 
       {contextMenu && (

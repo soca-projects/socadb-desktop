@@ -6,6 +6,7 @@ import {
   saveSchemaFile,
   saveSchemaFileAs,
 } from "../utils/fileOperations";
+import { handleUndo, handleRedo } from "../utils/schemaActions";
 import { exportCanvasPng } from "../utils/exportPng";
 
 async function handleSave() {
@@ -37,14 +38,6 @@ function handleNew() {
   const { setSchema, setFilePath } = useSchemaStore.getState();
   setSchema(createEmptySchema());
   setFilePath(null);
-}
-
-function handleUndo() {
-  useSchemaStore.temporal.getState().undo();
-}
-
-function handleRedo() {
-  useSchemaStore.temporal.getState().redo();
 }
 
 let menuInitialized = false;
