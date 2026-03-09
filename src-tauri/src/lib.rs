@@ -8,7 +8,7 @@ async fn mcp_respond(response: String) {
     let mut guard = sender.lock().await;
     if let Some(ref mut ws) = *guard {
         use futures_util::SinkExt;
-        let _ = ws.send(Message::Text(response.into())).await;
+        let _ = ws.send(Message::Text(response)).await;
     }
 }
 
