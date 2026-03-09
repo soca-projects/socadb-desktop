@@ -15,6 +15,14 @@
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
     "fs:allow-write-file",
-    "fs:allow-exists"
+    "fs:allow-exists",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$HOME/.claude.json" },
+        { "path": "$HOME/Library/Application Support/Claude/**" },
+        { "path": "$HOME/.codex/**" }
+      ]
+    }
   ]
 }
