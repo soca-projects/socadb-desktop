@@ -13,28 +13,10 @@ import {
 } from "@phosphor-icons/react";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { genId } from "../../utils/id";
+import { createTable } from "../../utils/schemaActions";
 import { TOOLBAR_HEIGHT } from "../../utils/layout";
 import type { ColumnType, Table, Column } from "../../types/schema";
-
-const COLUMN_TYPES: ColumnType[] = [
-  "uuid",
-  "serial",
-  "int",
-  "bigint",
-  "float",
-  "decimal",
-  "varchar",
-  "text",
-  "char",
-  "boolean",
-  "date",
-  "time",
-  "timestamp",
-  "datetime",
-  "json",
-  "jsonb",
-  "blob",
-];
+import { COLUMN_TYPES_BY_DB } from "../../types/schema";
 
 const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
   if (e.key === "Enter") e.currentTarget.blur();
@@ -80,6 +62,7 @@ function ConstraintBadge({
 function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
   const updateColumn = useSchemaStore((s) => s.updateColumn);
   const deleteColumn = useSchemaStore((s) => s.deleteColumn);
+  const columnTypes = useSchemaStore((s) => COLUMN_TYPES_BY_DB[s.schema.dbType]);
 
   return (
     <div className="group relative">
@@ -120,7 +103,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
               }
               className="cursor-pointer appearance-none rounded-[4px] border border-border bg-white py-0.5 pl-1.5 pr-4 font-mono text-[11px] text-gray-500 outline-none transition-all hover:border-gray-300 hover:text-gray-700 focus:border-accent/40"
             >
-              {COLUMN_TYPES.map((t) => (
+              {columnTypes.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
@@ -320,7 +303,7 @@ function TableItem({
       </div>
 
       {isOpen && (
-        <div className="pb-2">
+        <div className="animate-fade-in-subtle pb-2">
           <div className="mx-1 space-y-px">
             {table.columns.map((col) => (
               <ColumnRow key={col.id} col={col} tableId={table.id} />
@@ -352,27 +335,9 @@ interface SidePanelProps {
 
 export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) {
   const tables = useSchemaStore((s) => s.schema.tables);
-  const addTable = useSchemaStore((s) => s.addTable);
 
   const handleAddTable = () => {
-    const newId = genId();
-    addTable({
-      id: newId,
-      name: `new_table_${tables.length + 1}`,
-      position: { x: 100 + tables.length * 50, y: 100 + tables.length * 50 },
-      columns: [
-        {
-          id: genId(),
-          name: "id",
-          type: "uuid",
-          isPrimaryKey: true,
-          isForeignKey: false,
-          isNullable: false,
-          isUnique: true,
-          defaultValue: "gen_random_uuid()",
-        },
-      ],
-    });
+    const newId = createTable();
     onOpenTable(newId);
   };
 
@@ -396,14 +361,39 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {tables.map((table) => (
-          <TableItem
-            key={table.id}
-            table={table}
-            isOpen={openTableId === table.id}
-            onToggle={() => onOpenTable(openTableId === table.id ? null : table.id)}
-          />
-        ))}
+        {tables.length === 0 ? (
+          <div className="flex animate-fade-in flex-col items-center px-4 pt-10 text-center">
+            <p className="text-[13px] leading-relaxed text-gray-500">
+              No tables yet. Create one to start building your schema.
+            </p>
+            <div className="mt-5 space-y-1 self-stretch text-left text-[12px] text-gray-400">
+              <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
+                <span className="shrink-0 font-mono text-[11px] text-gray-500">1.</span>
+                <span>Add tables and define columns</span>
+              </div>
+              <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
+                <span className="shrink-0 font-mono text-[11px] text-gray-500">2.</span>
+                <span>Drag between columns to create relations</span>
+              </div>
+              <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
+                <span className="shrink-0 font-mono text-[11px] text-gray-500">3.</span>
+                <span>
+                  Save as <span className="font-mono text-gray-500">.soca</span> and
+                  export
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          tables.map((table) => (
+            <TableItem
+              key={table.id}
+              table={table}
+              isOpen={openTableId === table.id}
+              onToggle={() => onOpenTable(openTableId === table.id ? null : table.id)}
+            />
+          ))
+        )}
       </div>
 
       <div className="border-t border-border p-3">

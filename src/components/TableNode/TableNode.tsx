@@ -18,7 +18,7 @@ type TableNodeProps = NodeProps & { data: TableNodeData };
 export const TableNode = memo(function TableNode({ data, selected }: TableNodeProps) {
   return (
     <div
-      className={`min-w-[220px] select-none rounded-lg border bg-white shadow-card transition-shadow ${
+      className={`min-w-[220px] animate-node-appear select-none rounded-lg border bg-white shadow-card transition-shadow ${
         selected
           ? "border-accent ring-2 ring-accent/20"
           : "border-border hover:shadow-float"
@@ -45,8 +45,10 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               style={{ top: "50%", left: -1, transform: "translateY(-50%)" }}
             />
             <span
-              className={`pointer-events-none absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-300 bg-white transition-opacity ${
-                selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              className={`pointer-events-none absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-300 bg-white transition-[opacity,transform] duration-150 ${
+                selected
+                  ? "scale-100 opacity-100"
+                  : "scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100"
               }`}
             />
 
@@ -87,8 +89,10 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               style={{ top: "50%", right: -1, transform: "translateY(-50%)" }}
             />
             <span
-              className={`pointer-events-none absolute right-0 top-1/2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-300 bg-white transition-opacity ${
-                selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              className={`pointer-events-none absolute right-0 top-1/2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-300 bg-white transition-[opacity,transform] duration-150 ${
+                selected
+                  ? "scale-100 opacity-100"
+                  : "scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100"
               }`}
             />
           </div>

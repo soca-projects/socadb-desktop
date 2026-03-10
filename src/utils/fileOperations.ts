@@ -21,6 +21,9 @@ export async function openSchemaFile(): Promise<{
 
   const content = await readTextFile(selected);
   const schema = JSON.parse(content) as Schema;
+  if (!schema.dbType) {
+    schema.dbType = "postgresql";
+  }
   return { schema, path: selected };
 }
 

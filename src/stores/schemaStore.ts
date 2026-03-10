@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
-import type { Column, Table, Relation, Schema } from "../types/schema";
+import type { Column, Table, Relation, Schema, DbType } from "../types/schema";
 
 interface SchemaState {
   schema: Schema;
@@ -19,10 +19,14 @@ interface SchemaState {
   deleteRelation: (id: string) => void;
 }
 
-export function createEmptySchema(): Schema {
+export function createEmptySchema(
+  name = "Untitled",
+  dbType: DbType = "postgresql",
+): Schema {
   return {
     version: "1.0",
-    name: "Untitled",
+    name,
+    dbType,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     tables: [],

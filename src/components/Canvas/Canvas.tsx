@@ -10,7 +10,9 @@ import { SidePanel } from "../SidePanel/SidePanel";
 import { Toolbar } from "../Toolbar/Toolbar";
 import { CanvasControls } from "../CanvasControls/CanvasControls";
 import { ContextMenu } from "../ContextMenu/ContextMenu";
+import { EmptyCanvas } from "../EmptyCanvas/EmptyCanvas";
 import { genId } from "../../utils/id";
+import { createTable } from "../../utils/schemaActions";
 import { SIDE_PANEL_WIDTH } from "../../utils/layout";
 import type { Table, Relation } from "../../types/schema";
 
@@ -162,6 +164,11 @@ export function Canvas() {
     setContextMenu(null);
   }, []);
 
+  const handleAddFirstTable = useCallback(() => {
+    const newId = createTable();
+    setOpenTableId(newId);
+  }, []);
+
   return (
     <div className="flex flex-col w-screen h-screen bg-surface-canvas">
       <Toolbar
@@ -177,9 +184,15 @@ export function Canvas() {
         />
 
         <div
-          className="flex-1"
+          className="relative flex-1"
           style={{ marginLeft: sidePanelOpen ? SIDE_PANEL_WIDTH : 0 }}
         >
+          {tables.length === 0 && (
+            <EmptyCanvas
+              onAddTable={handleAddFirstTable}
+              isSidePanelOpen={sidePanelOpen}
+            />
+          )}
           <ReactFlow
             nodes={nodes}
             edges={edges}

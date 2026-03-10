@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { TrashIcon as Trash } from "@phosphor-icons/react";
+import { useClickOutside } from "../../hooks/useClickOutside";
 
 interface ContextMenuProps {
   x: number;
@@ -10,16 +11,7 @@ interface ContextMenuProps {
 
 export function ContextMenu({ x, y, onDelete, onClose }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
+  useClickOutside(ref, onClose);
 
   return (
     <div

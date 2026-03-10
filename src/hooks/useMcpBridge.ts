@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useSchemaStore } from "../stores/schemaStore";
 import { genId } from "../utils/id";
+import { createDefaultIdColumn } from "../utils/columnDefaults";
 import { computeAutoLayout } from "../utils/autoLayout";
 import type { Column } from "../types/schema";
 
@@ -43,6 +44,7 @@ function handleRequest(req: McpRequest) {
     case "get_schema": {
       respond(req.id, {
         name: schema.name,
+        dbType: schema.dbType,
         tables: schema.tables.map((t) => ({
           name: t.name,
           columns: t.columns.map(serializeColumn),
@@ -80,6 +82,7 @@ function handleRequest(req: McpRequest) {
       respond(req.id, {
         filePath: store.filePath,
         schemaName: schema.name,
+        dbType: schema.dbType,
         tableCount: schema.tables.length,
         relationCount: schema.relations.length,
       });
@@ -102,18 +105,7 @@ function handleRequest(req: McpRequest) {
               isUnique: (c.isUnique as boolean) ?? false,
               defaultValue: (c.defaultValue as string) ?? null,
             }))
-          : [
-              {
-                id: genId(),
-                name: "id",
-                type: "uuid",
-                isPrimaryKey: true,
-                isForeignKey: false,
-                isNullable: false,
-                isUnique: true,
-                defaultValue: "gen_random_uuid()",
-              },
-            ];
+          : [createDefaultIdColumn(schema.dbType)];
 
       const tables = schema.tables;
       store.addTable({

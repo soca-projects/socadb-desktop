@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/menu";
-import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
+import { emit } from "@tauri-apps/api/event";
+import { useSchemaStore } from "../stores/schemaStore";
 import {
   openSchemaFile,
   saveSchemaFile,
@@ -8,6 +9,9 @@ import {
 } from "../utils/fileOperations";
 import { handleUndo, handleRedo } from "../utils/schemaActions";
 import { exportCanvasPng } from "../utils/exportPng";
+import { exportCanvasSvg } from "../utils/exportSvg";
+import { exportSql } from "../utils/exportSql";
+import { saveLastSession } from "./useNewSchemaModal";
 
 async function handleSave() {
   const { schema, filePath, setFilePath } = useSchemaStore.getState();
@@ -17,12 +21,14 @@ async function handleSave() {
     const path = await saveSchemaFileAs(schema);
     if (path) setFilePath(path);
   }
+  saveLastSession();
 }
 
 async function handleSaveAs() {
   const { schema, setFilePath } = useSchemaStore.getState();
   const path = await saveSchemaFileAs(schema);
   if (path) setFilePath(path);
+  saveLastSession();
 }
 
 async function handleOpen() {
@@ -31,13 +37,12 @@ async function handleOpen() {
   if (result) {
     setSchema(result.schema);
     setFilePath(result.path);
+    saveLastSession();
   }
 }
 
 function handleNew() {
-  const { setSchema, setFilePath } = useSchemaStore.getState();
-  setSchema(createEmptySchema());
-  setFilePath(null);
+  void emit("new-schema-requested");
 }
 
 let menuInitialized = false;
@@ -98,8 +103,18 @@ async function setupMenu() {
       await MenuItem.new({
         id: "export_png",
         text: "Export PNG...",
-        accelerator: "CmdOrCtrl+E",
         action: () => void exportCanvasPng(),
+      }),
+      await MenuItem.new({
+        id: "export_svg",
+        text: "Export SVG...",
+        action: () => void exportCanvasSvg(),
+      }),
+      await MenuItem.new({
+        id: "export_sql",
+        text: "Export SQL...",
+        accelerator: "CmdOrCtrl+E",
+        action: () => void exportSql(),
       }),
     ],
   });

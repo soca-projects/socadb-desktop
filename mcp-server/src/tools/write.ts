@@ -5,12 +5,8 @@ import { send } from "../bridge.js";
 const ColumnSchema = z.object({
   name: z.string().describe("Column name"),
   type: z
-    .enum([
-      "uuid", "serial", "int", "bigint", "float", "decimal",
-      "varchar", "text", "char", "boolean", "date", "time",
-      "timestamp", "datetime", "json", "jsonb", "blob",
-    ])
-    .describe("Column data type"),
+    .string()
+    .describe("Column data type (depends on schema dbType — MySQL: int, bigint, tinyint, varchar, text, boolean, datetime, json, enum, blob... PostgreSQL: integer, bigint, varchar, text, boolean, timestamp, uuid, serial, json, jsonb, bytea...)"),
   isPrimaryKey: z.boolean().optional().describe("Is this a primary key"),
   isNullable: z.boolean().optional().describe("Is this column nullable"),
   isUnique: z.boolean().optional().describe("Is this column unique"),
@@ -32,7 +28,7 @@ export function registerWriteTools(server: McpServer) {
       description: "Create a new table with columns",
       inputSchema: {
         name: z.string().describe("Table name"),
-        columns: z.array(ColumnSchema).optional().describe("Table columns (defaults to id uuid PK if omitted)"),
+        columns: z.array(ColumnSchema).optional().describe("Table columns (if omitted, defaults to id column based on schema dbType: UUID PK for PostgreSQL, INT AUTO_INCREMENT PK for MySQL)"),
       },
     },
     async ({ name, columns }) => {
