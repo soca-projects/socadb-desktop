@@ -68,3 +68,5 @@ export function saveLastSession() {
 export function clearLastSession() {
   localStorage.removeItem(LAST_SESSION_KEY);
 }
+
+useSchemaStore.subscribe(saveLastSession);

@@ -11,7 +11,6 @@ import { handleUndo, handleRedo } from "../utils/schemaActions";
 import { exportCanvasPng } from "../utils/exportPng";
 import { exportCanvasSvg } from "../utils/exportSvg";
 import { exportSql } from "../utils/exportSql";
-import { saveLastSession } from "./useNewSchemaModal";
 
 async function handleSave() {
   const { schema, filePath, setFilePath } = useSchemaStore.getState();
@@ -21,14 +20,12 @@ async function handleSave() {
     const path = await saveSchemaFileAs(schema);
     if (path) setFilePath(path);
   }
-  saveLastSession();
 }
 
 async function handleSaveAs() {
   const { schema, setFilePath } = useSchemaStore.getState();
   const path = await saveSchemaFileAs(schema);
   if (path) setFilePath(path);
-  saveLastSession();
 }
 
 async function handleOpen() {
@@ -37,7 +34,6 @@ async function handleOpen() {
   if (result) {
     setSchema(result.schema);
     setFilePath(result.path);
-    saveLastSession();
   }
 }
 
