@@ -41,7 +41,7 @@ export const RelationEdge = memo(function RelationEdge({
       <path
         d={edgePath}
         fill="none"
-        stroke={hovered && !selected ? "#4F46E520" : "transparent"}
+        stroke={hovered && !selected ? "#C74B6820" : "transparent"}
         strokeWidth={12}
         strokeLinecap="round"
         onMouseEnter={() => setHovered(true)}
@@ -54,7 +54,7 @@ export const RelationEdge = memo(function RelationEdge({
         fill="none"
         className="react-flow__edge-path"
         style={{
-          stroke: selected ? "#4F46E5" : hovered ? "#6366F1" : "#94a3b8",
+          stroke: selected ? "#C74B68" : hovered ? "#D4667E" : "#A8A29E",
           strokeWidth: selected ? 2.5 : 1.5,
           transition: "stroke 0.15s, stroke-width 0.15s",
           pointerEvents: "none",
@@ -72,7 +72,7 @@ export const RelationEdge = memo(function RelationEdge({
           onMouseLeave={() => setHovered(false)}
         >
           {selected ? (
-            <div className="nodrag nopan flex items-center gap-0.5 rounded-lg border border-border bg-white p-1 shadow-float">
+            <div className="nodrag nopan flex items-center gap-0.5 rounded-lg border border-border bg-surface p-1 shadow-float">
               {RELATION_TYPES.map((type) => (
                 <button
                   key={type}
@@ -83,7 +83,7 @@ export const RelationEdge = memo(function RelationEdge({
                   className={`rounded-md px-2 py-1 font-mono text-[11px] font-medium transition-colors ${
                     data.relationType === type
                       ? "bg-accent text-white"
-                      : "text-gray-500 hover:bg-surface-muted hover:text-gray-700"
+                      : "text-stone-500 hover:bg-surface-muted hover:text-stone-700"
                   }`}
                 >
                   {type}
@@ -95,7 +95,7 @@ export const RelationEdge = memo(function RelationEdge({
                   e.stopPropagation();
                   useSchemaStore.getState().deleteRelation(id);
                 }}
-                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                className="rounded-md p-1 text-stone-400 transition-colors hover:bg-red-50 hover:text-red-500"
               >
                 <Trash size={13} />
               </button>
@@ -105,7 +105,7 @@ export const RelationEdge = memo(function RelationEdge({
               className={`nodrag nopan cursor-pointer rounded border px-2 py-0.5 font-mono text-[11px] font-medium shadow-soft transition-[color,background-color,border-color,transform] duration-150 ${
                 hovered
                   ? "scale-110 border-accent/30 bg-accent-light text-accent"
-                  : "border-gray-200 bg-white text-gray-400"
+                  : "border-stone-200 bg-surface text-stone-400"
               }`}
             >
               {data.relationType}

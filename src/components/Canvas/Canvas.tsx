@@ -240,7 +240,7 @@ export function Canvas() {
             deleteKeyCode={DELETE_KEY_CODE}
             proOptions={PRO_OPTIONS}
           >
-            <Background gap={20} size={1} color="#e5e7eb" />
+            <Background gap={20} size={1} color="#E8E5E6" />
             <CanvasControls />
           </ReactFlow>
         </div>

@@ -30,18 +30,18 @@ export function ContextMenu({
     <div
       ref={ref}
       style={{ position: "fixed", left: x, top: y }}
-      className="z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-white py-1 shadow-float"
+      className="z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-float"
     >
       <button
         onClick={onRename}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-gray-700 transition-colors hover:bg-surface-muted"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
       >
         <PencilSimple size={14} />
         Rename
       </button>
       <button
         onClick={onDuplicate}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-gray-700 transition-colors hover:bg-surface-muted"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
       >
         <Copy size={14} />
         Duplicate

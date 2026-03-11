@@ -13,7 +13,7 @@ export async function exportCanvasSvg() {
     const schemaName = useSchemaStore.getState().schema.name || "schema";
 
     const [svg, path] = await Promise.all([
-      toSvg(viewport, { backgroundColor: "#ffffff" }),
+      toSvg(viewport, { backgroundColor: "#FDFCFC" }),
       save({
         defaultPath: `${schemaName}.svg`,
         filters: [{ name: "SVG Image", extensions: ["svg"] }],

@@ -9,21 +9,19 @@ export default {
       },
       colors: {
         accent: {
-          DEFAULT: "#4F46E5",
-          hover: "#4338CA",
-          light: "#EEF2FF",
-          muted: "#C7D2FE",
+          DEFAULT: "#C74B68",
+          hover: "#B34058",
+          light: "#FDF2F5",
         },
         surface: {
-          DEFAULT: "#FFFFFF",
-          raised: "#FFFFFF",
-          canvas: "#F9FAFB",
-          muted: "#F3F4F6",
-          sidebar: "#F9FAFB",
+          DEFAULT: "#FDFCFC",
+          canvas: "#F9F8F8",
+          muted: "#F4F2F3",
+          sidebar: "#F9F8F8",
         },
         border: {
-          DEFAULT: "#E5E7EB",
-          light: "#F3F4F6",
+          DEFAULT: "#E8E5E6",
+          light: "#F2F0F1",
         },
       },
       borderRadius: {

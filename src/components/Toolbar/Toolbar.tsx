@@ -52,14 +52,14 @@ function ExportDropdown() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-surface-muted hover:text-gray-600"
+        className="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-surface-muted hover:text-stone-600"
         title="Export"
       >
         <DownloadSimple size={16} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-border bg-white py-1 shadow-float">
+        <div className="absolute right-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-float">
           {items.map((item) => (
             <button
               key={item.label}
@@ -67,7 +67,7 @@ function ExportDropdown() {
                 item.action();
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-gray-700 transition-colors hover:bg-surface-muted"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
             >
               {item.icon}
               {item.label}
@@ -88,11 +88,11 @@ export function Toolbar({ isSidePanelOpen, onToggleSidePanel }: ToolbarProps) {
   const displayName = filePath ? getFileName(filePath) : schemaName;
 
   return (
-    <div className="flex h-12 items-center border-b border-border bg-white px-4">
+    <div className="flex h-12 items-center border-b border-border bg-surface px-4">
       <button
         onClick={onToggleSidePanel}
-        className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-gray-600 ${
-          isSidePanelOpen ? "text-gray-600" : "text-gray-400"
+        className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-stone-600 ${
+          isSidePanelOpen ? "text-stone-600" : "text-stone-400"
         }`}
         title={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
       >
@@ -101,13 +101,13 @@ export function Toolbar({ isSidePanelOpen, onToggleSidePanel }: ToolbarProps) {
 
       <div className="flex flex-1 items-center justify-center gap-2">
         <span
-          className="text-sm font-medium text-gray-800"
+          className="text-sm font-medium text-stone-800"
           title={isDirty ? "Unsaved changes" : undefined}
         >
-          {isDirty && <span className="text-base text-gray-400">• </span>}
+          {isDirty && <span className="text-base text-stone-400">• </span>}
           {displayName}
         </span>
-        <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-medium text-gray-400">
+        <span className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[10px] font-medium text-stone-400">
           {dbType === "mysql" ? "MySQL" : "PostgreSQL"}
         </span>
       </div>

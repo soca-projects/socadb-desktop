@@ -15,8 +15,8 @@ import { useSchemaStore } from "../../stores/schemaStore";
 const zoomSelector = (s: ReactFlowState) => Math.round(s.transform[2] * 100);
 
 const btnClass =
-  "px-2 py-1.5 text-gray-500 transition-colors hover:bg-surface-muted hover:text-gray-700";
-const btnDisabledClass = "px-2 py-1.5 text-gray-300 cursor-not-allowed";
+  "px-2 py-1.5 text-stone-500 transition-colors hover:bg-surface-muted hover:text-stone-700";
+const btnDisabledClass = "px-2 py-1.5 text-stone-300 cursor-not-allowed";
 
 export function CanvasControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
@@ -33,11 +33,11 @@ export function CanvasControls() {
   return (
     <Panel position="bottom-left">
       <div className="flex items-center gap-2">
-        <div className="flex items-center overflow-hidden rounded-lg border border-border bg-white shadow-soft">
+        <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface shadow-soft">
           <button onClick={() => void zoomOut()} className={btnClass} title="Zoom out">
             <Minus size={14} />
           </button>
-          <span className="min-w-[42px] border-x border-border-light px-2 py-1.5 text-center font-mono text-[11px] text-gray-500">
+          <span className="min-w-[42px] border-x border-border-light px-2 py-1.5 text-center font-mono text-[11px] text-stone-500">
             {percentage}%
           </span>
           <button onClick={() => void zoomIn()} className={btnClass} title="Zoom in">
@@ -52,7 +52,7 @@ export function CanvasControls() {
           </button>
         </div>
 
-        <div className="flex items-center overflow-hidden rounded-lg border border-border bg-white shadow-soft">
+        <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface shadow-soft">
           <button
             onClick={handleUndo}
             disabled={!canUndo}

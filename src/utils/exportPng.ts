@@ -10,7 +10,7 @@ export async function exportCanvasPng() {
   const schemaName = useSchemaStore.getState().schema.name || "schema";
 
   const [blob, path] = await Promise.all([
-    toBlob(viewport, { backgroundColor: "#ffffff", pixelRatio: 2 }),
+    toBlob(viewport, { backgroundColor: "#FDFCFC", pixelRatio: 2 }),
     save({
       defaultPath: `${schemaName}.png`,
       filters: [{ name: "PNG Image", extensions: ["png"] }],

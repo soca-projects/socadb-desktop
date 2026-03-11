@@ -18,15 +18,15 @@ type TableNodeProps = NodeProps & { data: TableNodeData };
 export const TableNode = memo(function TableNode({ data, selected }: TableNodeProps) {
   return (
     <div
-      className={`min-w-[220px] animate-node-appear select-none rounded-lg border bg-white shadow-card transition-shadow ${
+      className={`min-w-[220px] animate-node-appear select-none rounded-lg border bg-surface shadow-card transition-shadow ${
         selected
           ? "border-accent ring-2 ring-accent/20"
           : "border-border hover:shadow-float"
       }`}
     >
       <div className="flex items-center gap-2 overflow-hidden rounded-t-[7px] border-b border-border px-3.5 py-2.5">
-        <Table size={14} className="text-gray-400" />
-        <span className="font-mono text-[13px] font-semibold text-gray-800">
+        <Table size={14} className="text-stone-400" />
+        <span className="font-mono text-[13px] font-semibold text-stone-800">
           {data.label}
         </span>
       </div>
@@ -45,10 +45,10 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               style={{ top: "50%", left: -1, transform: "translateY(-50%)" }}
             />
             <span
-              className={`pointer-events-none absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-white transition-[opacity,transform,border-color] duration-150 ${
+              className={`pointer-events-none absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-surface transition-[opacity,transform,border-color] duration-150 ${
                 selected
                   ? "scale-100 border-accent opacity-100"
-                  : "scale-90 border-gray-300 opacity-60 group-hover:scale-100 group-hover:border-gray-400 group-hover:opacity-100"
+                  : "scale-90 border-stone-300 opacity-60 group-hover:scale-100 group-hover:border-stone-400 group-hover:opacity-100"
               }`}
             />
 
@@ -64,19 +64,19 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
 
             <span
               className={`flex-1 font-mono text-xs ${
-                col.isPrimaryKey ? "font-medium text-gray-900" : "text-gray-700"
+                col.isPrimaryKey ? "font-medium text-stone-900" : "text-stone-700"
               }`}
             >
               {col.name}
             </span>
 
-            <span className="font-mono text-[11px] text-gray-400">{col.type}</span>
+            <span className="font-mono text-[11px] text-stone-400">{col.type}</span>
 
             {(col.isNullable || col.isUnique) && (
               <div className="flex items-center gap-1">
-                {col.isNullable && <span className="text-[11px] text-gray-300">?</span>}
+                {col.isNullable && <span className="text-[11px] text-stone-300">?</span>}
                 {col.isUnique && (
-                  <span className="text-[11px] font-medium text-gray-300">U</span>
+                  <span className="text-[11px] font-medium text-stone-300">U</span>
                 )}
               </div>
             )}
@@ -89,10 +89,10 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               style={{ top: "50%", right: -1, transform: "translateY(-50%)" }}
             />
             <span
-              className={`pointer-events-none absolute right-0 top-1/2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-white transition-[opacity,transform,border-color] duration-150 ${
+              className={`pointer-events-none absolute right-0 top-1/2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-surface transition-[opacity,transform,border-color] duration-150 ${
                 selected
                   ? "scale-100 border-accent opacity-100"
-                  : "scale-90 border-gray-300 opacity-60 group-hover:scale-100 group-hover:border-gray-400 group-hover:opacity-100"
+                  : "scale-90 border-stone-300 opacity-60 group-hover:scale-100 group-hover:border-stone-400 group-hover:opacity-100"
               }`}
             />
           </div>

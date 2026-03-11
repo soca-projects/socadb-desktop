@@ -37,16 +37,16 @@ export function NewSchemaModal({
       onKeyDown={handleKeyDown}
     >
       <div
-        className="w-full max-w-[400px] rounded-xl border border-border bg-white p-6 shadow-float"
+        className="w-full max-w-[400px] rounded-xl border border-border bg-surface p-6 shadow-float"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-gray-900">New Schema</h2>
-        <p className="mt-1 text-[13px] text-gray-500">
+        <h2 className="text-base font-semibold text-stone-900">New Schema</h2>
+        <p className="mt-1 text-[13px] text-stone-500">
           Choose a name and database type for your schema.
         </p>
 
         <div className="mt-5">
-          <label className="block text-[12px] font-medium uppercase tracking-wide text-gray-400">
+          <label className="block text-[12px] font-medium uppercase tracking-wide text-stone-400">
             Schema name
           </label>
           <input
@@ -56,13 +56,13 @@ export function NewSchemaModal({
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-gray-800 outline-none transition-colors focus:border-accent/40"
+            className="mt-1.5 w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-stone-800 outline-none transition-colors focus:border-accent/40"
             placeholder="Untitled"
           />
         </div>
 
         <div className="mt-4">
-          <label className="block text-[12px] font-medium uppercase tracking-wide text-gray-400">
+          <label className="block text-[12px] font-medium uppercase tracking-wide text-stone-400">
             Database type
           </label>
           <div className="mt-1.5 flex rounded-lg border border-border bg-surface-muted p-0.5">
@@ -72,8 +72,8 @@ export function NewSchemaModal({
                 onClick={() => setDbType(opt.value)}
                 className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all ${
                   dbType === opt.value
-                    ? "bg-white text-accent shadow-soft"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-surface text-accent shadow-soft"
+                    : "text-stone-500 hover:text-stone-700"
                 }`}
               >
                 {opt.label}
@@ -86,7 +86,7 @@ export function NewSchemaModal({
           {!isFirstLaunch && (
             <button
               onClick={onClose}
-              className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-gray-600 transition-all hover:bg-surface-muted"
+              className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-stone-600 transition-all hover:bg-surface-muted"
             >
               Cancel
             </button>
