@@ -1,17 +1,13 @@
 import { useState, useCallback, useRef } from "react";
 import {
   SidebarIcon as Sidebar,
-  ShuffleIcon as Shuffle,
   DownloadSimpleIcon as DownloadSimple,
-  ArrowCounterClockwiseIcon as Undo,
-  ArrowClockwiseIcon as Redo,
   ImageIcon as Image,
   FileCodeIcon as FileCode,
   FileSvgIcon as FileSvg,
 } from "@phosphor-icons/react";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { useClickOutside } from "../../hooks/useClickOutside";
-import { handleAutoLayout, handleUndo, handleRedo } from "../../utils/schemaActions";
 import { exportCanvasPng } from "../../utils/exportPng";
 import { exportCanvasSvg } from "../../utils/exportSvg";
 import { exportSql } from "../../utils/exportSql";
@@ -56,14 +52,14 @@ function ExportDropdown() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-white px-3 text-[13px] font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-surface-muted hover:text-gray-800"
+        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-surface-muted hover:text-gray-600"
+        title="Export"
       >
-        <DownloadSimple size={15} />
-        Export
+        <DownloadSimple size={16} />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-border bg-white py-1 shadow-float">
+        <div className="absolute right-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-border bg-white py-1 shadow-float">
           {items.map((item) => (
             <button
               key={item.label}
@@ -86,50 +82,37 @@ function ExportDropdown() {
 export function Toolbar({ isSidePanelOpen, onToggleSidePanel }: ToolbarProps) {
   const filePath = useSchemaStore((s) => s.filePath);
   const schemaName = useSchemaStore((s) => s.schema.name);
+  const dbType = useSchemaStore((s) => s.schema.dbType);
+  const isDirty = useSchemaStore((s) => s.savedAt !== s.schema.updatedAt);
 
   const displayName = filePath ? getFileName(filePath) : schemaName;
 
   return (
-    <div className="flex h-12 items-center gap-4 border-b border-border bg-white px-4">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onToggleSidePanel}
-          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-surface-muted hover:text-gray-600"
-          title={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
-        >
-          <Sidebar size={18} />
-        </button>
-        <div className="h-5 w-px bg-border" />
-        <span className="text-sm font-medium text-gray-800">{displayName}</span>
-      </div>
+    <div className="flex h-12 items-center border-b border-border bg-white px-4">
+      <button
+        onClick={onToggleSidePanel}
+        className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-gray-600 ${
+          isSidePanelOpen ? "text-gray-600" : "text-gray-400"
+        }`}
+        title={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
+      >
+        <Sidebar size={18} />
+      </button>
 
       <div className="flex flex-1 items-center justify-center gap-2">
-        <button
-          onClick={() => void handleAutoLayout()}
-          className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-white px-3 text-[13px] font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-surface-muted hover:text-gray-800"
+        <span
+          className="text-sm font-medium text-gray-800"
+          title={isDirty ? "Unsaved changes" : undefined}
         >
-          <Shuffle size={15} />
-          Reorg
-        </button>
-        <ExportDropdown />
+          {isDirty && <span className="text-base text-gray-400">• </span>}
+          {displayName}
+        </span>
+        <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-medium text-gray-400">
+          {dbType === "mysql" ? "MySQL" : "PostgreSQL"}
+        </span>
       </div>
 
-      <div className="flex items-center gap-1">
-        <button
-          onClick={handleUndo}
-          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-surface-muted hover:text-gray-600"
-          title="Undo"
-        >
-          <Undo size={16} />
-        </button>
-        <button
-          onClick={handleRedo}
-          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-surface-muted hover:text-gray-600"
-          title="Redo"
-        >
-          <Redo size={16} />
-        </button>
-      </div>
+      <ExportDropdown />
     </div>
   );
 }

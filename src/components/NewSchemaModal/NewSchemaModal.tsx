@@ -32,7 +32,7 @@ export function NewSchemaModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
       onClick={isFirstLaunch ? undefined : onClose}
       onKeyDown={handleKeyDown}
     >
@@ -65,25 +65,18 @@ export function NewSchemaModal({
           <label className="block text-[12px] font-medium uppercase tracking-wide text-gray-400">
             Database type
           </label>
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
+          <div className="mt-1.5 flex rounded-lg border border-border bg-surface-muted p-0.5">
             {DB_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setDbType(opt.value)}
-                className={`rounded-lg border px-3 py-3 text-left transition-all ${
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all ${
                   dbType === opt.value
-                    ? "border-accent bg-accent/5 ring-1 ring-accent/20"
-                    : "border-border hover:border-gray-300 hover:bg-surface-muted"
+                    ? "bg-white text-accent shadow-soft"
+                    : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <span
-                  className={`block text-sm font-semibold ${dbType === opt.value ? "text-accent" : "text-gray-800"}`}
-                >
-                  {opt.label}
-                </span>
-                <span className="mt-0.5 block text-[12px] text-gray-400">
-                  {opt.description}
-                </span>
+                {opt.label}
               </button>
             ))}
           </div>

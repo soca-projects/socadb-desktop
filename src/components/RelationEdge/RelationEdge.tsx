@@ -102,9 +102,9 @@ export const RelationEdge = memo(function RelationEdge({
             </div>
           ) : (
             <div
-              className={`nodrag nopan rounded-sm border px-1.5 py-0.5 font-mono text-[10px] font-medium shadow-soft transition-colors ${
+              className={`nodrag nopan cursor-pointer rounded border px-2 py-0.5 font-mono text-[11px] font-medium shadow-soft transition-[color,background-color,border-color,transform] duration-150 ${
                 hovered
-                  ? "border-accent/30 bg-accent-light text-accent"
+                  ? "scale-110 border-accent/30 bg-accent-light text-accent"
                   : "border-gray-200 bg-white text-gray-400"
               }`}
             >

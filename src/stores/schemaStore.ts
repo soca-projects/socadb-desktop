@@ -5,8 +5,10 @@ import type { Column, Table, Relation, Schema, DbType } from "../types/schema";
 interface SchemaState {
   schema: Schema;
   filePath: string | null;
+  savedAt: string | null;
   setSchema: (schema: Schema) => void;
   setFilePath: (path: string | null) => void;
+  markSaved: () => void;
   addTable: (table: Table) => void;
   updateTable: (id: string, updates: Partial<Table>) => void;
   updateTablePositions: (positions: Record<string, { x: number; y: number }>) => void;
@@ -43,9 +45,11 @@ export const useSchemaStore = create<SchemaState>()(
     (set) => ({
       schema: createEmptySchema(),
       filePath: null,
+      savedAt: null,
 
-      setSchema: (schema) => set({ schema }),
+      setSchema: (schema) => set({ schema, savedAt: schema.updatedAt }),
       setFilePath: (path) => set({ filePath: path }),
+      markSaved: () => set((state) => ({ savedAt: state.schema.updatedAt })),
 
       addTable: (table) =>
         set((state) => ({
@@ -150,7 +154,7 @@ export const useSchemaStore = create<SchemaState>()(
         })),
     }),
     {
-      partialize: (state) => ({ schema: state.schema }),
+      partialize: ({ schema }) => ({ schema }),
       limit: 50,
     },
   ),

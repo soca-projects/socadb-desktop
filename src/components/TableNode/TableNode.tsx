@@ -45,10 +45,10 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               style={{ top: "50%", left: -1, transform: "translateY(-50%)" }}
             />
             <span
-              className={`pointer-events-none absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-300 bg-white transition-[opacity,transform] duration-150 ${
+              className={`pointer-events-none absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-white transition-[opacity,transform,border-color] duration-150 ${
                 selected
-                  ? "scale-100 opacity-100"
-                  : "scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100"
+                  ? "scale-100 border-accent opacity-100"
+                  : "scale-90 border-gray-300 opacity-60 group-hover:scale-100 group-hover:border-gray-400 group-hover:opacity-100"
               }`}
             />
 
@@ -58,7 +58,7 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               ) : col.isForeignKey ? (
                 <Link size={13} className="text-blue-500" />
               ) : (
-                <span className="h-1.5 w-1.5 rounded-full bg-gray-200" />
+                <span className="h-1.5 w-1.5" />
               )}
             </div>
 
@@ -74,9 +74,9 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
 
             {(col.isNullable || col.isUnique) && (
               <div className="flex items-center gap-1">
-                {col.isNullable && <span className="text-[10px] text-gray-300">?</span>}
+                {col.isNullable && <span className="text-[11px] text-gray-300">?</span>}
                 {col.isUnique && (
-                  <span className="text-[10px] font-medium text-gray-300">U</span>
+                  <span className="text-[11px] font-medium text-gray-300">U</span>
                 )}
               </div>
             )}
@@ -89,10 +89,10 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               style={{ top: "50%", right: -1, transform: "translateY(-50%)" }}
             />
             <span
-              className={`pointer-events-none absolute right-0 top-1/2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-300 bg-white transition-[opacity,transform] duration-150 ${
+              className={`pointer-events-none absolute right-0 top-1/2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-white transition-[opacity,transform,border-color] duration-150 ${
                 selected
-                  ? "scale-100 opacity-100"
-                  : "scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100"
+                  ? "scale-100 border-accent opacity-100"
+                  : "scale-90 border-gray-300 opacity-60 group-hover:scale-100 group-hover:border-gray-400 group-hover:opacity-100"
               }`}
             />
           </div>

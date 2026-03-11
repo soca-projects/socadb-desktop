@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { ReactFlow, Background, applyNodeChanges, applyEdgeChanges } from "@xyflow/react";
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -11,8 +11,9 @@ import { Toolbar } from "../Toolbar/Toolbar";
 import { CanvasControls } from "../CanvasControls/CanvasControls";
 import { ContextMenu } from "../ContextMenu/ContextMenu";
 import { EmptyCanvas } from "../EmptyCanvas/EmptyCanvas";
+import { listen } from "@tauri-apps/api/event";
 import { genId } from "../../utils/id";
-import { createTable } from "../../utils/schemaActions";
+import { createTable, duplicateTable } from "../../utils/schemaActions";
 import { SIDE_PANEL_WIDTH } from "../../utils/layout";
 import type { Table, Relation } from "../../types/schema";
 
@@ -62,8 +63,18 @@ export function Canvas() {
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
+
+  useEffect(() => {
+    const unlisten = listen("toggle-sidebar", () => {
+      setSidePanelOpen((prev) => !prev);
+    });
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, []);
   const [openTableId, setOpenTableId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [localNodes, setLocalNodes] = useState<Node[] | null>(null);
   const [localEdges, setLocalEdges] = useState<Edge[] | null>(null);
   const [lastStoreNodes, setLastStoreNodes] = useState<Node[]>([]);
@@ -87,7 +98,14 @@ export function Canvas() {
   }
 
   const nodes = localNodes ?? storeNodes;
-  const edges = localEdges ?? storeEdges;
+  const baseEdges = localEdges ?? storeEdges;
+  const edges = useMemo(
+    () =>
+      hoveredEdgeId
+        ? baseEdges.map((e) => (e.id === hoveredEdgeId ? { ...e, zIndex: 999 } : e))
+        : baseEdges,
+    [baseEdges, hoveredEdgeId],
+  );
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -141,6 +159,14 @@ export function Canvas() {
     },
     [addRelation],
   );
+
+  const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => {
+    setHoveredEdgeId(edge.id);
+  }, []);
+
+  const onEdgeMouseLeave = useCallback(() => {
+    setHoveredEdgeId(null);
+  }, []);
 
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
@@ -204,7 +230,10 @@ export function Canvas() {
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onNodeContextMenu={onNodeContextMenu}
+            onEdgeMouseEnter={onEdgeMouseEnter}
+            onEdgeMouseLeave={onEdgeMouseLeave}
             onPaneClick={handleCloseContextMenu}
+            elevateEdgesOnSelect
             fitView
             minZoom={0.1}
             maxZoom={2}
@@ -221,6 +250,16 @@ export function Canvas() {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
+          onRename={() => {
+            setSidePanelOpen(true);
+            setOpenTableId(contextMenu.tableId);
+            setContextMenu(null);
+          }}
+          onDuplicate={() => {
+            const newId = duplicateTable(contextMenu.tableId);
+            if (newId) setOpenTableId(newId);
+            setContextMenu(null);
+          }}
           onDelete={() => {
             deleteTable(contextMenu.tableId);
             setContextMenu(null);

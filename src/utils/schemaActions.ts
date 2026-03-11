@@ -35,3 +35,17 @@ export function createTable(options?: {
   });
   return newId;
 }
+
+export function duplicateTable(tableId: string): string | null {
+  const { schema, addTable } = useSchemaStore.getState();
+  const source = schema.tables.find((t) => t.id === tableId);
+  if (!source) return null;
+  const newId = genId();
+  addTable({
+    id: newId,
+    name: `${source.name}_copy`,
+    position: { x: source.position.x + 40, y: source.position.y + 40 },
+    columns: source.columns.map((col) => ({ ...col, id: genId(), isForeignKey: false })),
+  });
+  return newId;
+}

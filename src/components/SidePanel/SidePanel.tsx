@@ -10,6 +10,7 @@ import {
   HashIcon as Hash,
   CaretUpDownIcon as CaretUpDown,
   DotsThreeVerticalIcon as DotsThreeVertical,
+  PencilSimpleIcon as PencilSimple,
 } from "@phosphor-icons/react";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { genId } from "../../utils/id";
@@ -160,9 +161,11 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
 }
 
 function TableMenu({
+  onRename,
   onAddColumn,
   onDelete,
 }: {
+  onRename: () => void;
   onAddColumn: () => void;
   onDelete: () => void;
 }) {
@@ -214,10 +217,20 @@ function TableMenu({
         >
           <button
             onClick={() => {
+              onRename();
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-gray-700 transition-colors hover:bg-surface-muted"
+          >
+            <PencilSimple size={14} />
+            Rename
+          </button>
+          <button
+            onClick={() => {
               onAddColumn();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs text-gray-700 transition-colors hover:bg-surface-muted"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-gray-700 transition-colors hover:bg-surface-muted"
           >
             <Plus size={14} />
             Add column
@@ -228,7 +241,7 @@ function TableMenu({
               onDelete();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs text-red-600 transition-colors hover:bg-red-50"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-50"
           >
             <Trash size={14} />
             Delete table
@@ -242,15 +255,31 @@ function TableMenu({
 function TableItem({
   table,
   isOpen,
+  isRenaming,
   onToggle,
+  onRename,
+  onRenameEnd,
 }: {
   table: Table;
   isOpen: boolean;
+  isRenaming: boolean;
   onToggle: () => void;
+  onRename: () => void;
+  onRenameEnd: () => void;
 }) {
   const updateTable = useSchemaStore((s) => s.updateTable);
   const deleteTable = useSchemaStore((s) => s.deleteTable);
   const addColumn = useSchemaStore((s) => s.addColumn);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isRenaming && isOpen) {
+      requestAnimationFrame(() => {
+        nameInputRef.current?.focus();
+        nameInputRef.current?.select();
+      });
+    }
+  }, [isRenaming, isOpen]);
 
   const handleAddColumn = () => {
     addColumn(table.id, {
@@ -279,19 +308,23 @@ function TableItem({
               <CaretRight size={12} weight="bold" className="text-gray-400" />
             )}
           </div>
-          {isOpen ? (
+          {isRenaming ? (
             <input
+              ref={nameInputRef}
               type="text"
               spellCheck={false}
               autoCorrect="off"
               defaultValue={table.name}
               onClick={(e) => e.stopPropagation()}
-              onBlur={(e) => updateTable(table.id, { name: e.target.value })}
+              onBlur={(e) => {
+                updateTable(table.id, { name: e.target.value });
+                onRenameEnd();
+              }}
               onKeyDown={blurOnEnter}
               className="min-w-0 flex-1 bg-transparent font-mono text-sm font-medium text-gray-800 outline-none focus:text-accent"
             />
           ) : (
-            <span className="font-mono text-sm font-medium text-gray-800">
+            <span className="truncate font-mono text-sm font-medium text-gray-800">
               {table.name}
             </span>
           )}
@@ -299,7 +332,11 @@ function TableItem({
             {table.columns.length}
           </span>
         </div>
-        <TableMenu onAddColumn={handleAddColumn} onDelete={() => deleteTable(table.id)} />
+        <TableMenu
+          onRename={onRename}
+          onAddColumn={handleAddColumn}
+          onDelete={() => deleteTable(table.id)}
+        />
       </div>
 
       {isOpen && (
@@ -313,7 +350,7 @@ function TableItem({
           <div className="mx-3 mt-1">
             <button
               onClick={handleAddColumn}
-              className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 py-2 text-xs font-medium text-gray-400 transition-all hover:border-accent/40 hover:bg-accent/[0.03] hover:text-accent"
+              className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 py-2 text-xs font-medium text-gray-500 transition-all hover:border-accent/40 hover:bg-accent/[0.03] hover:text-accent"
             >
               <Plus size={12} weight="bold" />
               Add column
@@ -335,6 +372,7 @@ interface SidePanelProps {
 
 export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) {
   const tables = useSchemaStore((s) => s.schema.tables);
+  const [renamingTableId, setRenamingTableId] = useState<string | null>(null);
 
   const handleAddTable = () => {
     const newId = createTable();
@@ -390,7 +428,13 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
               key={table.id}
               table={table}
               isOpen={openTableId === table.id}
+              isRenaming={renamingTableId === table.id}
               onToggle={() => onOpenTable(openTableId === table.id ? null : table.id)}
+              onRename={() => {
+                onOpenTable(table.id);
+                setRenamingTableId(table.id);
+              }}
+              onRenameEnd={() => setRenamingTableId(null)}
             />
           ))
         )}

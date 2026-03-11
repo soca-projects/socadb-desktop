@@ -13,19 +13,26 @@ import { exportCanvasSvg } from "../utils/exportSvg";
 import { exportSql } from "../utils/exportSql";
 
 async function handleSave() {
-  const { schema, filePath, setFilePath } = useSchemaStore.getState();
+  const { schema, filePath, setFilePath, markSaved } = useSchemaStore.getState();
   if (filePath) {
     await saveSchemaFile(schema, filePath);
+    markSaved();
   } else {
     const path = await saveSchemaFileAs(schema);
-    if (path) setFilePath(path);
+    if (path) {
+      setFilePath(path);
+      markSaved();
+    }
   }
 }
 
 async function handleSaveAs() {
-  const { schema, setFilePath } = useSchemaStore.getState();
+  const { schema, setFilePath, markSaved } = useSchemaStore.getState();
   const path = await saveSchemaFileAs(schema);
-  if (path) setFilePath(path);
+  if (path) {
+    setFilePath(path);
+    markSaved();
+  }
 }
 
 async function handleOpen() {
@@ -140,7 +147,16 @@ async function setupMenu() {
 
   const viewSubmenu = await Submenu.new({
     text: "View",
-    items: [await PredefinedMenuItem.new({ item: "Fullscreen" })],
+    items: [
+      await MenuItem.new({
+        id: "toggle_sidebar",
+        text: "Toggle Sidebar",
+        accelerator: "CmdOrCtrl+B",
+        action: () => void emit("toggle-sidebar"),
+      }),
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      await PredefinedMenuItem.new({ item: "Fullscreen" }),
+    ],
   });
 
   const windowSubmenu = await Submenu.new({
