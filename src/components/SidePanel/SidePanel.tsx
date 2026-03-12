@@ -18,6 +18,7 @@ import { createTable } from "../../utils/schemaActions";
 import { TOOLBAR_HEIGHT } from "../../utils/layout";
 import type { ColumnType, Table, Column } from "../../types/schema";
 import { COLUMN_TYPES_BY_DB } from "../../types/schema";
+import { TABLE_COLOR_MAP } from "../../utils/tableColors";
 
 const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
   if (e.key === "Enter") e.currentTarget.blur();
@@ -320,6 +321,12 @@ function TableItem({
               <CaretRight size={12} weight="bold" className="text-stone-400" />
             )}
           </div>
+          {table.color && (
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: TABLE_COLOR_MAP[table.color].dot }}
+            />
+          )}
           {isRenaming ? (
             <input
               ref={nameInputRef}

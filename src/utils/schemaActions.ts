@@ -2,6 +2,7 @@ import { useSchemaStore } from "../stores/schemaStore";
 import { genId } from "./id";
 import { createDefaultIdColumn } from "./columnDefaults";
 import { computeAutoLayout } from "./autoLayout";
+import { getNextTableColor } from "./tableColors";
 
 export function handleUndo() {
   useSchemaStore.temporal.getState().undo();
@@ -27,6 +28,7 @@ export function createTable(options?: {
   addTable({
     id: newId,
     name: options?.name ?? `new_table_${tables.length + 1}`,
+    color: getNextTableColor(tables),
     position: options?.position ?? {
       x: 100 + tables.length * 50,
       y: 100 + tables.length * 50,
@@ -44,6 +46,7 @@ export function duplicateTable(tableId: string): string | null {
   addTable({
     id: newId,
     name: `${source.name}_copy`,
+    color: source.color,
     position: { x: source.position.x + 40, y: source.position.y + 40 },
     columns: source.columns.map((col) => ({ ...col, id: genId(), isForeignKey: false })),
   });

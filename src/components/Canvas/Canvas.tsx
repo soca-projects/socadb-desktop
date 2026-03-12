@@ -30,6 +30,7 @@ function tablesToNodes(tables: Table[]) {
     data: {
       label: table.name,
       columns: table.columns,
+      color: table.color,
     },
   }));
 }

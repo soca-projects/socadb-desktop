@@ -6,11 +6,13 @@ import {
   KeyIcon as Key,
   LinkIcon as Link,
 } from "@phosphor-icons/react";
-import type { Column } from "../../types/schema";
+import type { Column, TableColor } from "../../types/schema";
+import { TABLE_COLOR_MAP } from "../../utils/tableColors";
 
 interface TableNodeData {
   label: string;
   columns: Column[];
+  color?: TableColor;
 }
 
 type TableNodeProps = NodeProps & { data: TableNodeData };
@@ -24,8 +26,17 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
           : "border-border hover:shadow-float"
       }`}
     >
-      <div className="flex items-center gap-2 overflow-hidden rounded-t-[7px] border-b border-border px-3.5 py-2.5">
-        <Table size={14} className="text-stone-400" />
+      <div
+        className="flex items-center gap-2 overflow-hidden rounded-t-[7px] border-b border-border px-3.5 py-2.5"
+        style={
+          data.color ? { backgroundColor: TABLE_COLOR_MAP[data.color].bg } : undefined
+        }
+      >
+        <Table
+          size={14}
+          className="text-stone-400"
+          style={data.color ? { color: TABLE_COLOR_MAP[data.color].dot } : undefined}
+        />
         <span className="font-mono text-[13px] font-semibold text-stone-800">
           {data.label}
         </span>
