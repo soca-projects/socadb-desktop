@@ -29,10 +29,12 @@ export function ContextMenu({
   return (
     <div
       ref={ref}
+      role="menu"
       style={{ position: "fixed", left: x, top: y }}
       className="z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-float"
     >
       <button
+        role="menuitem"
         onClick={onRename}
         className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
       >
@@ -40,6 +42,7 @@ export function ContextMenu({
         Rename
       </button>
       <button
+        role="menuitem"
         onClick={onDuplicate}
         className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
       >
@@ -48,6 +51,7 @@ export function ContextMenu({
       </button>
       <div className="mx-2 my-1 h-px bg-border-light" />
       <button
+        role="menuitem"
         onClick={onDelete}
         className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-50"
       >

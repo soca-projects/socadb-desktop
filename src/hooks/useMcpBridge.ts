@@ -26,6 +26,7 @@ function serializeColumn(c: Column) {
     isForeignKey: c.isForeignKey,
     isNullable: c.isNullable,
     isUnique: c.isUnique,
+    isAutoIncrement: c.isAutoIncrement,
     defaultValue: c.defaultValue,
   };
 }
@@ -33,6 +34,11 @@ function serializeColumn(c: Column) {
 function respond(id: number, result: unknown, error?: string) {
   const msg = error ? { id, error } : { id, result };
   void invoke("mcp_respond", { response: JSON.stringify(msg) });
+}
+
+function getString(obj: Record<string, unknown>, key: string): string | undefined {
+  const val = obj[key];
+  return typeof val === "string" ? val : undefined;
 }
 
 function handleRequest(req: McpRequest) {
@@ -65,7 +71,12 @@ function handleRequest(req: McpRequest) {
     }
 
     case "get_table": {
-      const table = findTableByName(p.name as string);
+      const name = getString(p, "name");
+      if (!name) {
+        respond(req.id, null, "Missing name");
+        break;
+      }
+      const table = findTableByName(name);
       respond(
         req.id,
         table
@@ -90,8 +101,15 @@ function handleRequest(req: McpRequest) {
     }
 
     case "create_table": {
-      const name = p.name as string;
-      const rawColumns = (p.columns as Record<string, unknown>[]) ?? [];
+      const name = getString(p, "name");
+      if (!name) {
+        respond(req.id, null, "Missing name");
+        break;
+      }
+      const rawColumns = (Array.isArray(p.columns) ? p.columns : []) as Record<
+        string,
+        unknown
+      >[];
       const tableId = genId();
       const columns: Column[] =
         rawColumns.length > 0
@@ -103,6 +121,7 @@ function handleRequest(req: McpRequest) {
               isForeignKey: false,
               isNullable: (c.isNullable as boolean) ?? true,
               isUnique: (c.isUnique as boolean) ?? false,
+              isAutoIncrement: (c.isAutoIncrement as boolean) ?? false,
               defaultValue: (c.defaultValue as string) ?? null,
             }))
           : [createDefaultIdColumn(schema.dbType)];
@@ -119,18 +138,29 @@ function handleRequest(req: McpRequest) {
     }
 
     case "update_table": {
-      const table = findTableByName(p.name as string);
+      const name = getString(p, "name");
+      const newName = getString(p, "newName");
+      if (!name || !newName) {
+        respond(req.id, null, "Missing name or newName");
+        break;
+      }
+      const table = findTableByName(name);
       if (!table) {
         respond(req.id, false);
         break;
       }
-      store.updateTable(table.id, { name: p.newName as string });
+      store.updateTable(table.id, { name: newName });
       respond(req.id, true);
       break;
     }
 
     case "delete_table": {
-      const table = findTableByName(p.name as string);
+      const name = getString(p, "name");
+      if (!name) {
+        respond(req.id, null, "Missing name");
+        break;
+      }
+      const table = findTableByName(name);
       if (!table) {
         respond(req.id, false);
         break;
@@ -141,7 +171,12 @@ function handleRequest(req: McpRequest) {
     }
 
     case "add_column": {
-      const table = findTableByName(p.table as string);
+      const tableName = getString(p, "table");
+      if (!tableName || typeof p.column !== "object" || !p.column) {
+        respond(req.id, null, "Missing table or column");
+        break;
+      }
+      const table = findTableByName(tableName);
       if (!table) {
         respond(req.id, false);
         break;
@@ -155,6 +190,7 @@ function handleRequest(req: McpRequest) {
         isForeignKey: false,
         isNullable: (col.isNullable as boolean) ?? true,
         isUnique: (col.isUnique as boolean) ?? false,
+        isAutoIncrement: (col.isAutoIncrement as boolean) ?? false,
         defaultValue: (col.defaultValue as string) ?? null,
       });
       respond(req.id, true);
@@ -162,12 +198,18 @@ function handleRequest(req: McpRequest) {
     }
 
     case "update_column": {
-      const table = findTableByName(p.table as string);
+      const tableName = getString(p, "table");
+      const colName = getString(p, "column");
+      if (!tableName || !colName) {
+        respond(req.id, null, "Missing table or column");
+        break;
+      }
+      const table = findTableByName(tableName);
       if (!table) {
         respond(req.id, false);
         break;
       }
-      const col = table.columns.find((c) => c.name === (p.column as string));
+      const col = table.columns.find((c) => c.name === colName);
       if (!col) {
         respond(req.id, false);
         break;
@@ -178,12 +220,18 @@ function handleRequest(req: McpRequest) {
     }
 
     case "delete_column": {
-      const table = findTableByName(p.table as string);
+      const tableName = getString(p, "table");
+      const colName = getString(p, "column");
+      if (!tableName || !colName) {
+        respond(req.id, null, "Missing table or column");
+        break;
+      }
+      const table = findTableByName(tableName);
       if (!table) {
         respond(req.id, false);
         break;
       }
-      const col = table.columns.find((c) => c.name === (p.column as string));
+      const col = table.columns.find((c) => c.name === colName);
       if (!col) {
         respond(req.id, false);
         break;
@@ -194,14 +242,22 @@ function handleRequest(req: McpRequest) {
     }
 
     case "create_relation": {
-      const fromTable = findTableByName(p.fromTable as string);
-      const toTable = findTableByName(p.toTable as string);
+      const fromTableName = getString(p, "fromTable");
+      const toTableName = getString(p, "toTable");
+      const fromColName = getString(p, "fromColumn");
+      const toColName = getString(p, "toColumn");
+      if (!fromTableName || !toTableName || !fromColName || !toColName) {
+        respond(req.id, null, "Missing fromTable, toTable, fromColumn, or toColumn");
+        break;
+      }
+      const fromTable = findTableByName(fromTableName);
+      const toTable = findTableByName(toTableName);
       if (!fromTable || !toTable) {
         respond(req.id, false);
         break;
       }
-      const fromCol = fromTable.columns.find((c) => c.name === (p.fromColumn as string));
-      const toCol = toTable.columns.find((c) => c.name === (p.toColumn as string));
+      const fromCol = fromTable.columns.find((c) => c.name === fromColName);
+      const toCol = toTable.columns.find((c) => c.name === toColName);
       if (!fromCol || !toCol) {
         respond(req.id, false);
         break;
@@ -219,14 +275,22 @@ function handleRequest(req: McpRequest) {
     }
 
     case "delete_relation": {
-      const fromTable = findTableByName(p.fromTable as string);
-      const toTable = findTableByName(p.toTable as string);
+      const fromTableName = getString(p, "fromTable");
+      const toTableName = getString(p, "toTable");
+      const fromColName = getString(p, "fromColumn");
+      const toColName = getString(p, "toColumn");
+      if (!fromTableName || !toTableName || !fromColName || !toColName) {
+        respond(req.id, null, "Missing fromTable, toTable, fromColumn, or toColumn");
+        break;
+      }
+      const fromTable = findTableByName(fromTableName);
+      const toTable = findTableByName(toTableName);
       if (!fromTable || !toTable) {
         respond(req.id, false);
         break;
       }
-      const fromCol = fromTable.columns.find((c) => c.name === (p.fromColumn as string));
-      const toCol = toTable.columns.find((c) => c.name === (p.toColumn as string));
+      const fromCol = fromTable.columns.find((c) => c.name === fromColName);
+      const toCol = toTable.columns.find((c) => c.name === toColName);
       if (!fromCol || !toCol) {
         respond(req.id, false);
         break;
@@ -266,17 +330,21 @@ function handleRequest(req: McpRequest) {
 
 export function useMcpBridge() {
   useEffect(() => {
-    const unlisten = listen<string>("mcp-request", (event) => {
+    let unlistenFn: (() => void) | null = null;
+
+    listen<string>("mcp-request", (event) => {
       try {
         const req = JSON.parse(event.payload) as McpRequest;
         handleRequest(req);
       } catch (e) {
         console.error("Failed to handle MCP request:", e);
       }
+    }).then((fn) => {
+      unlistenFn = fn;
     });
 
     return () => {
-      void unlisten.then((fn) => fn());
+      unlistenFn?.();
     };
   }, []);
 }

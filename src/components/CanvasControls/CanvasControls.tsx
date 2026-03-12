@@ -34,19 +34,30 @@ export function CanvasControls() {
     <Panel position="bottom-left">
       <div className="flex items-center gap-2">
         <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface shadow-soft">
-          <button onClick={() => void zoomOut()} className={btnClass} title="Zoom out">
+          <button
+            onClick={() => void zoomOut()}
+            className={btnClass}
+            title="Zoom out"
+            aria-label="Zoom out"
+          >
             <Minus size={14} />
           </button>
           <span className="min-w-[42px] border-x border-border-light px-2 py-1.5 text-center font-mono text-[11px] text-stone-500">
             {percentage}%
           </span>
-          <button onClick={() => void zoomIn()} className={btnClass} title="Zoom in">
+          <button
+            onClick={() => void zoomIn()}
+            className={btnClass}
+            title="Zoom in"
+            aria-label="Zoom in"
+          >
             <Plus size={14} />
           </button>
           <button
             onClick={() => void fitView({ padding: 0.2 })}
             className={`border-l border-border-light ${btnClass}`}
             title="Fit view"
+            aria-label="Fit view"
           >
             <CornersOut size={14} />
           </button>
@@ -58,6 +69,7 @@ export function CanvasControls() {
             disabled={!canUndo}
             className={canUndo ? btnClass : btnDisabledClass}
             title="Undo"
+            aria-label="Undo"
           >
             <Undo size={14} />
           </button>
@@ -66,6 +78,7 @@ export function CanvasControls() {
             disabled={!canRedo}
             className={`border-l border-border-light ${canRedo ? btnClass : btnDisabledClass}`}
             title="Redo"
+            aria-label="Redo"
           >
             <Redo size={14} />
           </button>
@@ -73,6 +86,7 @@ export function CanvasControls() {
             onClick={() => void handleAutoLayout()}
             className={`border-l border-border-light ${btnClass}`}
             title="Auto layout"
+            aria-label="Auto layout"
           >
             <Shuffle size={14} />
           </button>

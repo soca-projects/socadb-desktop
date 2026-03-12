@@ -23,6 +23,10 @@ export default {
           DEFAULT: "#E8E5E6",
           light: "#F2F0F1",
         },
+        badge: {
+          primary: { DEFAULT: "#D97706", bg: "#FFFBEB", border: "rgba(217, 119, 6, 0.2)" },
+          unique: { DEFAULT: "#2563EB", bg: "#EFF6FF", border: "rgba(37, 99, 235, 0.2)" },
+        },
       },
       borderRadius: {
         DEFAULT: "8px",

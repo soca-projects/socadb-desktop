@@ -20,7 +20,7 @@ function getForeignKeysFromTable(schema: Schema, tableId: string): Relation[] {
 function mysqlColumnDef(col: Column): string {
   let def = `  \`${col.name}\` ${mysqlType(col)}`;
   if (!col.isNullable) def += " NOT NULL";
-  if (col.defaultValue === "AUTO_INCREMENT") {
+  if (col.isAutoIncrement) {
     def += " AUTO_INCREMENT";
   } else if (col.defaultValue) {
     def += ` DEFAULT ${col.defaultValue}`;
@@ -85,7 +85,7 @@ export function generateMysqlDdl(schema: Schema): string {
 function postgresqlColumnDef(col: Column): string {
   let def = `  "${col.name}" ${postgresqlType(col)}`;
   if (!col.isNullable) def += " NOT NULL";
-  if (col.defaultValue && col.defaultValue !== "AUTO_INCREMENT") {
+  if (col.defaultValue) {
     def += ` DEFAULT ${col.defaultValue}`;
   }
   return def;

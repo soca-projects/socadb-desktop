@@ -1,10 +1,14 @@
 import { useEffect } from "react";
 import { Canvas } from "./components/Canvas/Canvas";
+import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
 import { NewSchemaModal } from "./components/NewSchemaModal/NewSchemaModal";
 import { useAppMenu } from "./hooks/useAppMenu";
 import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
 import { registerMcpServers } from "./utils/mcpRegistration";
+import { initSessionPersistence } from "./utils/sessionPersistence";
+
+initSessionPersistence();
 
 function App() {
   useAppMenu();
@@ -17,7 +21,7 @@ function App() {
   }, []);
 
   return (
-    <>
+    <ErrorBoundary>
       <Canvas />
       {isOpen && (
         <NewSchemaModal
@@ -26,7 +30,7 @@ function App() {
           onCreate={handleCreate}
         />
       )}
-    </>
+    </ErrorBoundary>
   );
 }
 

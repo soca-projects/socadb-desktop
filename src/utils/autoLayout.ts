@@ -4,9 +4,9 @@ import type { Table, Relation } from "../types/schema";
 const elk = new ELK();
 
 const NODE_WIDTH = 250;
-const ROW_HEIGHT = 28;
-const HEADER_HEIGHT = 36;
-const PADDING = 16;
+const ROW_HEIGHT = 28; // matches py-1.5 (12px) + text line-height (16px) in ColumnRow
+const HEADER_HEIGHT = 36; // matches py-2.5 (20px) + text line-height (16px) in TableItem header
+const PADDING = 16; // bottom padding + "Add column" button area
 
 function estimateNodeHeight(table: Table): number {
   return HEADER_HEIGHT + table.columns.length * ROW_HEIGHT + PADDING;

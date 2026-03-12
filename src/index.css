@@ -50,6 +50,13 @@
   font-display: swap;
 }
 
+:root {
+  --color-edge-default: #a8a29e;
+  --color-edge-hovered: #d4667e;
+  --color-edge-selected: #c74b68;
+  --color-edge-hover-zone: rgba(199, 75, 104, 0.125);
+}
+
 body {
   margin: 0;
   padding: 0;

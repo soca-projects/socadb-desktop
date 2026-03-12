@@ -99,6 +99,7 @@ export interface Column {
   isForeignKey: boolean;
   isNullable: boolean;
   isUnique: boolean;
+  isAutoIncrement: boolean;
   defaultValue: string | null;
 }
 

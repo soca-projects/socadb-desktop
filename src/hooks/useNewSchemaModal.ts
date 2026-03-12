@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
+import { migrateSchema } from "../utils/fileOperations";
 import type { DbType, Schema } from "../types/schema";
 
 const LAST_SESSION_KEY = "socadb_last_session";
@@ -16,7 +17,7 @@ function getInitialState(): { modal: ModalState; restored: boolean } {
 
   try {
     const session = JSON.parse(raw) as LastSession;
-    if (!session.schema.dbType) session.schema.dbType = "postgresql";
+    migrateSchema(session.schema);
     const { setSchema, setFilePath } = useSchemaStore.getState();
     setSchema(session.schema);
     setFilePath(session.filePath);
@@ -58,15 +59,3 @@ export function useNewSchemaModal() {
     handleClose,
   };
 }
-
-export function saveLastSession() {
-  const { schema, filePath } = useSchemaStore.getState();
-  const session: LastSession = { schema, filePath };
-  localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(session));
-}
-
-export function clearLastSession() {
-  localStorage.removeItem(LAST_SESSION_KEY);
-}
-
-useSchemaStore.subscribe(saveLastSession);

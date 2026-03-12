@@ -54,6 +54,7 @@ function ExportDropdown() {
         onClick={() => setOpen(!open)}
         className="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-surface-muted hover:text-stone-600"
         title="Export"
+        aria-label="Export"
       >
         <DownloadSimple size={16} />
       </button>
@@ -95,6 +96,7 @@ export function Toolbar({ isSidePanelOpen, onToggleSidePanel }: ToolbarProps) {
           isSidePanelOpen ? "text-stone-600" : "text-stone-400"
         }`}
         title={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
+        aria-label={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
       >
         <Sidebar size={18} />
       </button>

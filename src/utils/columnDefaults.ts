@@ -11,7 +11,8 @@ export function createDefaultIdColumn(dbType: DbType): Column {
         isForeignKey: false,
         isNullable: false,
         isUnique: true,
-        defaultValue: "AUTO_INCREMENT",
+        isAutoIncrement: true,
+        defaultValue: null,
       }
     : {
         id: genId(),
@@ -21,6 +22,7 @@ export function createDefaultIdColumn(dbType: DbType): Column {
         isForeignKey: false,
         isNullable: false,
         isUnique: true,
+        isAutoIncrement: false,
         defaultValue: "gen_random_uuid()",
       };
 }

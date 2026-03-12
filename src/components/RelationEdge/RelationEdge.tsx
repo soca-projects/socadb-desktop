@@ -41,7 +41,7 @@ export const RelationEdge = memo(function RelationEdge({
       <path
         d={edgePath}
         fill="none"
-        stroke={hovered && !selected ? "#C74B6820" : "transparent"}
+        stroke={hovered && !selected ? "var(--color-edge-hover-zone)" : "transparent"}
         strokeWidth={12}
         strokeLinecap="round"
         onMouseEnter={() => setHovered(true)}
@@ -54,7 +54,11 @@ export const RelationEdge = memo(function RelationEdge({
         fill="none"
         className="react-flow__edge-path"
         style={{
-          stroke: selected ? "#C74B68" : hovered ? "#D4667E" : "#A8A29E",
+          stroke: selected
+            ? "var(--color-edge-selected)"
+            : hovered
+              ? "var(--color-edge-hovered)"
+              : "var(--color-edge-default)",
           strokeWidth: selected ? 2.5 : 1.5,
           transition: "stroke 0.15s, stroke-width 0.15s",
           pointerEvents: "none",
@@ -76,6 +80,7 @@ export const RelationEdge = memo(function RelationEdge({
               {RELATION_TYPES.map((type) => (
                 <button
                   key={type}
+                  aria-pressed={data.relationType === type}
                   onClick={(e) => {
                     e.stopPropagation();
                     useSchemaStore.getState().updateRelation(id, { type });
@@ -91,6 +96,7 @@ export const RelationEdge = memo(function RelationEdge({
               ))}
               <div className="mx-0.5 h-5 w-px bg-border" />
               <button
+                aria-label="Delete relation"
                 onClick={(e) => {
                   e.stopPropagation();
                   useSchemaStore.getState().deleteRelation(id);

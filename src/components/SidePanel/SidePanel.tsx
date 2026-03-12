@@ -27,8 +27,8 @@ const BADGE_INACTIVE =
   "bg-transparent text-stone-400 border-transparent hover:bg-stone-100 hover:text-stone-500";
 const BADGE_ACTIVE = {
   default: "bg-accent/10 text-accent border-accent/20",
-  amber: "bg-amber-50 text-amber-600 border-amber-200/60",
-  blue: "bg-blue-50 text-blue-600 border-blue-200/60",
+  amber: "bg-badge-primary-bg text-badge-primary border-badge-primary-border",
+  blue: "bg-badge-unique-bg text-badge-unique border-badge-unique-border",
 } as const;
 
 function ConstraintBadge({
@@ -53,6 +53,7 @@ function ConstraintBadge({
         onClick();
       }}
       disabled={disabled}
+      aria-pressed={active}
       className={`inline-flex items-center rounded-[4px] border px-[5px] py-[1px] font-mono text-[11px] font-medium leading-tight transition-all ${colorClass} ${disabled ? "cursor-not-allowed opacity-30" : "cursor-pointer"}`}
     >
       {label}
@@ -120,6 +121,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
           <button
             onClick={() => deleteColumn(tableId, col.id)}
             className="shrink-0 rounded-[4px] p-[3px] text-stone-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+            aria-label="Delete column"
           >
             <Trash size={13} />
           </button>
@@ -194,7 +196,11 @@ function TableMenu({
     e.stopPropagation();
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setMenuPos({ top: rect.top, left: rect.right + 4 });
+      const menuWidth = 160;
+      const menuHeight = 140;
+      const top = Math.min(rect.top, window.innerHeight - menuHeight);
+      const left = Math.min(rect.right + 4, window.innerWidth - menuWidth);
+      setMenuPos({ top, left });
     }
     setOpen(!open);
   };
@@ -205,6 +211,7 @@ function TableMenu({
         ref={buttonRef}
         onClick={handleToggle}
         className="rounded-[4px] p-1 text-stone-500 transition-all hover:bg-surface-muted hover:text-stone-700"
+        aria-label="Table options"
       >
         <DotsThreeVertical size={14} weight="bold" />
       </button>
@@ -214,8 +221,10 @@ function TableMenu({
           ref={menuRef}
           style={{ position: "fixed", top: menuPos.top, left: menuPos.left }}
           className="z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-float"
+          role="menu"
         >
           <button
+            role="menuitem"
             onClick={() => {
               onRename();
               setOpen(false);
@@ -226,6 +235,7 @@ function TableMenu({
             Rename
           </button>
           <button
+            role="menuitem"
             onClick={() => {
               onAddColumn();
               setOpen(false);
@@ -237,6 +247,7 @@ function TableMenu({
           </button>
           <div className="mx-2 my-1 h-px bg-border-light" />
           <button
+            role="menuitem"
             onClick={() => {
               onDelete();
               setOpen(false);
@@ -290,6 +301,7 @@ function TableItem({
       isForeignKey: false,
       isNullable: true,
       isUnique: false,
+      isAutoIncrement: false,
       defaultValue: null,
     });
   };

@@ -37,19 +37,27 @@ export function NewSchemaModal({
       onKeyDown={handleKeyDown}
     >
       <div
+        role="dialog"
+        aria-labelledby="new-schema-title"
         className="w-full max-w-[400px] rounded-xl border border-border bg-surface p-6 shadow-float"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-stone-900">New Schema</h2>
+        <h2 id="new-schema-title" className="text-base font-semibold text-stone-900">
+          New Schema
+        </h2>
         <p className="mt-1 text-[13px] text-stone-500">
           Choose a name and database type for your schema.
         </p>
 
         <div className="mt-5">
-          <label className="block text-[12px] font-medium uppercase tracking-wide text-stone-400">
+          <label
+            htmlFor="schema-name"
+            className="block text-[12px] font-medium uppercase tracking-wide text-stone-400"
+          >
             Schema name
           </label>
           <input
+            id="schema-name"
             type="text"
             spellCheck={false}
             autoCorrect="off"
@@ -62,13 +70,22 @@ export function NewSchemaModal({
         </div>
 
         <div className="mt-4">
-          <label className="block text-[12px] font-medium uppercase tracking-wide text-stone-400">
+          <label
+            id="db-type-label"
+            className="block text-[12px] font-medium uppercase tracking-wide text-stone-400"
+          >
             Database type
           </label>
-          <div className="mt-1.5 flex rounded-lg border border-border bg-surface-muted p-0.5">
+          <div
+            role="radiogroup"
+            aria-labelledby="db-type-label"
+            className="mt-1.5 flex rounded-lg border border-border bg-surface-muted p-0.5"
+          >
             {DB_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
+                role="radio"
+                aria-checked={dbType === opt.value}
                 onClick={() => setDbType(opt.value)}
                 className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all ${
                   dbType === opt.value
