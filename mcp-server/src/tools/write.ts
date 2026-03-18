@@ -40,15 +40,16 @@ export function registerWriteTools(server: McpServer) {
   server.registerTool(
     "update_table",
     {
-      description: "Update a table's name",
+      description: "Update a table's name or color",
       inputSchema: {
         name: z.string().describe("Current table name"),
-        newName: z.string().describe("New table name"),
+        newName: z.string().optional().describe("New table name"),
+        color: z.string().optional().describe("Table header color as hex (e.g. #E11D48)"),
       },
     },
-    async ({ name, newName }) => {
-      const result = await send("update_table", { name, newName });
-      return result ? ok(`Table renamed from "${name}" to "${newName}"`) : err(`Table "${name}" not found`);
+    async ({ name, newName, color }) => {
+      const result = await send("update_table", { name, newName, color });
+      return result ? ok(`Table "${name}" updated`) : err(`Table "${name}" not found`);
     },
   );
 
