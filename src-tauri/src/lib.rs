@@ -1,3 +1,4 @@
+mod chat;
 mod ws;
 
 use tokio_tungstenite::tungstenite::Message;
@@ -16,7 +17,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![mcp_respond])
+        .invoke_handler(tauri::generate_handler![
+            mcp_respond,
+            chat::detect_provider,
+            chat::chat_send,
+            chat::chat_stop,
+        ])
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {

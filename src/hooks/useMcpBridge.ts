@@ -330,9 +330,11 @@ function handleRequest(req: McpRequest) {
 
 export function useMcpBridge() {
   useEffect(() => {
+    let cancelled = false;
     let unlistenFn: (() => void) | null = null;
 
     listen<string>("mcp-request", (event) => {
+      if (cancelled) return;
       try {
         const req = JSON.parse(event.payload) as McpRequest;
         handleRequest(req);
@@ -340,10 +342,12 @@ export function useMcpBridge() {
         console.error("Failed to handle MCP request:", e);
       }
     }).then((fn) => {
-      unlistenFn = fn;
+      if (cancelled) fn();
+      else unlistenFn = fn;
     });
 
     return () => {
+      cancelled = true;
       unlistenFn?.();
     };
   }, []);

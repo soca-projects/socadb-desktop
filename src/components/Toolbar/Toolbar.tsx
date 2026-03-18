@@ -5,6 +5,7 @@ import {
   ImageIcon as Image,
   FileCodeIcon as FileCode,
   FileSvgIcon as FileSvg,
+  GearSixIcon as GearSix,
 } from "@phosphor-icons/react";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { useClickOutside } from "../../hooks/useClickOutside";
@@ -15,6 +16,7 @@ import { exportSql } from "../../utils/exportSql";
 interface ToolbarProps {
   isSidePanelOpen: boolean;
   onToggleSidePanel: () => void;
+  onOpenAgentSetup: () => void;
 }
 
 function getFileName(filePath: string | null): string {
@@ -80,12 +82,15 @@ function ExportDropdown() {
   );
 }
 
-export function Toolbar({ isSidePanelOpen, onToggleSidePanel }: ToolbarProps) {
+export function Toolbar({
+  isSidePanelOpen,
+  onToggleSidePanel,
+  onOpenAgentSetup,
+}: ToolbarProps) {
   const filePath = useSchemaStore((s) => s.filePath);
   const schemaName = useSchemaStore((s) => s.schema.name);
   const dbType = useSchemaStore((s) => s.schema.dbType);
   const isDirty = useSchemaStore((s) => s.savedAt !== s.schema.updatedAt);
-
   const displayName = filePath ? getFileName(filePath) : schemaName;
 
   return (
@@ -114,7 +119,17 @@ export function Toolbar({ isSidePanelOpen, onToggleSidePanel }: ToolbarProps) {
         </span>
       </div>
 
-      <ExportDropdown />
+      <div className="flex items-center gap-1">
+        <ExportDropdown />
+        <button
+          onClick={onOpenAgentSetup}
+          className="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-surface-muted hover:text-stone-600"
+          title="Agent settings"
+          aria-label="Agent settings"
+        >
+          <GearSix size={16} />
+        </button>
+      </div>
     </div>
   );
 }
