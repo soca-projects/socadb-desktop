@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "bun build --compile src/index.ts --outfile dist/socadb-mcp"
+    "build": "tsx build.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
