@@ -87,16 +87,6 @@ export const COLUMN_TYPES_BY_DB: Record<DbType, ColumnType[]> = {
   postgresql: POSTGRESQL_COLUMN_TYPES,
 };
 
-export type TableColor =
-  | "rose"
-  | "amber"
-  | "emerald"
-  | "sky"
-  | "violet"
-  | "teal"
-  | "orange"
-  | "fuchsia";
-
 export type RelationType = "1:1" | "1:N" | "N:1";
 
 export type ReferentialAction = "CASCADE" | "SET NULL" | "RESTRICT" | "NO ACTION";
@@ -116,7 +106,7 @@ export interface Column {
 export interface Table {
   id: string;
   name: string;
-  color?: TableColor;
+  color?: string;
   position: { x: number; y: number };
   columns: Column[];
 }
