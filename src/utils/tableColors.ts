@@ -9,6 +9,8 @@ export const PRESET_COLORS = [
   "#0D9488",
   "#EA580C",
   "#C026D3",
+  "#0EA5E9",
+  "#84CC16",
 ];
 
 const LEGACY_COLOR_MAP: Record<string, string> = {

@@ -324,7 +324,7 @@ function TableItem({
           {table.color && (
             <span
               className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: getColorVariants(table.color).bg, outline: `2px solid ${getColorVariants(table.color).dot}`, outlineOffset: "-1px" }}
+              style={{ backgroundColor: getColorVariants(table.color).dot }}
             />
           )}
           {isRenaming ? (
@@ -369,11 +369,13 @@ function TableItem({
                   <button
                     key={preset}
                     onClick={() => updateTable(table.id, { color: preset })}
-                    className="h-5 w-5 rounded-full border-2 transition-all hover:scale-110"
+                    className="h-4 w-4 rounded-full border-2 transition-all hover:scale-110"
                     style={{
-                      backgroundColor: v.bg,
-                      borderColor: isActive ? v.dot : "transparent",
+                      backgroundColor: isActive ? v.dot : v.bg,
+                      borderColor: "transparent",
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = v.dot; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isActive ? v.dot : v.bg; }}
                     aria-label={`Color ${preset}`}
                   />
                 );
