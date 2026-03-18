@@ -6,18 +6,20 @@ import {
   KeyIcon as Key,
   LinkIcon as Link,
 } from "@phosphor-icons/react";
-import type { Column, TableColor } from "../../types/schema";
-import { TABLE_COLOR_MAP } from "../../utils/tableColors";
+import type { Column } from "../../types/schema";
+import { getColorVariants } from "../../utils/tableColors";
 
 interface TableNodeData {
   label: string;
   columns: Column[];
-  color?: TableColor;
+  color?: string;
 }
 
 type TableNodeProps = NodeProps & { data: TableNodeData };
 
 export const TableNode = memo(function TableNode({ data, selected }: TableNodeProps) {
+  const variants = data.color ? getColorVariants(data.color) : null;
+
   return (
     <div
       className={`min-w-[220px] animate-node-appear select-none rounded-lg border bg-surface shadow-card transition-shadow ${
@@ -27,15 +29,13 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
       }`}
     >
       <div
-        className="flex items-center gap-2 overflow-hidden rounded-t-[7px] border-b border-border px-3.5 py-2.5"
-        style={
-          data.color ? { backgroundColor: TABLE_COLOR_MAP[data.color].bg } : undefined
-        }
+        className="flex items-center gap-2 rounded-t-lg border-b border-border px-3.5 py-2.5"
+        style={variants ? { backgroundColor: variants.bg } : undefined}
       >
         <Table
           size={14}
           className="text-stone-400"
-          style={data.color ? { color: TABLE_COLOR_MAP[data.color].dot } : undefined}
+          style={variants ? { color: variants.dot } : undefined}
         />
         <span className="font-mono text-[13px] font-semibold text-stone-800">
           {data.label}
@@ -46,7 +46,7 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
         {data.columns.map((col) => (
           <div
             key={col.id}
-            className="group relative flex items-center gap-2 px-3.5 py-[7px] transition-colors hover:bg-surface-muted"
+            className="group relative flex items-center gap-2 px-3.5 py-[7px] transition-colors last:rounded-b-[7px] hover:bg-surface-muted"
           >
             <Handle
               type="target"

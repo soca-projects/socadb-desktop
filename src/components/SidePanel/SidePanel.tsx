@@ -18,7 +18,11 @@ import { createTable } from "../../utils/schemaActions";
 import { TOOLBAR_HEIGHT } from "../../utils/layout";
 import type { ColumnType, Table, Column } from "../../types/schema";
 import { COLUMN_TYPES_BY_DB } from "../../types/schema";
-import { TABLE_COLOR_MAP } from "../../utils/tableColors";
+import {
+  getColorVariants,
+  normalizeTableColor,
+  PRESET_COLORS,
+} from "../../utils/tableColors";
 
 const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
   if (e.key === "Enter") e.currentTarget.blur();
@@ -324,7 +328,7 @@ function TableItem({
           {table.color && (
             <span
               className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: TABLE_COLOR_MAP[table.color].dot }}
+              style={{ backgroundColor: getColorVariants(table.color).dot }}
             />
           )}
           {isRenaming ? (
@@ -360,6 +364,34 @@ function TableItem({
 
       {isOpen && (
         <div className="animate-fade-in-subtle pb-2">
+          <div className="mx-3 mb-2 mt-1">
+            <div className="flex items-center gap-1.5">
+              {PRESET_COLORS.map((preset) => {
+                const v = getColorVariants(preset);
+                const isActive =
+                  !!table.color && normalizeTableColor(table.color) === preset;
+                return (
+                  <button
+                    key={preset}
+                    onClick={() => updateTable(table.id, { color: preset })}
+                    className="h-4 w-4 rounded-full border-2 transition-all hover:scale-110"
+                    style={{
+                      backgroundColor: isActive ? v.dot : v.bg,
+                      borderColor: "transparent",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = v.dot;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = isActive ? v.dot : v.bg;
+                    }}
+                    aria-label={`Color ${preset}`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
           <div className="mx-1 space-y-px">
             {table.columns.map((col) => (
               <ColumnRow key={col.id} col={col} tableId={table.id} />

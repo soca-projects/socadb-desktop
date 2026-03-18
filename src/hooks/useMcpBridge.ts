@@ -139,9 +139,8 @@ function handleRequest(req: McpRequest) {
 
     case "update_table": {
       const name = getString(p, "name");
-      const newName = getString(p, "newName");
-      if (!name || !newName) {
-        respond(req.id, null, "Missing name or newName");
+      if (!name) {
+        respond(req.id, null, "Missing name");
         break;
       }
       const table = findTableByName(name);
@@ -149,7 +148,16 @@ function handleRequest(req: McpRequest) {
         respond(req.id, false);
         break;
       }
-      store.updateTable(table.id, { name: newName });
+      const updates: Partial<{ name: string; color: string }> = {};
+      const newName = getString(p, "newName");
+      const color = getString(p, "color");
+      if (newName) updates.name = newName;
+      if (color) updates.color = color;
+      if (Object.keys(updates).length === 0) {
+        respond(req.id, null, "Missing newName or color");
+        break;
+      }
+      store.updateTable(table.id, updates);
       respond(req.id, true);
       break;
     }
