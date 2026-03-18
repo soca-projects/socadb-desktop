@@ -55,7 +55,11 @@ interface ContextMenuState {
   y: number;
 }
 
-export function Canvas() {
+interface CanvasProps {
+  onOpenAgentSetup: () => void;
+}
+
+export function Canvas({ onOpenAgentSetup }: CanvasProps) {
   const tables = useSchemaStore((s) => s.schema.tables);
   const relations = useSchemaStore((s) => s.schema.relations);
   const updateTable = useSchemaStore((s) => s.updateTable);
@@ -201,6 +205,7 @@ export function Canvas() {
       <Toolbar
         isSidePanelOpen={sidePanelOpen}
         onToggleSidePanel={() => setSidePanelOpen(!sidePanelOpen)}
+        onOpenAgentSetup={onOpenAgentSetup}
       />
 
       <div className="relative flex flex-1">
