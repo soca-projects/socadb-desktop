@@ -18,7 +18,11 @@ import { createTable } from "../../utils/schemaActions";
 import { TOOLBAR_HEIGHT } from "../../utils/layout";
 import type { ColumnType, Table, Column } from "../../types/schema";
 import { COLUMN_TYPES_BY_DB } from "../../types/schema";
-import { getColorVariants, normalizeTableColor, PRESET_COLORS } from "../../utils/tableColors";
+import {
+  getColorVariants,
+  normalizeTableColor,
+  PRESET_COLORS,
+} from "../../utils/tableColors";
 
 const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
   if (e.key === "Enter") e.currentTarget.blur();
@@ -364,7 +368,8 @@ function TableItem({
             <div className="flex items-center gap-1.5">
               {PRESET_COLORS.map((preset) => {
                 const v = getColorVariants(preset);
-                const isActive = !!table.color && normalizeTableColor(table.color) === preset;
+                const isActive =
+                  !!table.color && normalizeTableColor(table.color) === preset;
                 return (
                   <button
                     key={preset}
@@ -374,8 +379,12 @@ function TableItem({
                       backgroundColor: isActive ? v.dot : v.bg,
                       borderColor: "transparent",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = v.dot; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isActive ? v.dot : v.bg; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = v.dot;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = isActive ? v.dot : v.bg;
+                    }}
                     aria-label={`Color ${preset}`}
                   />
                 );

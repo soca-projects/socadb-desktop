@@ -30,7 +30,11 @@ export function normalizeTableColor(color: string): string {
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
 }
 
 function rgbToHex(r: number, g: number, b: number): string {
@@ -52,7 +56,11 @@ function blendWithWhite(hex: string, factor: number): string {
   );
 }
 
-export function getColorVariants(color: string): { bg: string; border: string; dot: string } {
+export function getColorVariants(color: string): {
+  bg: string;
+  border: string;
+  dot: string;
+} {
   const hex = normalizeTableColor(color);
   return {
     bg: blendWithWhite(hex, 0.72),
