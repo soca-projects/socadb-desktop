@@ -21,7 +21,8 @@
       "allow": [
         { "path": "$HOME/.claude.json" },
         { "path": "$HOME/Library/Application Support/Claude/**" },
-        { "path": "$HOME/.codex/**" }
+        { "path": "$HOME/.codex/**" },
+        { "path": "$HOME/.socadb/**" }
       ]
     }
   ]
