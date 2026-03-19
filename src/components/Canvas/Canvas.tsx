@@ -15,7 +15,6 @@ import { EmptyCanvas } from "../EmptyCanvas/EmptyCanvas";
 import { listen } from "@tauri-apps/api/event";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
-import { SIDE_PANEL_WIDTH } from "../../utils/layout";
 import type { Table, Relation } from "../../types/schema";
 
 const nodeTypes = { table: TableNode };
@@ -219,10 +218,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
           onOpenTable={setOpenTableId}
         />
 
-        <div
-          className="relative flex-1"
-          style={{ marginLeft: sidePanelOpen ? SIDE_PANEL_WIDTH : 0 }}
-        >
+        <div className="relative flex-1">
           {tables.length === 0 && (
             <EmptyCanvas
               onAddTable={handleAddFirstTable}
@@ -244,14 +240,14 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
             onEdgeMouseLeave={onEdgeMouseLeave}
             onPaneClick={handleCloseContextMenu}
             elevateEdgesOnSelect
-            fitView
+            onInit={(instance) => instance.fitView({ padding: 0.2 })}
             minZoom={0.1}
             maxZoom={8}
             deleteKeyCode={DELETE_KEY_CODE}
             proOptions={PRO_OPTIONS}
           >
             <Background gap={20} size={1} color={gridColor} />
-            <CanvasControls />
+            <CanvasControls isSidePanelOpen={sidePanelOpen} />
           </ReactFlow>
         </div>
       </div>
