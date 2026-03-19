@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useSchemaStore } from "../stores/schemaStore";
 import { genId } from "../utils/id";
 import { createDefaultIdColumn } from "../utils/columnDefaults";
+import { getNextTableColor } from "../utils/tableColors";
 import { computeAutoLayout } from "../utils/autoLayout";
 import type { Column } from "../types/schema";
 
@@ -130,6 +131,7 @@ function handleRequest(req: McpRequest) {
       store.addTable({
         id: tableId,
         name,
+        color: getNextTableColor(tables),
         position: { x: 100 + tables.length * 50, y: 100 + tables.length * 50 },
         columns,
       });
