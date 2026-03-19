@@ -142,7 +142,7 @@ export function ChatPanel() {
   if (!isPanelOpen) {
     return (
       <div className="fixed bottom-4 right-4 z-50 flex w-[340px] items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-card transition-shadow hover:shadow-float">
-        <ChatCircle size={16} className="flex-shrink-0 text-stone-400" />
+        <ChatCircle size={16} className="flex-shrink-0 text-tertiary" />
         <input
           type="text"
           placeholder={
@@ -152,7 +152,7 @@ export function ChatPanel() {
           }
           disabled={!isConnected}
           readOnly={!isConnected}
-          className="flex-1 bg-transparent text-[13px] text-stone-700 placeholder-stone-400 outline-none disabled:opacity-50"
+          className="flex-1 bg-transparent text-[13px] text-secondary placeholder:text-tertiary outline-none disabled:opacity-50"
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
@@ -182,14 +182,14 @@ export function ChatPanel() {
         className="absolute left-0 top-0 cursor-nw-resize p-1"
         onMouseDown={handleResizeStart}
       >
-        <ArrowsOut size={12} className="rotate-90 text-stone-300" />
+        <ArrowsOut size={12} className="rotate-90 text-muted" />
       </div>
 
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <span className="text-[13px] font-medium text-stone-700">AI Chat</span>
+        <span className="text-[13px] font-medium text-secondary">AI Chat</span>
         <button
           onClick={togglePanel}
-          className="rounded p-1 text-stone-400 transition-colors hover:bg-surface-muted hover:text-stone-600"
+          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
           aria-label="Close chat"
         >
           <X size={14} />
@@ -199,7 +199,7 @@ export function ChatPanel() {
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            <p className="text-[13px] text-stone-400">
+            <p className="text-[13px] text-tertiary">
               {isConnected
                 ? "What do you want to build?"
                 : "Connect a provider in Settings to start."}
@@ -215,7 +215,7 @@ export function ChatPanel() {
                   <button
                     key={suggestion}
                     onClick={() => handleSend(suggestion)}
-                    className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-stone-500 transition-colors hover:border-stone-300 hover:bg-surface-muted hover:text-stone-700"
+                    className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
                   >
                     {suggestion}
                   </button>

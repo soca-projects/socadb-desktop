@@ -42,17 +42,17 @@ export function NewSchemaModal({
         className="w-full max-w-[400px] rounded-xl border border-border bg-surface p-6 shadow-float"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="new-schema-title" className="text-base font-semibold text-stone-900">
+        <h2 id="new-schema-title" className="text-base font-semibold text-primary">
           New Schema
         </h2>
-        <p className="mt-1 text-[13px] text-stone-500">
+        <p className="mt-1 text-[13px] text-tertiary">
           Choose a name and database type for your schema.
         </p>
 
         <div className="mt-5">
           <label
             htmlFor="schema-name"
-            className="block text-[12px] font-medium uppercase tracking-wide text-stone-400"
+            className="block text-[12px] font-medium uppercase tracking-wide text-tertiary"
           >
             Schema name
           </label>
@@ -64,7 +64,7 @@ export function NewSchemaModal({
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-stone-800 outline-none transition-colors focus:border-accent/40"
+            className="mt-1.5 w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-primary outline-none transition-colors focus:border-accent/40"
             placeholder="Untitled"
           />
         </div>
@@ -72,7 +72,7 @@ export function NewSchemaModal({
         <div className="mt-4">
           <label
             id="db-type-label"
-            className="block text-[12px] font-medium uppercase tracking-wide text-stone-400"
+            className="block text-[12px] font-medium uppercase tracking-wide text-tertiary"
           >
             Database type
           </label>
@@ -90,7 +90,7 @@ export function NewSchemaModal({
                 className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all ${
                   dbType === opt.value
                     ? "bg-surface text-accent shadow-soft"
-                    : "text-stone-500 hover:text-stone-700"
+                    : "text-tertiary hover:text-secondary"
                 }`}
               >
                 {opt.label}
@@ -103,7 +103,7 @@ export function NewSchemaModal({
           {!isFirstLaunch && (
             <button
               onClick={onClose}
-              className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-stone-600 transition-all hover:bg-surface-muted"
+              className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-secondary transition-all hover:bg-surface-muted"
             >
               Cancel
             </button>

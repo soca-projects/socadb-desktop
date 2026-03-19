@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Column } from "../../types/schema";
 import { getColorVariants } from "../../utils/tableColors";
+import { useThemeStore } from "../../stores/themeStore";
 
 interface TableNodeData {
   label: string;
@@ -18,7 +19,8 @@ interface TableNodeData {
 type TableNodeProps = NodeProps & { data: TableNodeData };
 
 export const TableNode = memo(function TableNode({ data, selected }: TableNodeProps) {
-  const variants = data.color ? getColorVariants(data.color) : null;
+  const isDark = useThemeStore((s) => s.theme === "dark");
+  const variants = data.color ? getColorVariants(data.color, isDark) : null;
 
   return (
     <div
@@ -34,10 +36,10 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
       >
         <Table
           size={14}
-          className="text-stone-400"
+          className="text-tertiary"
           style={variants ? { color: variants.dot } : undefined}
         />
-        <span className="font-mono text-[13px] font-semibold text-stone-800">
+        <span className="font-mono text-[13px] font-semibold text-primary">
           {data.label}
         </span>
       </div>
@@ -59,7 +61,7 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               className={`pointer-events-none absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-surface transition-[opacity,transform,border-color] duration-150 ${
                 selected
                   ? "scale-100 border-accent opacity-100"
-                  : "scale-90 border-stone-300 opacity-60 group-hover:scale-100 group-hover:border-stone-400 group-hover:opacity-100"
+                  : "scale-90 border-border opacity-60 group-hover:scale-100 group-hover:border-border-hover group-hover:opacity-100"
               }`}
             />
 
@@ -75,19 +77,19 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
 
             <span
               className={`flex-1 font-mono text-xs ${
-                col.isPrimaryKey ? "font-medium text-stone-900" : "text-stone-700"
+                col.isPrimaryKey ? "font-medium text-primary" : "text-secondary"
               }`}
             >
               {col.name}
             </span>
 
-            <span className="font-mono text-[11px] text-stone-400">{col.type}</span>
+            <span className="font-mono text-[11px] text-tertiary">{col.type}</span>
 
             {(col.isNullable || col.isUnique) && (
               <div className="flex items-center gap-1">
-                {col.isNullable && <span className="text-[11px] text-stone-300">?</span>}
+                {col.isNullable && <span className="text-[11px] text-tertiary">?</span>}
                 {col.isUnique && (
-                  <span className="text-[11px] font-medium text-stone-300">U</span>
+                  <span className="text-[11px] font-medium text-tertiary">U</span>
                 )}
               </div>
             )}
@@ -103,7 +105,7 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
               className={`pointer-events-none absolute right-0 top-1/2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-surface transition-[opacity,transform,border-color] duration-150 ${
                 selected
                   ? "scale-100 border-accent opacity-100"
-                  : "scale-90 border-stone-300 opacity-60 group-hover:scale-100 group-hover:border-stone-400 group-hover:opacity-100"
+                  : "scale-90 border-border opacity-60 group-hover:scale-100 group-hover:border-border-hover group-hover:opacity-100"
               }`}
             />
           </div>
