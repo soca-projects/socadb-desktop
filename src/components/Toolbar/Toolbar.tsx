@@ -12,6 +12,7 @@ import { useClickOutside } from "../../hooks/useClickOutside";
 import { exportCanvasPng } from "../../utils/exportPng";
 import { exportCanvasSvg } from "../../utils/exportSvg";
 import { exportSql } from "../../utils/exportSql";
+import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 
 interface ToolbarProps {
   isSidePanelOpen: boolean;
@@ -54,7 +55,7 @@ function ExportDropdown() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-surface-muted hover:text-stone-600"
+        className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
         title="Export"
         aria-label="Export"
       >
@@ -70,7 +71,7 @@ function ExportDropdown() {
                 item.action();
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
             >
               {item.icon}
               {item.label}
@@ -97,8 +98,8 @@ export function Toolbar({
     <div className="flex h-12 items-center border-b border-border bg-surface px-4">
       <button
         onClick={onToggleSidePanel}
-        className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-stone-600 ${
-          isSidePanelOpen ? "text-stone-600" : "text-stone-400"
+        className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-secondary ${
+          isSidePanelOpen ? "text-secondary" : "text-tertiary"
         }`}
         title={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
         aria-label={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
@@ -108,22 +109,23 @@ export function Toolbar({
 
       <div className="flex flex-1 items-center justify-center gap-2">
         <span
-          className="text-sm font-medium text-stone-800"
+          className="text-sm font-medium text-primary"
           title={isDirty ? "Unsaved changes" : undefined}
         >
-          {isDirty && <span className="text-base text-stone-400">• </span>}
+          {isDirty && <span className="text-base text-tertiary">• </span>}
           {displayName}
         </span>
-        <span className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[10px] font-medium text-stone-400">
+        <span className="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary">
           {dbType === "mysql" ? "MySQL" : "PostgreSQL"}
         </span>
       </div>
 
       <div className="flex items-center gap-1">
+        <ThemeToggle />
         <ExportDropdown />
         <button
           onClick={onOpenAgentSetup}
-          className="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-surface-muted hover:text-stone-600"
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
           title="Agent settings"
           aria-label="Agent settings"
         >
