@@ -47,24 +47,29 @@ function rgbToHex(r: number, g: number, b: number): string {
   );
 }
 
-function blendWithWhite(hex: string, factor: number): string {
+function blendWithBase(hex: string, factor: number, base: string): string {
   const [r, g, b] = hexToRgb(hex);
+  const [br, bg, bb] = hexToRgb(base);
   return rgbToHex(
-    Math.round(r + (255 - r) * factor),
-    Math.round(g + (255 - g) * factor),
-    Math.round(b + (255 - b) * factor),
+    Math.round(r + (br - r) * factor),
+    Math.round(g + (bg - g) * factor),
+    Math.round(b + (bb - b) * factor),
   );
 }
 
-export function getColorVariants(color: string): {
+export function getColorVariants(
+  color: string,
+  isDark = false,
+): {
   bg: string;
   border: string;
   dot: string;
 } {
   const hex = normalizeTableColor(color);
+  const base = isDark ? "#1A1918" : "#FDFCFC";
   return {
-    bg: blendWithWhite(hex, 0.72),
-    border: blendWithWhite(hex, 0.55),
+    bg: blendWithBase(hex, isDark ? 0.82 : 0.72, base),
+    border: blendWithBase(hex, isDark ? 0.7 : 0.55, base),
     dot: hex,
   };
 }

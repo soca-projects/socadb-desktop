@@ -4,6 +4,7 @@ import type { Node, Edge, NodeChange, EdgeChange, Connection } from "@xyflow/rea
 import "@xyflow/react/dist/style.css";
 
 import { useSchemaStore } from "../../stores/schemaStore";
+import { useThemeStore } from "../../stores/themeStore";
 import { TableNode } from "../TableNode/TableNode";
 import { RelationEdge } from "../RelationEdge/RelationEdge";
 import { SidePanel } from "../SidePanel/SidePanel";
@@ -66,6 +67,9 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
   const deleteTable = useSchemaStore((s) => s.deleteTable);
   const addRelation = useSchemaStore((s) => s.addRelation);
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
+  const theme = useThemeStore((s) => s.theme);
+
+  const gridColor = theme === "dark" ? "#2A2827" : "#E8E5E6";
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
 
@@ -246,7 +250,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
             deleteKeyCode={DELETE_KEY_CODE}
             proOptions={PRO_OPTIONS}
           >
-            <Background gap={20} size={1} color="#E8E5E6" />
+            <Background gap={20} size={1} color={gridColor} />
             <CanvasControls />
           </ReactFlow>
         </div>
