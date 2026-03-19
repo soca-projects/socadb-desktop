@@ -126,7 +126,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
 
           <button
             onClick={() => deleteColumn(tableId, col.id)}
-            className="shrink-0 rounded-[4px] p-[3px] text-muted opacity-0 transition-all hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+            className="shrink-0 rounded-[4px] p-[3px] text-muted transition-all hover:bg-red-500/10 hover:text-red-500"
             aria-label="Delete column"
           >
             <Trash size={13} />
