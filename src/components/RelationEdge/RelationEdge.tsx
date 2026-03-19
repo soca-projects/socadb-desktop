@@ -1,11 +1,34 @@
 import { memo, useState } from "react";
-import { EdgeLabelRenderer, getSmoothStepPath } from "@xyflow/react";
+import { EdgeLabelRenderer, getSmoothStepPath, Position } from "@xyflow/react";
 import type { EdgeProps } from "@xyflow/react";
 import { TrashIcon as Trash } from "@phosphor-icons/react";
 import type { RelationType } from "../../types/schema";
 import { useSchemaStore } from "../../stores/schemaStore";
 
 const RELATION_TYPES: RelationType[] = ["1:1", "1:N", "N:1"];
+
+type EndType = "one" | "many";
+
+function getEndTypes(relationType: RelationType): [EndType, EndType] {
+  switch (relationType) {
+    case "1:1":
+      return ["one", "one"];
+    case "1:N":
+      return ["one", "many"];
+    case "N:1":
+      return ["many", "one"];
+  }
+}
+
+function markerPath(x: number, y: number, type: EndType, position: Position): string {
+  const dir = position === Position.Right ? 1 : -1;
+  const size = 5;
+
+  if (type === "one") return "";
+
+  const tip = x + dir * 10;
+  return `M ${tip} ${y} L ${x} ${y - size} M ${tip} ${y} L ${x} ${y + size}`;
+}
 
 interface RelationEdgeData {
   relationType: RelationType;
@@ -36,6 +59,16 @@ export const RelationEdge = memo(function RelationEdge({
     borderRadius: 8,
   });
 
+  const strokeColor = selected
+    ? "var(--color-edge-selected)"
+    : hovered
+      ? "var(--color-edge-hovered)"
+      : "var(--color-edge-default)";
+
+  const [sourceEnd, targetEnd] = getEndTypes(data.relationType);
+  const sourceMarkerD = markerPath(sourceX, sourceY, sourceEnd, sourcePosition);
+  const targetMarkerD = markerPath(targetX, targetY, targetEnd, targetPosition);
+
   return (
     <>
       <path
@@ -54,15 +87,27 @@ export const RelationEdge = memo(function RelationEdge({
         fill="none"
         className="react-flow__edge-path"
         style={{
-          stroke: selected
-            ? "var(--color-edge-selected)"
-            : hovered
-              ? "var(--color-edge-hovered)"
-              : "var(--color-edge-default)",
+          stroke: strokeColor,
           strokeWidth: selected ? 2.5 : 1.5,
           transition: "stroke 0.15s, stroke-width 0.15s",
           pointerEvents: "none",
         }}
+      />
+      <path
+        d={sourceMarkerD}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth={selected ? 2.5 : 1.5}
+        strokeLinecap="round"
+        style={{ transition: "stroke 0.15s, stroke-width 0.15s", pointerEvents: "none" }}
+      />
+      <path
+        d={targetMarkerD}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth={selected ? 2.5 : 1.5}
+        strokeLinecap="round"
+        style={{ transition: "stroke 0.15s, stroke-width 0.15s", pointerEvents: "none" }}
       />
       <EdgeLabelRenderer>
         <div
@@ -70,7 +115,7 @@ export const RelationEdge = memo(function RelationEdge({
             position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             pointerEvents: "all",
-            zIndex: selected ? 1000 : 0,
+            zIndex: selected || hovered ? 1000 : 0,
           }}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -108,10 +153,10 @@ export const RelationEdge = memo(function RelationEdge({
             </div>
           ) : (
             <div
-              className={`nodrag nopan cursor-pointer rounded border px-2 py-0.5 font-mono text-[11px] font-medium shadow-soft transition-[color,background-color,border-color,transform] duration-150 ${
+              className={`nodrag nopan cursor-pointer rounded border px-2 py-0.5 font-mono text-[11px] font-medium shadow-soft transition-[color,background-color,border-color,opacity,transform] duration-150 ${
                 hovered
-                  ? "scale-110 border-accent/30 bg-accent-light text-accent"
-                  : "border-border bg-surface text-tertiary"
+                  ? "scale-110 border-accent/30 bg-accent-light text-accent opacity-100"
+                  : "border-border bg-surface text-tertiary opacity-0"
               }`}
             >
               {data.relationType}

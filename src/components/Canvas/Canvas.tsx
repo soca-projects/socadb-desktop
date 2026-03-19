@@ -246,7 +246,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
             elevateEdgesOnSelect
             fitView
             minZoom={0.1}
-            maxZoom={2}
+            maxZoom={8}
             deleteKeyCode={DELETE_KEY_CODE}
             proOptions={PRO_OPTIONS}
           >
