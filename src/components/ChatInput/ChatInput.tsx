@@ -50,7 +50,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         autoComplete="off"
         spellCheck={false}
         rows={1}
-        className="flex-1 resize-none rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-stone-700 placeholder-stone-400 outline-none transition-colors focus:border-accent disabled:opacity-50"
+        className="flex-1 resize-none rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-secondary placeholder:text-tertiary outline-none transition-colors focus:border-accent disabled:opacity-50"
       />
       <button
         onClick={handleSend}

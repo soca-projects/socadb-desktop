@@ -68,10 +68,10 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div className="w-full max-w-md animate-fade-in rounded-xl border border-border bg-surface shadow-float">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-[15px] font-semibold text-stone-800">Setup Agents</h2>
+          <h2 className="text-[15px] font-semibold text-primary">Setup Agents</h2>
           <button
             onClick={onClose}
-            className="rounded p-1 text-stone-400 transition-colors hover:bg-surface-muted hover:text-stone-600"
+            className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
             aria-label="Close"
           >
             <X size={16} />
@@ -79,16 +79,16 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
         </div>
 
         <div className="p-5">
-          <p className="mb-4 text-[13px] font-medium text-stone-600">Agents on Canvas</p>
+          <p className="mb-4 text-[13px] font-medium text-secondary">Agents on Canvas</p>
 
           <div className="rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-[14px]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-[14px]">
                   ⬡
                 </div>
                 <div>
-                  <p className="text-[13px] font-medium text-stone-700">
+                  <p className="text-[13px] font-medium text-secondary">
                     Anthropic Claude Code
                   </p>
                   {isConnected ? (
@@ -97,11 +97,11 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
                       Connected{provider?.email ? ` (${provider.email})` : ""}
                     </p>
                   ) : status && !status.installed ? (
-                    <p className="text-[12px] text-stone-400">Not installed</p>
+                    <p className="text-[12px] text-tertiary">Not installed</p>
                   ) : status && !status.authenticated ? (
-                    <p className="text-[12px] text-stone-400">Not authenticated</p>
+                    <p className="text-[12px] text-tertiary">Not authenticated</p>
                   ) : (
-                    <p className="text-[12px] text-stone-400">Checking...</p>
+                    <p className="text-[12px] text-tertiary">Checking...</p>
                   )}
                 </div>
               </div>
@@ -120,24 +120,24 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
             {!isConnected && status && (
               <div className="mt-4 rounded-lg bg-surface-muted p-3">
                 {!status.installed ? (
-                  <div className="space-y-2 text-[12px] text-stone-600">
+                  <div className="space-y-2 text-[12px] text-secondary">
                     <p className="font-medium">Install Claude Code</p>
-                    <code className="block rounded bg-white px-2 py-1.5 font-mono text-[11px] text-stone-500">
+                    <code className="block rounded bg-surface px-2 py-1.5 font-mono text-[11px] text-tertiary">
                       curl -fsSL https://claude.ai/install.sh | bash
                     </code>
                     <p className="mt-2 font-medium">Then sign in</p>
-                    <code className="block rounded bg-white px-2 py-1.5 font-mono text-[11px] text-stone-500">
+                    <code className="block rounded bg-surface px-2 py-1.5 font-mono text-[11px] text-tertiary">
                       claude
                     </code>
                   </div>
                 ) : (
-                  <div className="space-y-2 text-[12px] text-stone-600">
+                  <div className="space-y-2 text-[12px] text-secondary">
                     <p className="font-medium">Sign in with your Claude subscription</p>
                     <p>Run in your terminal:</p>
-                    <code className="block rounded bg-white px-2 py-1.5 font-mono text-[11px] text-stone-500">
+                    <code className="block rounded bg-surface px-2 py-1.5 font-mono text-[11px] text-tertiary">
                       claude
                     </code>
-                    <p className="text-stone-400">
+                    <p className="text-tertiary">
                       Select "Claude account with subscription" and sign in. SocaDB will
                       detect the connection automatically.
                     </p>

@@ -1,9 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react";
-import {
-  XIcon as X,
-  ArrowsOutIcon as ArrowsOut,
-  ChatCircleIcon as ChatCircle,
-} from "@phosphor-icons/react";
+import { XIcon as X, ChatCircleIcon as ChatCircle } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../../stores/chatStore";
 import { useSchemaStore } from "../../stores/schemaStore";
@@ -65,6 +61,58 @@ ${JSON.stringify(serialized, null, 2)}
 - Be concise`;
 }
 
+type ResizeAxis = "both" | "vertical" | "horizontal";
+
+function useResize(initial: { width: number; height: number }) {
+  const [size, setSize] = useState(initial);
+
+  const startResize = useCallback(
+    (e: React.MouseEvent, axis: ResizeAxis) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startW = size.width;
+      const startH = size.height;
+
+      const cursorMap: Record<ResizeAxis, string> = {
+        both: "nwse-resize",
+        vertical: "ns-resize",
+        horizontal: "ew-resize",
+      };
+      document.body.style.cursor = cursorMap[axis];
+      document.body.style.userSelect = "none";
+
+      const onMove = (ev: MouseEvent) => {
+        const dw = axis !== "vertical" ? startX - ev.clientX : 0;
+        const dh = axis !== "horizontal" ? startY - ev.clientY : 0;
+        setSize({
+          width: Math.min(
+            Math.max(startW + dw, CHAT_PANEL_MIN_WIDTH),
+            CHAT_PANEL_MAX_WIDTH,
+          ),
+          height: Math.min(
+            Math.max(startH + dh, CHAT_PANEL_MIN_HEIGHT),
+            CHAT_PANEL_MAX_HEIGHT,
+          ),
+        });
+      };
+
+      const onUp = () => {
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+      };
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    },
+    [size],
+  );
+
+  return { size, startResize };
+}
+
 export function ChatPanel() {
   const isPanelOpen = useChatStore((s) => s.isPanelOpen);
   const messages = useChatStore((s) => s.messages);
@@ -77,7 +125,7 @@ export function ChatPanel() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({
+  const { size, startResize } = useResize({
     width: CHAT_PANEL_DEFAULT_WIDTH,
     height: CHAT_PANEL_DEFAULT_HEIGHT,
   });
@@ -103,46 +151,12 @@ export function ChatPanel() {
     [addUserMessage, startAssistantMessage, sessionId, isPanelOpen, togglePanel],
   );
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startW = size.width;
-      const startH = size.height;
-
-      const onMove = (ev: MouseEvent) => {
-        const dw = startX - ev.clientX;
-        const dh = startY - ev.clientY;
-        setSize({
-          width: Math.min(
-            Math.max(startW + dw, CHAT_PANEL_MIN_WIDTH),
-            CHAT_PANEL_MAX_WIDTH,
-          ),
-          height: Math.min(
-            Math.max(startH + dh, CHAT_PANEL_MIN_HEIGHT),
-            CHAT_PANEL_MAX_HEIGHT,
-          ),
-        });
-      };
-
-      const onUp = () => {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-      };
-
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-    },
-    [size],
-  );
-
   const isConnected = provider?.connected ?? false;
 
   if (!isPanelOpen) {
     return (
       <div className="fixed bottom-4 right-4 z-50 flex w-[340px] items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-card transition-shadow hover:shadow-float">
-        <ChatCircle size={16} className="flex-shrink-0 text-stone-400" />
+        <ChatCircle size={16} className="flex-shrink-0 text-tertiary" />
         <input
           type="text"
           placeholder={
@@ -152,7 +166,7 @@ export function ChatPanel() {
           }
           disabled={!isConnected}
           readOnly={!isConnected}
-          className="flex-1 bg-transparent text-[13px] text-stone-700 placeholder-stone-400 outline-none disabled:opacity-50"
+          className="flex-1 bg-transparent text-[13px] text-secondary placeholder:text-tertiary outline-none disabled:opacity-50"
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
@@ -179,17 +193,23 @@ export function ChatPanel() {
       style={{ width: size.width, height: size.height }}
     >
       <div
-        className="absolute left-0 top-0 cursor-nw-resize p-1"
-        onMouseDown={handleResizeStart}
-      >
-        <ArrowsOut size={12} className="rotate-90 text-stone-300" />
-      </div>
+        className="absolute left-3 right-0 top-0 z-10 h-1.5 cursor-ns-resize"
+        onMouseDown={(e) => startResize(e, "vertical")}
+      />
+      <div
+        className="absolute bottom-0 left-0 top-3 z-10 w-1.5 cursor-ew-resize"
+        onMouseDown={(e) => startResize(e, "horizontal")}
+      />
+      <div
+        className="absolute left-0 top-0 z-20 h-3 w-3 cursor-nwse-resize"
+        onMouseDown={(e) => startResize(e, "both")}
+      />
 
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <span className="text-[13px] font-medium text-stone-700">AI Chat</span>
+        <span className="text-[13px] font-medium text-secondary">AI Chat</span>
         <button
           onClick={togglePanel}
-          className="rounded p-1 text-stone-400 transition-colors hover:bg-surface-muted hover:text-stone-600"
+          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
           aria-label="Close chat"
         >
           <X size={14} />
@@ -199,7 +219,7 @@ export function ChatPanel() {
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            <p className="text-[13px] text-stone-400">
+            <p className="text-[13px] text-tertiary">
               {isConnected
                 ? "What do you want to build?"
                 : "Connect a provider in Settings to start."}
@@ -215,7 +235,7 @@ export function ChatPanel() {
                   <button
                     key={suggestion}
                     onClick={() => handleSend(suggestion)}
-                    className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-stone-500 transition-colors hover:border-stone-300 hover:bg-surface-muted hover:text-stone-700"
+                    className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
                   >
                     {suggestion}
                   </button>

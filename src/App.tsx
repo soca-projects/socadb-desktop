@@ -11,9 +11,11 @@ import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
 import { registerMcpServers } from "./utils/mcpRegistration";
 import { initSessionPersistence } from "./utils/sessionPersistence";
 import { initChatPersistence } from "./utils/chatPersistence";
+import { initThemePersistence } from "./utils/themePersistence";
 
 initSessionPersistence();
 initChatPersistence();
+initThemePersistence();
 
 function App() {
   useAppMenu();

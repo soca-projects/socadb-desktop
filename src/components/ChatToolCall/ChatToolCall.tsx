@@ -44,10 +44,10 @@ export function ChatToolCall({ toolCall }: ChatToolCallProps) {
     <div className="my-1">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[12px] text-stone-500 transition-colors hover:bg-surface-muted"
+        className="flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[12px] text-tertiary transition-colors hover:bg-surface-muted"
       >
         {isPending ? (
-          <span className="h-3.5 w-3.5 animate-spin rounded-full border border-stone-300 border-t-stone-500" />
+          <span className="h-3.5 w-3.5 animate-spin rounded-full border border-[var(--color-fg-muted)] border-t-[var(--color-fg-tertiary)]" />
         ) : toolCall.isSuccess ? (
           <CheckCircle size={14} weight="fill" className="text-emerald-500" />
         ) : (
@@ -61,7 +61,7 @@ export function ChatToolCall({ toolCall }: ChatToolCallProps) {
       </button>
 
       {expanded && (
-        <pre className="ml-5 mt-1 max-h-32 overflow-auto rounded bg-surface-muted px-2 py-1.5 font-mono text-[11px] text-stone-500">
+        <pre className="ml-5 mt-1 max-h-32 overflow-auto rounded bg-surface-muted px-2 py-1.5 font-mono text-[11px] text-tertiary">
           {JSON.stringify(toolCall.input, null, 2)}
           {toolCall.result && (
             <>

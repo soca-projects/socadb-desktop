@@ -8,6 +8,7 @@ import {
   saveSchemaFileAs,
 } from "../utils/fileOperations";
 import { handleUndo, handleRedo } from "../utils/schemaActions";
+import { useThemeStore } from "../stores/themeStore";
 import { exportCanvasPng } from "../utils/exportPng";
 import { exportCanvasSvg } from "../utils/exportSvg";
 import { exportSql } from "../utils/exportSql";
@@ -153,6 +154,12 @@ async function setupMenu() {
         text: "Toggle Sidebar",
         accelerator: "CmdOrCtrl+B",
         action: () => void emit("toggle-sidebar"),
+      }),
+      await MenuItem.new({
+        id: "toggle_theme",
+        text: "Toggle Theme",
+        accelerator: "CmdOrCtrl+Shift+T",
+        action: () => useThemeStore.getState().toggleTheme(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Fullscreen" }),

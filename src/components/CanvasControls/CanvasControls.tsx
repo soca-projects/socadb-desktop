@@ -15,8 +15,8 @@ import { useSchemaStore } from "../../stores/schemaStore";
 const zoomSelector = (s: ReactFlowState) => Math.round(s.transform[2] * 100);
 
 const btnClass =
-  "px-2 py-1.5 text-stone-500 transition-colors hover:bg-surface-muted hover:text-stone-700";
-const btnDisabledClass = "px-2 py-1.5 text-stone-300 cursor-not-allowed";
+  "px-2 py-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary";
+const btnDisabledClass = "px-2 py-1.5 text-muted cursor-not-allowed";
 
 export function CanvasControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
@@ -42,7 +42,7 @@ export function CanvasControls() {
           >
             <Minus size={14} />
           </button>
-          <span className="min-w-[42px] border-x border-border-light px-2 py-1.5 text-center font-mono text-[11px] text-stone-500">
+          <span className="min-w-[42px] border-x border-border-light px-2 py-1.5 text-center font-mono text-[11px] text-tertiary">
             {percentage}%
           </span>
           <button

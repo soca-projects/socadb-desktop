@@ -88,7 +88,7 @@ export const RelationEdge = memo(function RelationEdge({
                   className={`rounded-md px-2 py-1 font-mono text-[11px] font-medium transition-colors ${
                     data.relationType === type
                       ? "bg-accent text-white"
-                      : "text-stone-500 hover:bg-surface-muted hover:text-stone-700"
+                      : "text-tertiary hover:bg-surface-muted hover:text-secondary"
                   }`}
                 >
                   {type}
@@ -101,7 +101,7 @@ export const RelationEdge = memo(function RelationEdge({
                   e.stopPropagation();
                   useSchemaStore.getState().deleteRelation(id);
                 }}
-                className="rounded-md p-1 text-stone-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                className="rounded-md p-1 text-tertiary transition-colors hover:bg-red-500/10 hover:text-red-500"
               >
                 <Trash size={13} />
               </button>
@@ -111,7 +111,7 @@ export const RelationEdge = memo(function RelationEdge({
               className={`nodrag nopan cursor-pointer rounded border px-2 py-0.5 font-mono text-[11px] font-medium shadow-soft transition-[color,background-color,border-color,transform] duration-150 ${
                 hovered
                   ? "scale-110 border-accent/30 bg-accent-light text-accent"
-                  : "border-stone-200 bg-surface text-stone-400"
+                  : "border-border bg-surface text-tertiary"
               }`}
             >
               {data.relationType}

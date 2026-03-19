@@ -36,7 +36,7 @@ export function ContextMenu({
       <button
         role="menuitem"
         onClick={onRename}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
       >
         <PencilSimple size={14} />
         Rename
@@ -44,7 +44,7 @@ export function ContextMenu({
       <button
         role="menuitem"
         onClick={onDuplicate}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
       >
         <Copy size={14} />
         Duplicate
@@ -53,7 +53,7 @@ export function ContextMenu({
       <button
         role="menuitem"
         onClick={onDelete}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-50"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10"
       >
         <Trash size={14} />
         Delete Table

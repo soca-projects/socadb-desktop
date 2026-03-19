@@ -13,6 +13,7 @@ import {
   PencilSimpleIcon as PencilSimple,
 } from "@phosphor-icons/react";
 import { useSchemaStore } from "../../stores/schemaStore";
+import { useThemeStore } from "../../stores/themeStore";
 import { genId } from "../../utils/id";
 import { createTable } from "../../utils/schemaActions";
 import { TOOLBAR_HEIGHT } from "../../utils/layout";
@@ -29,7 +30,7 @@ const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
 };
 
 const BADGE_INACTIVE =
-  "bg-transparent text-stone-400 border-transparent hover:bg-stone-100 hover:text-stone-500";
+  "bg-transparent text-tertiary border-transparent hover:bg-surface-muted hover:text-tertiary";
 const BADGE_ACTIVE = {
   default: "bg-accent/10 text-accent border-accent/20",
   amber: "bg-badge-primary-bg text-badge-primary border-badge-primary-border",
@@ -74,10 +75,10 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
   return (
     <div className="group relative">
       <div className="absolute left-0 top-0 flex h-full w-5 items-center justify-center opacity-0 transition-opacity group-hover:opacity-40">
-        <DragHandle size={10} className="text-stone-400" />
+        <DragHandle size={10} className="text-tertiary" />
       </div>
 
-      <div className="rounded-md py-1.5 pl-5 pr-2 transition-colors group-hover:bg-surface/80">
+      <div className="rounded-md py-1.5 pl-5 pr-2 transition-colors group-hover:bg-surface-muted/50">
         <div className="flex items-center gap-1.5">
           <div className="flex w-3.5 shrink-0 items-center justify-center">
             {col.isPrimaryKey ? (
@@ -85,7 +86,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
             ) : col.isForeignKey ? (
               <Link size={13} weight="bold" className="text-blue-500" />
             ) : (
-              <Hash size={13} className="text-stone-300" />
+              <Hash size={13} className="text-muted" />
             )}
           </div>
 
@@ -96,7 +97,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
             defaultValue={col.name}
             onBlur={(e) => updateColumn(tableId, col.id, { name: e.target.value })}
             onKeyDown={blurOnEnter}
-            className="min-w-0 flex-1 truncate bg-transparent font-mono text-[13px] font-medium text-stone-800 outline-none placeholder:text-stone-300 focus:text-stone-900"
+            className="min-w-0 flex-1 truncate bg-transparent font-mono text-[13px] font-medium text-primary outline-none placeholder:text-muted focus:text-primary"
             placeholder="column_name"
           />
 
@@ -108,7 +109,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
                   type: e.target.value as ColumnType,
                 })
               }
-              className="cursor-pointer appearance-none rounded-[4px] border border-border bg-surface py-0.5 pl-1.5 pr-4 font-mono text-[11px] text-stone-500 outline-none transition-all hover:border-stone-300 hover:text-stone-700 focus:border-accent/40"
+              className="cursor-pointer appearance-none rounded-[4px] border border-border bg-surface py-0.5 pl-1.5 pr-4 font-mono text-[11px] text-tertiary outline-none transition-all hover:border-border-hover hover:text-secondary focus:border-accent/40"
             >
               {columnTypes.map((t) => (
                 <option key={t} value={t}>
@@ -119,13 +120,13 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
             <CaretUpDown
               size={8}
               weight="bold"
-              className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-stone-400"
+              className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-tertiary"
             />
           </div>
 
           <button
             onClick={() => deleteColumn(tableId, col.id)}
-            className="shrink-0 rounded-[4px] p-[3px] text-stone-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+            className="shrink-0 rounded-[4px] p-[3px] text-muted transition-all hover:bg-red-500/10 hover:text-red-500"
             aria-label="Delete column"
           >
             <Trash size={13} />
@@ -215,7 +216,7 @@ function TableMenu({
       <button
         ref={buttonRef}
         onClick={handleToggle}
-        className="rounded-[4px] p-1 text-stone-500 transition-all hover:bg-surface-muted hover:text-stone-700"
+        className="rounded-[4px] p-1 text-tertiary transition-all hover:bg-surface-muted hover:text-secondary"
         aria-label="Table options"
       >
         <DotsThreeVertical size={14} weight="bold" />
@@ -234,7 +235,7 @@ function TableMenu({
               onRename();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
           >
             <PencilSimple size={14} />
             Rename
@@ -245,7 +246,7 @@ function TableMenu({
               onAddColumn();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-stone-700 transition-colors hover:bg-surface-muted"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
           >
             <Plus size={14} />
             Add column
@@ -257,7 +258,7 @@ function TableMenu({
               onDelete();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-50"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10"
           >
             <Trash size={14} />
             Delete table
@@ -286,6 +287,7 @@ function TableItem({
   const updateTable = useSchemaStore((s) => s.updateTable);
   const deleteTable = useSchemaStore((s) => s.deleteTable);
   const addColumn = useSchemaStore((s) => s.addColumn);
+  const isDark = useThemeStore((s) => s.theme === "dark");
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -320,15 +322,15 @@ function TableItem({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <div className="flex h-4 w-4 shrink-0 items-center justify-center">
             {isOpen ? (
-              <CaretDown size={12} weight="bold" className="text-stone-400" />
+              <CaretDown size={12} weight="bold" className="text-tertiary" />
             ) : (
-              <CaretRight size={12} weight="bold" className="text-stone-400" />
+              <CaretRight size={12} weight="bold" className="text-tertiary" />
             )}
           </div>
           {table.color && (
             <span
               className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: getColorVariants(table.color).dot }}
+              style={{ backgroundColor: getColorVariants(table.color, isDark).dot }}
             />
           )}
           {isRenaming ? (
@@ -344,14 +346,14 @@ function TableItem({
                 onRenameEnd();
               }}
               onKeyDown={blurOnEnter}
-              className="min-w-0 flex-1 bg-transparent font-mono text-sm font-medium text-stone-800 outline-none focus:text-accent"
+              className="min-w-0 flex-1 bg-transparent font-mono text-sm font-medium text-primary outline-none focus:text-accent"
             />
           ) : (
-            <span className="truncate font-mono text-sm font-medium text-stone-800">
+            <span className="truncate font-mono text-sm font-medium text-primary">
               {table.name}
             </span>
           )}
-          <span className="shrink-0 rounded-full bg-stone-200/60 px-1.5 py-[1px] font-mono text-[11px] text-stone-400">
+          <span className="shrink-0 rounded-full border border-border-light bg-surface-muted px-1.5 py-[1px] font-mono text-[11px] text-tertiary">
             {table.columns.length}
           </span>
         </div>
@@ -367,7 +369,7 @@ function TableItem({
           <div className="mx-3 mb-2 mt-1">
             <div className="flex items-center gap-1.5">
               {PRESET_COLORS.map((preset) => {
-                const v = getColorVariants(preset);
+                const v = getColorVariants(preset, isDark);
                 const isActive =
                   !!table.color && normalizeTableColor(table.color) === preset;
                 return (
@@ -401,7 +403,7 @@ function TableItem({
           <div className="mx-3 mt-1">
             <button
               onClick={handleAddColumn}
-              className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-stone-300 py-2 text-xs font-medium text-stone-500 transition-all hover:border-accent/40 hover:bg-accent/[0.03] hover:text-accent"
+              className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border py-2 text-xs font-medium text-tertiary transition-all hover:border-accent/40 hover:bg-accent/[0.03] hover:text-accent"
             >
               <Plus size={12} weight="bold" />
               Add column
@@ -441,10 +443,10 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
       }}
     >
       <div className="flex items-center justify-between px-3 py-3">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-stone-400">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-tertiary">
           Tables
         </span>
-        <span className="rounded-full bg-stone-200/60 px-1.5 py-[1px] font-mono text-[11px] text-stone-400">
+        <span className="rounded-full border border-border-light bg-surface-muted px-1.5 py-[1px] font-mono text-[11px] text-tertiary">
           {tables.length}
         </span>
       </div>
@@ -452,22 +454,22 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
       <div className="flex-1 overflow-y-auto">
         {tables.length === 0 ? (
           <div className="flex animate-fade-in flex-col items-center px-4 pt-10 text-center">
-            <p className="text-[13px] leading-relaxed text-stone-500">
+            <p className="text-[13px] leading-relaxed text-tertiary">
               No tables yet. Create one to start building your schema.
             </p>
-            <div className="mt-5 space-y-1 self-stretch text-left text-[12px] text-stone-400">
+            <div className="mt-5 space-y-1 self-stretch text-left text-[12px] text-tertiary">
               <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
-                <span className="shrink-0 font-mono text-[11px] text-stone-500">1.</span>
+                <span className="shrink-0 font-mono text-[11px] text-tertiary">1.</span>
                 <span>Add tables and define columns</span>
               </div>
               <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
-                <span className="shrink-0 font-mono text-[11px] text-stone-500">2.</span>
+                <span className="shrink-0 font-mono text-[11px] text-tertiary">2.</span>
                 <span>Drag between columns to create relations</span>
               </div>
               <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
-                <span className="shrink-0 font-mono text-[11px] text-stone-500">3.</span>
+                <span className="shrink-0 font-mono text-[11px] text-tertiary">3.</span>
                 <span>
-                  Save as <span className="font-mono text-stone-500">.soca</span> and
+                  Save as <span className="font-mono text-tertiary">.soca</span> and
                   export
                 </span>
               </div>
@@ -494,7 +496,7 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
       <div className="border-t border-border p-3">
         <button
           onClick={handleAddTable}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-[13px] font-medium text-stone-700 transition-all hover:border-stone-300 hover:bg-surface-muted hover:text-stone-900 active:scale-[0.98]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-[13px] font-medium text-secondary transition-all hover:border-border-hover hover:bg-surface-muted hover:text-primary active:scale-[0.98]"
         >
           <Plus size={15} weight="bold" />
           New Table
