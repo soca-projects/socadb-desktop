@@ -9,24 +9,39 @@ export default {
       },
       colors: {
         accent: {
-          DEFAULT: "#C74B68",
-          hover: "#B34058",
-          light: "#FDF2F5",
+          DEFAULT: "rgb(var(--color-accent) / <alpha-value>)",
+          hover: "var(--color-accent-hover)",
+          light: "var(--color-accent-light)",
         },
         surface: {
-          DEFAULT: "#FDFCFC",
-          canvas: "#F9F8F8",
-          muted: "#F4F2F3",
-          sidebar: "#F9F8F8",
+          DEFAULT: "var(--color-surface)",
+          canvas: "var(--color-surface-canvas)",
+          muted: "rgb(var(--color-surface-muted) / <alpha-value>)",
+          sidebar: "var(--color-surface-sidebar)",
         },
         border: {
-          DEFAULT: "#E8E5E6",
-          light: "#F2F0F1",
+          DEFAULT: "var(--color-border)",
+          light: "var(--color-border-light)",
+          hover: "var(--color-border-hover)",
         },
         badge: {
-          primary: { DEFAULT: "#D97706", bg: "#FFFBEB", border: "rgba(217, 119, 6, 0.2)" },
-          unique: { DEFAULT: "#2563EB", bg: "#EFF6FF", border: "rgba(37, 99, 235, 0.2)" },
+          primary: {
+            DEFAULT: "var(--color-badge-primary-text)",
+            bg: "var(--color-badge-primary-bg)",
+            border: "var(--color-badge-primary-border)",
+          },
+          unique: {
+            DEFAULT: "var(--color-badge-unique-text)",
+            bg: "var(--color-badge-unique-bg)",
+            border: "var(--color-badge-unique-border)",
+          },
         },
+      },
+      textColor: {
+        primary: "var(--color-fg)",
+        secondary: "var(--color-fg-secondary)",
+        tertiary: "var(--color-fg-tertiary)",
+        muted: "var(--color-fg-muted)",
       },
       borderRadius: {
         DEFAULT: "8px",
@@ -35,9 +50,9 @@ export default {
         xl: "16px",
       },
       boxShadow: {
-        soft: "0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03)",
-        card: "0 2px 8px 0 rgba(0, 0, 0, 0.06)",
-        float: "0 4px 16px 0 rgba(0, 0, 0, 0.1)",
+        soft: "var(--shadow-soft)",
+        card: "var(--shadow-card)",
+        float: "var(--shadow-float)",
       },
       keyframes: {
         "fade-in": {
