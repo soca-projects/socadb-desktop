@@ -58,4 +58,6 @@ jobs:
 
       - name: Clippy
         working-directory: src-tauri
+        env:
+          TAURI_CONFIG: '{"bundle":{"resources":{}}}'
         run: cargo clippy -- -D warnings
