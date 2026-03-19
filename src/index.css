@@ -92,19 +92,19 @@
   --color-accent-hover: #d4667e;
   --color-accent-light: #2a1f23;
 
-  --color-surface: #1a1918;
-  --color-surface-canvas: #141313;
-  --color-surface-muted: 37 35 35;
-  --color-surface-sidebar: #1a1918;
+  --color-surface: #242222;
+  --color-surface-canvas: #1c1b1a;
+  --color-surface-muted: 47 44 45;
+  --color-surface-sidebar: #242222;
 
   --color-fg: #e7e5e4;
   --color-fg-secondary: #d6d3d1;
   --color-fg-tertiary: #8a8380;
   --color-fg-muted: #57534e;
 
-  --color-border: #2e2b2c;
-  --color-border-light: #252223;
-  --color-border-hover: #3d3a3b;
+  --color-border: #3d3a3b;
+  --color-border-light: #322f30;
+  --color-border-hover: #4a4647;
 
   --color-badge-primary-text: #f59e0b;
   --color-badge-primary-bg: #2a2215;
@@ -119,7 +119,7 @@
   --color-edge-hover-zone: rgba(199, 75, 104, 0.15);
 
   --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.15), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.35);
   --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -130,6 +130,16 @@ body {
   -webkit-font-smoothing: antialiased;
   background-color: var(--color-surface);
   color: var(--color-fg);
+}
+
+[data-theme-transition] *,
+[data-theme-transition] *::before,
+[data-theme-transition] *::after {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.15s ease,
+    box-shadow 0.3s ease !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

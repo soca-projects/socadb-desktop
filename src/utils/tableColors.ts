@@ -66,7 +66,7 @@ export function getColorVariants(
   dot: string;
 } {
   const hex = normalizeTableColor(color);
-  const base = isDark ? "#1A1918" : "#FDFCFC";
+  const base = isDark ? "#242222" : "#FDFCFC";
   return {
     bg: blendWithBase(hex, isDark ? 0.82 : 0.72, base),
     border: blendWithBase(hex, isDark ? 0.7 : 0.55, base),

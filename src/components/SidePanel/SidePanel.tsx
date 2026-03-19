@@ -353,7 +353,7 @@ function TableItem({
               {table.name}
             </span>
           )}
-          <span className="shrink-0 rounded-full bg-surface-muted px-1.5 py-[1px] font-mono text-[11px] text-tertiary">
+          <span className="shrink-0 rounded-full border border-border-light bg-surface-muted px-1.5 py-[1px] font-mono text-[11px] text-tertiary">
             {table.columns.length}
           </span>
         </div>
@@ -446,7 +446,7 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
         <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-tertiary">
           Tables
         </span>
-        <span className="rounded-full bg-surface-muted px-1.5 py-[1px] font-mono text-[11px] text-tertiary">
+        <span className="rounded-full border border-border-light bg-surface-muted px-1.5 py-[1px] font-mono text-[11px] text-tertiary">
           {tables.length}
         </span>
       </div>

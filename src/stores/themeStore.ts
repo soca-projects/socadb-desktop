@@ -9,6 +9,22 @@ function getInitialTheme(): Theme {
   return "dark";
 }
 
+function applyTheme(theme: Theme) {
+  const el = document.documentElement;
+  el.dataset.theme = theme;
+  el.style.colorScheme = theme;
+  localStorage.setItem("socadb_theme", theme);
+}
+
+function applyThemeWithTransition(theme: Theme) {
+  const el = document.documentElement;
+  el.dataset.themeTransition = "";
+  applyTheme(theme);
+  setTimeout(() => {
+    delete el.dataset.themeTransition;
+  }, 350);
+}
+
 interface ThemeState {
   theme: Theme;
   setTheme: (theme: Theme) => void;
@@ -18,17 +34,13 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>((set) => ({
   theme: getInitialTheme(),
   setTheme: (theme) => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    localStorage.setItem("socadb_theme", theme);
+    applyTheme(theme);
     set({ theme });
   },
   toggleTheme: () => {
     set((state) => {
       const next = state.theme === "light" ? "dark" : "light";
-      document.documentElement.dataset.theme = next;
-      document.documentElement.style.colorScheme = next;
-      localStorage.setItem("socadb_theme", next);
+      applyThemeWithTransition(next);
       return { theme: next };
     });
   },

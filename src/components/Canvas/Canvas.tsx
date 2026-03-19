@@ -69,7 +69,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
   const theme = useThemeStore((s) => s.theme);
 
-  const gridColor = theme === "dark" ? "#2A2827" : "#E8E5E6";
+  const gridColor = theme === "dark" ? "#333030" : "#E8E5E6";
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
 
