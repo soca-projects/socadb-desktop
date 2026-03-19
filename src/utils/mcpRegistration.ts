@@ -1,6 +1,6 @@
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { homeDir, join } from "@tauri-apps/api/path";
-import { message } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 
 interface McpServerConfig {
   command: string;
@@ -9,18 +9,7 @@ interface McpServerConfig {
 }
 
 async function getMcpBinaryPath(): Promise<string> {
-  // In dev, use the compiled binary from mcp-server/dist
-  // In prod, it would be inside the .app bundle
-  const home = await homeDir();
-  const devPath = await join(
-    home,
-    "socadb",
-    "socadb-desktop",
-    "mcp-server",
-    "dist",
-    "socadb-mcp",
-  );
-  return devPath;
+  return invoke<string>("get_mcp_binary_path");
 }
 
 function addMcpServer(
@@ -91,25 +80,13 @@ async function registerClaudeDesktop(binaryPath: string): Promise<boolean> {
 export async function registerMcpServers() {
   try {
     const binaryPath = await getMcpBinaryPath();
-    const registered: string[] = [];
 
-    if (await registerClaudeCode(binaryPath)) {
-      registered.push("Claude Code");
-    }
+    await registerClaudeCode(binaryPath);
 
     try {
-      if (await registerClaudeDesktop(binaryPath)) {
-        registered.push("Claude Desktop");
-      }
+      await registerClaudeDesktop(binaryPath);
     } catch {
       // Claude Desktop not installed, skip
-    }
-
-    if (registered.length > 0) {
-      await message(
-        `SocaDB MCP server registered with: ${registered.join(", ")}.\n\nYou can now use SocaDB tools in your AI CLI.`,
-        { title: "MCP Setup Complete", kind: "info" },
-      );
     }
   } catch (e) {
     console.error("MCP registration failed:", e);
