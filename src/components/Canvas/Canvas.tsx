@@ -69,7 +69,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
   const theme = useThemeStore((s) => s.theme);
 
-  const gridColor = theme === "dark" ? "#333030" : "#E8E5E6";
+  const gridColor = theme === "dark" ? "#3A3737" : "#DBD8D9";
 
   const focusMode = useFocusStore((s) => s.focusMode);
   const toggleFocusMode = useFocusStore((s) => s.toggleFocusMode);
@@ -255,11 +255,11 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
             elevateEdgesOnSelect
             onInit={(instance) => instance.fitView({ padding: 0.2 })}
             minZoom={0.1}
-            maxZoom={8}
+            maxZoom={2}
             deleteKeyCode={DELETE_KEY_CODE}
             proOptions={PRO_OPTIONS}
           >
-            <Background gap={20} size={1} color={gridColor} />
+            <Background gap={12} size={2} color={gridColor} />
             {!focusMode && <CanvasControls isSidePanelOpen={sidePanelOpen} />}
           </ReactFlow>
           {focusMode && (
