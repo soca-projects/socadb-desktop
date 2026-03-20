@@ -5,6 +5,7 @@ import "@xyflow/react/dist/style.css";
 
 import { useSchemaStore } from "../../stores/schemaStore";
 import { useThemeStore } from "../../stores/themeStore";
+import { useFocusStore } from "../../stores/focusStore";
 import { TableNode } from "../TableNode/TableNode";
 import { RelationEdge } from "../RelationEdge/RelationEdge";
 import { SidePanel } from "../SidePanel/SidePanel";
@@ -70,21 +71,23 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
 
   const gridColor = theme === "dark" ? "#333030" : "#E8E5E6";
 
+  const focusMode = useFocusStore((s) => s.focusMode);
+  const toggleFocusMode = useFocusStore((s) => s.toggleFocusMode);
+
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
-  const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
     const unlistenSidebar = listen("toggle-sidebar", () => {
       setSidePanelOpen((prev) => !prev);
     });
     const unlistenFocus = listen("toggle-focus-mode", () => {
-      setFocusMode((prev) => !prev);
+      toggleFocusMode();
     });
     return () => {
       void unlistenSidebar.then((fn) => fn());
       void unlistenFocus.then((fn) => fn());
     };
-  }, []);
+  }, [toggleFocusMode]);
   const [openTableId, setOpenTableId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -206,10 +209,6 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
   const handleAddFirstTable = useCallback(() => {
     const newId = createTable();
     setOpenTableId(newId);
-  }, []);
-
-  const toggleFocusMode = useCallback(() => {
-    setFocusMode((prev) => !prev);
   }, []);
 
   return (
