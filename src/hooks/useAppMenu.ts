@@ -102,6 +102,13 @@ async function setupMenu() {
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
+        id: "import",
+        text: "Import...",
+        accelerator: "CmdOrCtrl+I",
+        action: () => void emit("open-import"),
+      }),
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      await MenuItem.new({
         id: "export",
         text: "Export...",
         accelerator: "CmdOrCtrl+E",

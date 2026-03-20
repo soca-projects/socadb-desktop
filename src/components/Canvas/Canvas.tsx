@@ -14,6 +14,7 @@ import { CanvasControls } from "../CanvasControls/CanvasControls";
 import { ContextMenu } from "../ContextMenu/ContextMenu";
 import { EmptyCanvas } from "../EmptyCanvas/EmptyCanvas";
 import { ExportModal } from "../ExportModal/ExportModal";
+import { ImportModal } from "../ImportModal/ImportModal";
 import { listen } from "@tauri-apps/api/event";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
@@ -77,6 +78,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     const unlistenSidebar = listen("toggle-sidebar", () => {
@@ -88,10 +90,14 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
     const unlistenExport = listen("open-export", () => {
       setExportModalOpen(true);
     });
+    const unlistenImport = listen("open-import", () => {
+      setImportModalOpen(true);
+    });
     return () => {
       void unlistenSidebar.then((fn) => fn());
       void unlistenFocus.then((fn) => fn());
       void unlistenExport.then((fn) => fn());
+      void unlistenImport.then((fn) => fn());
     };
   }, [toggleFocusMode]);
   const [openTableId, setOpenTableId] = useState<string | null>(null);
@@ -306,6 +312,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
       )}
 
       {exportModalOpen && <ExportModal onClose={() => setExportModalOpen(false)} />}
+      {importModalOpen && <ImportModal onClose={() => setImportModalOpen(false)} />}
     </div>
   );
 }
