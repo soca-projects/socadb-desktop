@@ -156,6 +156,12 @@ async function setupMenu() {
         action: () => void emit("toggle-sidebar"),
       }),
       await MenuItem.new({
+        id: "toggle_focus",
+        text: "Focus Mode",
+        accelerator: "CmdOrCtrl+Shift+F",
+        action: () => void emit("toggle-focus-mode"),
+      }),
+      await MenuItem.new({
         id: "toggle_theme",
         text: "Toggle Theme",
         accelerator: "CmdOrCtrl+Shift+T",

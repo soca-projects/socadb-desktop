@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { XIcon as X, ChatCircleIcon as ChatCircle } from "@phosphor-icons/react";
+import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../../stores/chatStore";
 import { useSchemaStore } from "../../stores/schemaStore";
@@ -129,10 +130,20 @@ export function ChatPanel() {
     width: CHAT_PANEL_DEFAULT_WIDTH,
     height: CHAT_PANEL_DEFAULT_HEIGHT,
   });
+  const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const unlisten = listen("toggle-focus-mode", () => {
+      setFocusMode((prev) => !prev);
+    });
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, []);
 
   const handleSend = useCallback(
     (content: string) => {
@@ -152,6 +163,8 @@ export function ChatPanel() {
   );
 
   const isConnected = provider?.connected ?? false;
+
+  if (focusMode) return null;
 
   if (!isPanelOpen) {
     return (

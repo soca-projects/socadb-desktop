@@ -1,5 +1,5 @@
 export const SIDE_PANEL_WIDTH = 280;
-export const TOOLBAR_HEIGHT = 48;
+export const TOOLBAR_HEIGHT = 40;
 
 export const CHAT_PANEL_DEFAULT_WIDTH = 380;
 export const CHAT_PANEL_DEFAULT_HEIGHT = 480;

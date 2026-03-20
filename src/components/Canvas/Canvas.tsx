@@ -71,13 +71,18 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
   const gridColor = theme === "dark" ? "#333030" : "#E8E5E6";
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
-    const unlisten = listen("toggle-sidebar", () => {
+    const unlistenSidebar = listen("toggle-sidebar", () => {
       setSidePanelOpen((prev) => !prev);
     });
+    const unlistenFocus = listen("toggle-focus-mode", () => {
+      setFocusMode((prev) => !prev);
+    });
     return () => {
-      void unlisten.then((fn) => fn());
+      void unlistenSidebar.then((fn) => fn());
+      void unlistenFocus.then((fn) => fn());
     };
   }, []);
   const [openTableId, setOpenTableId] = useState<string | null>(null);
@@ -203,23 +208,32 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
     setOpenTableId(newId);
   }, []);
 
+  const toggleFocusMode = useCallback(() => {
+    setFocusMode((prev) => !prev);
+  }, []);
+
   return (
     <div className="flex flex-col w-screen h-screen bg-surface-canvas">
-      <Toolbar
-        isSidePanelOpen={sidePanelOpen}
-        onToggleSidePanel={() => setSidePanelOpen(!sidePanelOpen)}
-        onOpenAgentSetup={onOpenAgentSetup}
-      />
+      {!focusMode && (
+        <Toolbar
+          isSidePanelOpen={sidePanelOpen}
+          onToggleSidePanel={() => setSidePanelOpen(!sidePanelOpen)}
+          onToggleFocusMode={toggleFocusMode}
+          onOpenAgentSetup={onOpenAgentSetup}
+        />
+      )}
 
       <div className="relative flex flex-1">
-        <SidePanel
-          isOpen={sidePanelOpen}
-          openTableId={openTableId}
-          onOpenTable={setOpenTableId}
-        />
+        {!focusMode && (
+          <SidePanel
+            isOpen={sidePanelOpen}
+            openTableId={openTableId}
+            onOpenTable={setOpenTableId}
+          />
+        )}
 
         <div className="relative flex-1">
-          {tables.length === 0 && (
+          {tables.length === 0 && !focusMode && (
             <EmptyCanvas
               onAddTable={handleAddFirstTable}
               isSidePanelOpen={sidePanelOpen}
@@ -247,8 +261,20 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
             proOptions={PRO_OPTIONS}
           >
             <Background gap={20} size={1} color={gridColor} />
-            <CanvasControls isSidePanelOpen={sidePanelOpen} />
+            {!focusMode && <CanvasControls isSidePanelOpen={sidePanelOpen} />}
           </ReactFlow>
+          {focusMode && (
+            <button
+              onClick={toggleFocusMode}
+              className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-tertiary shadow-soft transition-colors hover:bg-surface-muted hover:text-secondary"
+            >
+              Press{" "}
+              <kbd className="mx-0.5 rounded border border-border-light bg-surface-muted px-1 py-0.5 font-mono text-[10px]">
+                {"\u2318\u21E7"}F
+              </kbd>{" "}
+              to exit focus mode
+            </button>
+          )}
         </div>
       </div>
 
