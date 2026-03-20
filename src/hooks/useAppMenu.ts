@@ -9,9 +9,6 @@ import {
 } from "../utils/fileOperations";
 import { handleUndo, handleRedo } from "../utils/schemaActions";
 import { useThemeStore } from "../stores/themeStore";
-import { exportCanvasPng } from "../utils/exportPng";
-import { exportCanvasSvg } from "../utils/exportSvg";
-import { exportSql } from "../utils/exportSql";
 
 async function handleSave() {
   const { schema, filePath, setFilePath, markSaved } = useSchemaStore.getState();
@@ -105,20 +102,10 @@ async function setupMenu() {
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
-        id: "export_png",
-        text: "Export PNG...",
-        action: () => void exportCanvasPng(),
-      }),
-      await MenuItem.new({
-        id: "export_svg",
-        text: "Export SVG...",
-        action: () => void exportCanvasSvg(),
-      }),
-      await MenuItem.new({
-        id: "export_sql",
-        text: "Export SQL...",
+        id: "export",
+        text: "Export...",
         accelerator: "CmdOrCtrl+E",
-        action: () => void exportSql(),
+        action: () => void emit("open-export"),
       }),
     ],
   });
@@ -154,6 +141,12 @@ async function setupMenu() {
         text: "Toggle Sidebar",
         accelerator: "CmdOrCtrl+B",
         action: () => void emit("toggle-sidebar"),
+      }),
+      await MenuItem.new({
+        id: "toggle_focus",
+        text: "Focus Mode",
+        accelerator: "CmdOrCtrl+Shift+F",
+        action: () => void emit("toggle-focus-mode"),
       }),
       await MenuItem.new({
         id: "toggle_theme",

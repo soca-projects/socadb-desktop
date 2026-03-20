@@ -3,6 +3,7 @@ import { XIcon as X, ChatCircleIcon as ChatCircle } from "@phosphor-icons/react"
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../../stores/chatStore";
 import { useSchemaStore } from "../../stores/schemaStore";
+import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
 import {
@@ -129,6 +130,7 @@ export function ChatPanel() {
     width: CHAT_PANEL_DEFAULT_WIDTH,
     height: CHAT_PANEL_DEFAULT_HEIGHT,
   });
+  const focusMode = useFocusStore((s) => s.focusMode);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -152,6 +154,8 @@ export function ChatPanel() {
   );
 
   const isConnected = provider?.connected ?? false;
+
+  if (focusMode) return null;
 
   if (!isPanelOpen) {
     return (

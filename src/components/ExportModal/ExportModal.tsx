@@ -1,0 +1,146 @@
+import { useState } from "react";
+import {
+  XIcon as X,
+  FileCodeIcon as FileCode,
+  ImageIcon as Image,
+  BracketsAngleIcon as BracketsAngle,
+} from "@phosphor-icons/react";
+import { useSchemaStore } from "../../stores/schemaStore";
+import { exportCanvasPng } from "../../utils/exportPng";
+import { exportCanvasSvg } from "../../utils/exportSvg";
+import { exportSql } from "../../utils/exportSql";
+import { exportJson } from "../../utils/exportJson";
+
+type ExportType = "sql" | "image" | "json";
+type ImageFormat = "png" | "svg";
+
+interface ExportModalProps {
+  onClose: () => void;
+}
+
+export function ExportModal({ onClose }: ExportModalProps) {
+  const [selected, setSelected] = useState<ExportType>("sql");
+  const [imageFormat, setImageFormat] = useState<ImageFormat>("png");
+  const dbType = useSchemaStore((s) => s.schema.dbType);
+
+  const handleExport = () => {
+    switch (selected) {
+      case "sql":
+        void exportSql();
+        break;
+      case "image":
+        if (imageFormat === "png") void exportCanvasPng();
+        else void exportCanvasSvg();
+        break;
+      case "json":
+        void exportJson();
+        break;
+    }
+    onClose();
+  };
+
+  const cards: {
+    type: ExportType;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      type: "sql",
+      label: dbType === "mysql" ? "MySQL" : "PostgreSQL",
+      description: "Export as SQL DDL statements",
+      icon: <FileCode size={24} />,
+    },
+    {
+      type: "image",
+      label: "Image",
+      description: "Export diagram as an image",
+      icon: <Image size={24} />,
+    },
+    {
+      type: "json",
+      label: "JSON",
+      description: "Export schema as JSON data",
+      icon: <BracketsAngle size={24} />,
+    },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-labelledby="export-title"
+        className="w-full max-w-[480px] rounded-xl border border-border bg-surface p-6 shadow-float"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 id="export-title" className="text-base font-semibold text-primary">
+              Export diagram
+            </h2>
+            <p className="mt-1 text-[13px] text-tertiary">
+              Choose a format to export your schema.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          {cards.map((card) => (
+            <button
+              key={card.type}
+              onClick={() => setSelected(card.type)}
+              className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-all ${
+                selected === card.type
+                  ? "border-accent bg-accent/[0.05] text-accent"
+                  : "border-border text-tertiary hover:border-border-hover hover:text-secondary"
+              }`}
+            >
+              {card.icon}
+              <span className="text-[13px] font-medium">{card.label}</span>
+              <span className="text-[11px] leading-tight text-tertiary">
+                {card.description}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {selected === "image" && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-surface-muted p-1">
+            {(["png", "svg"] as const).map((fmt) => (
+              <button
+                key={fmt}
+                onClick={() => setImageFormat(fmt)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all ${
+                  imageFormat === fmt
+                    ? "bg-surface text-accent shadow-soft"
+                    : "text-tertiary hover:text-secondary"
+                }`}
+              >
+                {fmt.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-5 flex justify-end">
+          <button
+            onClick={handleExport}
+            className="rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98]"
+          >
+            Export
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

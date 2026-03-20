@@ -5,6 +5,7 @@ import "@xyflow/react/dist/style.css";
 
 import { useSchemaStore } from "../../stores/schemaStore";
 import { useThemeStore } from "../../stores/themeStore";
+import { useFocusStore } from "../../stores/focusStore";
 import { TableNode } from "../TableNode/TableNode";
 import { RelationEdge } from "../RelationEdge/RelationEdge";
 import { SidePanel } from "../SidePanel/SidePanel";
@@ -12,10 +13,10 @@ import { Toolbar } from "../Toolbar/Toolbar";
 import { CanvasControls } from "../CanvasControls/CanvasControls";
 import { ContextMenu } from "../ContextMenu/ContextMenu";
 import { EmptyCanvas } from "../EmptyCanvas/EmptyCanvas";
+import { ExportModal } from "../ExportModal/ExportModal";
 import { listen } from "@tauri-apps/api/event";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
-import { SIDE_PANEL_WIDTH } from "../../utils/layout";
 import type { Table, Relation } from "../../types/schema";
 
 const nodeTypes = { table: TableNode };
@@ -69,18 +70,30 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
   const theme = useThemeStore((s) => s.theme);
 
-  const gridColor = theme === "dark" ? "#333030" : "#E8E5E6";
+  const gridColor = theme === "dark" ? "#3A3737" : "#DBD8D9";
+
+  const focusMode = useFocusStore((s) => s.focusMode);
+  const toggleFocusMode = useFocusStore((s) => s.toggleFocusMode);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   useEffect(() => {
-    const unlisten = listen("toggle-sidebar", () => {
+    const unlistenSidebar = listen("toggle-sidebar", () => {
       setSidePanelOpen((prev) => !prev);
     });
+    const unlistenFocus = listen("toggle-focus-mode", () => {
+      toggleFocusMode();
+    });
+    const unlistenExport = listen("open-export", () => {
+      setExportModalOpen(true);
+    });
     return () => {
-      void unlisten.then((fn) => fn());
+      void unlistenSidebar.then((fn) => fn());
+      void unlistenFocus.then((fn) => fn());
+      void unlistenExport.then((fn) => fn());
     };
-  }, []);
+  }, [toggleFocusMode]);
   const [openTableId, setOpenTableId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -206,24 +219,26 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
 
   return (
     <div className="flex flex-col w-screen h-screen bg-surface-canvas">
-      <Toolbar
-        isSidePanelOpen={sidePanelOpen}
-        onToggleSidePanel={() => setSidePanelOpen(!sidePanelOpen)}
-        onOpenAgentSetup={onOpenAgentSetup}
-      />
+      {!focusMode && (
+        <Toolbar
+          isSidePanelOpen={sidePanelOpen}
+          onToggleSidePanel={() => setSidePanelOpen(!sidePanelOpen)}
+          onToggleFocusMode={toggleFocusMode}
+          onOpenAgentSetup={onOpenAgentSetup}
+        />
+      )}
 
       <div className="relative flex flex-1">
-        <SidePanel
-          isOpen={sidePanelOpen}
-          openTableId={openTableId}
-          onOpenTable={setOpenTableId}
-        />
+        {!focusMode && (
+          <SidePanel
+            isOpen={sidePanelOpen}
+            openTableId={openTableId}
+            onOpenTable={setOpenTableId}
+          />
+        )}
 
-        <div
-          className="relative flex-1"
-          style={{ marginLeft: sidePanelOpen ? SIDE_PANEL_WIDTH : 0 }}
-        >
-          {tables.length === 0 && (
+        <div className="relative flex-1">
+          {tables.length === 0 && !focusMode && (
             <EmptyCanvas
               onAddTable={handleAddFirstTable}
               isSidePanelOpen={sidePanelOpen}
@@ -244,15 +259,27 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
             onEdgeMouseLeave={onEdgeMouseLeave}
             onPaneClick={handleCloseContextMenu}
             elevateEdgesOnSelect
-            fitView
+            onInit={(instance) => instance.fitView({ padding: 0.2 })}
             minZoom={0.1}
             maxZoom={2}
             deleteKeyCode={DELETE_KEY_CODE}
             proOptions={PRO_OPTIONS}
           >
-            <Background gap={20} size={1} color={gridColor} />
-            <CanvasControls />
+            <Background gap={12} size={2} color={gridColor} />
+            {!focusMode && <CanvasControls isSidePanelOpen={sidePanelOpen} />}
           </ReactFlow>
+          {focusMode && (
+            <button
+              onClick={toggleFocusMode}
+              className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-tertiary shadow-soft transition-colors hover:bg-surface-muted hover:text-secondary"
+            >
+              Press{" "}
+              <kbd className="mx-0.5 rounded border border-border-light bg-surface-muted px-1 py-0.5 font-mono text-[10px]">
+                {"\u2318\u21E7"}F
+              </kbd>{" "}
+              to exit focus mode
+            </button>
+          )}
         </div>
       </div>
 
@@ -277,6 +304,8 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
           onClose={handleCloseContextMenu}
         />
       )}
+
+      {exportModalOpen && <ExportModal onClose={() => setExportModalOpen(false)} />}
     </div>
   );
 }
