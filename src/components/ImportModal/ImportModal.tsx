@@ -1,9 +1,7 @@
 import { useState } from "react";
-import {
-  XIcon as X,
-  FileCodeIcon as FileCode,
-  BracketsAngleIcon as BracketsAngle,
-} from "@phosphor-icons/react";
+import { XIcon as X, BracketsCurlyIcon as BracketsCurly } from "@phosphor-icons/react";
+import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
+import { MysqlIcon } from "../../assets/icons/MysqlIcon";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { message } from "@tauri-apps/plugin-dialog";
@@ -30,6 +28,7 @@ interface ImportModalProps {
 }
 
 export function ImportModal({ onClose }: ImportModalProps) {
+  const dbType = useSchemaStore((s) => s.schema.dbType);
   const [format, setFormat] = useState<ImportFormat>("sql");
   const [mode, setMode] = useState<ImportMode>("replace");
   const [conflict, setConflict] = useState<ConflictState | null>(null);
@@ -265,15 +264,15 @@ export function ImportModal({ onClose }: ImportModalProps) {
   }[] = [
     {
       type: "sql",
-      label: "SQL",
-      description: "Import from SQL DDL file",
-      icon: <FileCode size={24} />,
+      label: dbType === "mysql" ? "MySQL DDL" : "PostgreSQL DDL",
+      description: `Import from a ${dbType === "mysql" ? "MySQL" : "PostgreSQL"} DDL file`,
+      icon: dbType === "mysql" ? <MysqlIcon size={24} /> : <PostgresqlIcon size={24} />,
     },
     {
       type: "json",
       label: "JSON",
       description: "Import from JSON file",
-      icon: <BracketsAngle size={24} />,
+      icon: <BracketsCurly size={24} />,
     },
   ];
 
