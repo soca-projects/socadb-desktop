@@ -83,6 +83,10 @@ function handleEvent(parsed: ChatEvent) {
       break;
 
     case "done":
+      if (parsed.response) {
+        ensureAssistantMessage();
+        store.setAssistantText(parsed.response as string);
+      }
       store.finishResponse((parsed.sessionId as string) ?? "");
       break;
 
@@ -100,11 +104,13 @@ export function useChatStream() {
 
     const unlistenPromise = listen<StreamEvent>("chat-stream", (event) => {
       if (cancelled) return;
+      console.log("[chat-stream raw]", event.payload.raw);
       try {
         const parsed = JSON.parse(event.payload.raw) as ChatEvent;
+        console.log("[chat-stream parsed]", parsed.type, parsed.event);
         handleEvent(parsed);
-      } catch {
-        // Invalid JSON — ignore
+      } catch (e) {
+        console.error("[chat-stream parse error]", e, event.payload.raw);
       }
     });
 

@@ -46,6 +46,7 @@ let currentSessionId: string | undefined;
 
 async function handleChatSend(cmd: ChatSendCommand) {
   abortController = new AbortController();
+  console.error("[agent] handleChatSend", cmd.message.slice(0, 50));
 
   try {
     const options: Options = {
@@ -59,6 +60,7 @@ async function handleChatSend(cmd: ChatSendCommand) {
       maxTurns: 500,
       allowedTools: ["mcp__socadb", "WebSearch", "WebFetch"],
       permissionMode: "bypassPermissions" as const,
+      includePartialMessages: true,
       mcpServers: {
         socadb: {
           command: getMcpBinaryPath(),
@@ -77,11 +79,13 @@ async function handleChatSend(cmd: ChatSendCommand) {
       }
     }
 
+    console.error("[agent] calling query()");
     currentQuery = query({
       prompt: cmd.message,
       options,
     });
 
+    console.error("[agent] starting iteration");
     let finalResponse = "";
 
     for await (const message of currentQuery) {
@@ -146,6 +150,7 @@ async function handleChatSend(cmd: ChatSendCommand) {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[agent] error:", errorMessage);
     emit({
       type: "chat_event",
       event: "error",
