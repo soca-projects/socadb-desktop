@@ -19,6 +19,7 @@ interface SchemaState {
   addRelation: (relation: Relation) => void;
   updateRelation: (id: string, updates: Partial<Relation>) => void;
   deleteRelation: (id: string) => void;
+  importTables: (tables: Table[], relations: Relation[]) => void;
 }
 
 export function createEmptySchema(
@@ -150,6 +151,14 @@ export const useSchemaStore = create<SchemaState>()(
         set((state) => ({
           schema: patchSchema(state.schema, {
             relations: state.schema.relations.filter((r) => r.id !== id),
+          }),
+        })),
+
+      importTables: (tables, relations) =>
+        set((state) => ({
+          schema: patchSchema(state.schema, {
+            tables: [...state.schema.tables, ...tables],
+            relations: [...state.schema.relations, ...relations],
           }),
         })),
     }),
