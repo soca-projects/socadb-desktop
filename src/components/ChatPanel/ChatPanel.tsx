@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { XIcon as X, ChatCircleIcon as ChatCircle } from "@phosphor-icons/react";
-import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../../stores/chatStore";
+import { sendChatMessage, stopChat, initChat } from "../../hooks/useChatStream";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
@@ -136,22 +136,35 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (isPanelOpen) {
+      void initChat();
+    }
+  }, [isPanelOpen]);
+
   const handleSend = useCallback(
     (content: string) => {
+      if (isStreaming) return;
       if (!isPanelOpen) togglePanel();
       addUserMessage(content);
       startAssistantMessage();
 
       const systemPrompt = buildSystemPrompt();
-
-      void invoke("chat_send", {
-        message: content,
-        systemPrompt,
-        sessionId: sessionId ?? undefined,
-      });
+      sendChatMessage(content, systemPrompt, sessionId ?? undefined);
     },
-    [addUserMessage, startAssistantMessage, sessionId, isPanelOpen, togglePanel],
+    [
+      addUserMessage,
+      startAssistantMessage,
+      sessionId,
+      isPanelOpen,
+      togglePanel,
+      isStreaming,
+    ],
   );
+
+  const handleStop = useCallback(() => {
+    stopChat();
+  }, []);
 
   const isConnected = provider?.connected ?? false;
 
@@ -169,7 +182,6 @@ export function ChatPanel() {
               : "Connect a provider to start..."
           }
           disabled={!isConnected}
-          readOnly={!isConnected}
           className="flex-1 bg-transparent text-[13px] text-secondary placeholder:text-tertiary outline-none disabled:opacity-50"
           autoCorrect="off"
           autoComplete="off"
@@ -257,7 +269,12 @@ export function ChatPanel() {
         )}
       </div>
 
-      <ChatInput onSend={handleSend} disabled={isStreaming || !isConnected} />
+      <ChatInput
+        onSend={handleSend}
+        onStop={handleStop}
+        disabled={!isConnected}
+        isStreaming={isStreaming}
+      />
     </div>
   );
 }

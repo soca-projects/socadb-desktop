@@ -1,15 +1,23 @@
-import { invoke } from "@tauri-apps/api/core";
+import { checkChatStatus } from "../hooks/useChatStream";
+import type { ChatStatusResult } from "../types/chat";
 
-interface ProviderStatus {
+export interface ProviderStatus {
   installed: boolean;
   authenticated: boolean;
   email: string | null;
+  loginType: string | null;
 }
 
 export async function detectClaudeCode(): Promise<ProviderStatus> {
   try {
-    return await invoke<ProviderStatus>("detect_provider");
+    const status: ChatStatusResult = await checkChatStatus();
+    return {
+      installed: true,
+      authenticated: status.loggedIn,
+      email: status.email,
+      loginType: status.loginType,
+    };
   } catch {
-    return { installed: false, authenticated: false, email: null };
+    return { installed: false, authenticated: false, email: null, loginType: null };
   }
 }

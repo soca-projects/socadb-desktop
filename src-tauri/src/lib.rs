@@ -62,9 +62,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             mcp_respond,
-            chat::detect_provider,
+            chat::chat_init,
             chat::chat_send,
             chat::chat_stop,
+            chat::chat_status,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

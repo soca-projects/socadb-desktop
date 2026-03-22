@@ -14,8 +14,7 @@ interface ChatState {
   setAssistantText: (text: string) => void;
   appendAssistantText: (text: string) => void;
   addToolCall: (toolCall: ToolCallInfo) => void;
-  setToolCalls: (toolCalls: ToolCallInfo[]) => void;
-  updateLastToolCall: (result: string, isSuccess: boolean) => void;
+  updateLastToolCall: (toolUseId: string, result: string, isSuccess: boolean) => void;
   finishResponse: (sessionId: string) => void;
   togglePanel: () => void;
   clearHistory: () => void;
@@ -93,24 +92,14 @@ export const useChatStore = create<ChatState>()((set) => ({
       return { messages: msgs };
     }),
 
-  setToolCalls: (toolCalls) =>
-    set((state) => {
-      const msgs = [...state.messages];
-      const last = msgs[msgs.length - 1];
-      if (last?.role === "assistant") {
-        msgs[msgs.length - 1] = { ...last, toolCalls };
-      }
-      return { messages: msgs };
-    }),
-
-  updateLastToolCall: (result, isSuccess) =>
+  updateLastToolCall: (toolUseId, result, isSuccess) =>
     set((state) => {
       const msgs = [...state.messages];
       const last = msgs[msgs.length - 1];
       if (last?.role === "assistant" && last.toolCalls.length > 0) {
-        const toolCalls = [...last.toolCalls];
-        const lastTool = toolCalls[toolCalls.length - 1];
-        toolCalls[toolCalls.length - 1] = { ...lastTool, result, isSuccess };
+        const toolCalls = last.toolCalls.map((tc) =>
+          tc.id === toolUseId ? { ...tc, result, isSuccess } : tc,
+        );
         msgs[msgs.length - 1] = { ...last, toolCalls };
       }
       return { messages: msgs };

@@ -23,7 +23,7 @@ async function runDetection(
     id: "claude-code";
     name: string;
     connected: boolean;
-    connectionMethod: "subscription";
+    connectionMethod: "subscription" | "api-key";
     email: string | null;
   }) => void,
 ) {
@@ -35,7 +35,9 @@ async function runDetection(
       id: "claude-code" as const,
       name: "Anthropic Claude Code",
       connected: true,
-      connectionMethod: "subscription" as const,
+      connectionMethod: (result.loginType === "api-key" ? "api-key" : "subscription") as
+        | "subscription"
+        | "api-key",
       email: result.email,
     };
     setProvider(p);
@@ -94,7 +96,8 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
                   {isConnected ? (
                     <p className="flex items-center gap-1 text-[12px] text-emerald-600">
                       <CheckCircle size={12} weight="fill" />
-                      Connected{provider?.email ? ` (${provider.email})` : ""}
+                      Connected via {provider?.connectionMethod ?? "subscription"}
+                      {provider?.email ? ` (${provider.email})` : ""}
                     </p>
                   ) : status && !status.installed ? (
                     <p className="text-[12px] text-tertiary">Not installed</p>
