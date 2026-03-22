@@ -27,14 +27,7 @@ fn agent_runner_path() -> String {
         .to_string()
 }
 
-async fn ensure_agent(app: &AppHandle) -> Result<(), String> {
-    let agent = get_agent();
-    let mut guard = agent.lock().await;
-
-    if guard.is_some() {
-        return Ok(());
-    }
-
+async fn spawn_agent(app: &AppHandle) -> Result<AgentProcess, String> {
     let mut child = Command::new("npx")
         .args(["tsx", &agent_runner_path()])
         .current_dir(
@@ -80,11 +73,23 @@ async fn ensure_agent(app: &AppHandle) -> Result<(), String> {
         });
     }
 
-    *guard = Some(AgentProcess { stdin });
+    Ok(AgentProcess { stdin })
+}
+
+async fn ensure_agent(app: &AppHandle) -> Result<(), String> {
+    let agent = get_agent();
+    let mut guard = agent.lock().await;
+
+    if guard.is_some() {
+        return Ok(());
+    }
+
+    let process = spawn_agent(app).await?;
+    *guard = Some(process);
     Ok(())
 }
 
-async fn send_to_agent(cmd: &serde_json::Value) -> Result<(), String> {
+async fn send_to_agent_inner(cmd: &serde_json::Value) -> Result<(), String> {
     let agent = get_agent();
     let mut guard = agent.lock().await;
     let process = guard.as_mut().ok_or("Agent not running")?;
@@ -93,7 +98,20 @@ async fn send_to_agent(cmd: &serde_json::Value) -> Result<(), String> {
         .stdin
         .write_all(format!("{line}\n").as_bytes())
         .await
-        .map_err(|e| format!("Failed to write to agent: {e}"))
+        .map_err(|e| {
+            *guard = None;
+            format!("Failed to write to agent: {e}")
+        })
+}
+
+async fn send_to_agent(app: &AppHandle, cmd: &serde_json::Value) -> Result<(), String> {
+    if let Ok(()) = send_to_agent_inner(cmd).await {
+        return Ok(());
+    }
+
+    eprintln!("[chat] Agent dead, restarting...");
+    ensure_agent(app).await?;
+    send_to_agent_inner(cmd).await
 }
 
 #[derive(Serialize, Clone)]
@@ -104,7 +122,7 @@ struct StreamEvent {
 #[tauri::command]
 pub async fn chat_init(app: AppHandle) -> Result<(), String> {
     ensure_agent(&app).await?;
-    send_to_agent(&serde_json::json!({ "type": "chat_init" })).await
+    send_to_agent(&app, &serde_json::json!({ "type": "chat_init" })).await
 }
 
 #[tauri::command]
@@ -116,23 +134,26 @@ pub async fn chat_send(
     model: Option<String>,
 ) -> Result<(), String> {
     ensure_agent(&app).await?;
-    send_to_agent(&serde_json::json!({
-        "type": "chat_send",
-        "message": message,
-        "systemPrompt": system_prompt,
-        "sessionId": session_id,
-        "model": model,
-    }))
+    send_to_agent(
+        &app,
+        &serde_json::json!({
+            "type": "chat_send",
+            "message": message,
+            "systemPrompt": system_prompt,
+            "sessionId": session_id,
+            "model": model,
+        }),
+    )
     .await
 }
 
 #[tauri::command]
-pub async fn chat_stop() -> Result<(), String> {
-    send_to_agent(&serde_json::json!({ "type": "chat_stop" })).await
+pub async fn chat_stop(app: AppHandle) -> Result<(), String> {
+    send_to_agent(&app, &serde_json::json!({ "type": "chat_stop" })).await
 }
 
 #[tauri::command]
 pub async fn chat_status(app: AppHandle) -> Result<(), String> {
     ensure_agent(&app).await?;
-    send_to_agent(&serde_json::json!({ "type": "chat_status" })).await
+    send_to_agent(&app, &serde_json::json!({ "type": "chat_status" })).await
 }
