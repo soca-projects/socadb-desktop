@@ -5,6 +5,7 @@ import {
   ArrowClockwiseIcon as ArrowClockwise,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
+import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
 import { detectClaudeCode } from "../../utils/providerDetection";
 import { saveProviderConfig } from "../../utils/chatPersistence";
 
@@ -86,8 +87,8 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
           <div className="rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-[14px]">
-                  ⬡
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#D97757]/10">
+                  <ClaudeIcon size={18} />
                 </div>
                 <div>
                   <p className="text-[13px] font-medium text-secondary">
