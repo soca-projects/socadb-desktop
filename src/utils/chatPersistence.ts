@@ -2,11 +2,10 @@ import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { homeDir } from "@tauri-apps/api/path";
 import { useChatStore } from "../stores/chatStore";
 import { detectClaudeCode } from "./providerDetection";
-import type { ChatMessage, Provider } from "../types/chat";
+import type { Conversation, Provider } from "../types/chat";
 
-interface ChatHistoryFile {
-  messages: ChatMessage[];
-  sessionId: string | null;
+interface ConversationsFile {
+  conversations: Conversation[];
 }
 
 interface ConfigFile {
@@ -23,9 +22,9 @@ async function getSocadbDir(): Promise<string> {
   return socadbDir;
 }
 
-async function chatHistoryPath(): Promise<string> {
+async function conversationsPath(): Promise<string> {
   const dir = await getSocadbDir();
-  return `${dir}chat-history.json`;
+  return `${dir}conversations.json`;
 }
 
 async function configPath(): Promise<string> {
@@ -33,28 +32,46 @@ async function configPath(): Promise<string> {
   return `${dir}config.json`;
 }
 
-async function saveChatHistory() {
+async function saveConversations() {
   try {
-    const { messages, sessionId } = useChatStore.getState();
-    const data: ChatHistoryFile = { messages, sessionId };
-    await writeTextFile(await chatHistoryPath(), JSON.stringify(data));
+    const { conversations } = useChatStore.getState();
+    const data: ConversationsFile = { conversations };
+    await writeTextFile(await conversationsPath(), JSON.stringify(data));
   } catch {
-    // ~/.socadb/ might not exist yet or write failed — silently ignore
+    // Write failed — silently ignore
   }
 }
 
-async function loadChatHistory() {
+async function loadConversations() {
   try {
-    const content = await readTextFile(await chatHistoryPath());
-    const data = JSON.parse(content) as ChatHistoryFile;
-    if (data.messages) {
-      useChatStore.getState().setMessages(data.messages);
-    }
-    if (data.sessionId) {
-      useChatStore.getState().setSessionId(data.sessionId);
+    const content = await readTextFile(await conversationsPath());
+    const data = JSON.parse(content) as ConversationsFile;
+    if (data.conversations?.length > 0) {
+      useChatStore.getState().setConversations(data.conversations);
     }
   } catch {
     // File doesn't exist yet — first launch
+  }
+
+  // Ensure at least one conversation exists
+  if (useChatStore.getState().conversations.length === 0) {
+    useChatStore.getState().newConversation();
+  }
+
+  // Migrate old chat-history.json if it exists
+  try {
+    const dir = await getSocadbDir();
+    const oldPath = `${dir}chat-history.json`;
+    const content = await readTextFile(oldPath);
+    const data = JSON.parse(content) as { messages: unknown[]; sessionId: string | null };
+    if (data.messages?.length > 0 && useChatStore.getState().conversations.length === 0) {
+      useChatStore.getState().setMessages(data.messages as Conversation["messages"]);
+      if (data.sessionId) {
+        useChatStore.getState().setSessionId(data.sessionId);
+      }
+    }
+  } catch {
+    // No old history — normal
   }
 }
 
@@ -78,7 +95,7 @@ export async function loadProviderConfig(): Promise<Provider | null> {
 }
 
 export function initChatPersistence() {
-  void loadChatHistory();
+  void loadConversations();
   void loadProviderConfig().then(async (provider) => {
     if (provider?.connected) {
       useChatStore.getState().setProvider(provider);
@@ -90,7 +107,7 @@ export function initChatPersistence() {
         id: "claude-code",
         name: "Anthropic Claude Code",
         connected: true,
-        connectionMethod: "subscription",
+        connectionMethod: result.loginType === "api-key" ? "api-key" : "subscription",
         email: result.email,
       };
       useChatStore.getState().setProvider(p);
@@ -98,5 +115,5 @@ export function initChatPersistence() {
     }
   });
 
-  useChatStore.subscribe(saveChatHistory);
+  useChatStore.subscribe(saveConversations);
 }

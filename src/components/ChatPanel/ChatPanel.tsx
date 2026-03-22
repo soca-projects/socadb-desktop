@@ -1,8 +1,14 @@
 import { useRef, useEffect, useCallback, useState } from "react";
-import { XIcon as X, ChatCircleIcon as ChatCircle } from "@phosphor-icons/react";
+import {
+  XIcon as X,
+  ChatCircleIcon as ChatCircle,
+  CaretDownIcon as CaretDown,
+  PlusIcon as Plus,
+} from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../hooks/useChatStream";
 import { useSchemaStore } from "../../stores/schemaStore";
+import { SUPPORTED_MODELS, DEFAULT_MODEL } from "../../types/chat";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
@@ -120,10 +126,15 @@ export function ChatPanel() {
   const isStreaming = useChatStore((s) => s.isStreaming);
   const sessionId = useChatStore((s) => s.sessionId);
   const provider = useChatStore((s) => s.provider);
+  const conversations = useChatStore((s) => s.conversations);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
   const togglePanel = useChatStore((s) => s.togglePanel);
   const addUserMessage = useChatStore((s) => s.addUserMessage);
   const startAssistantMessage = useChatStore((s) => s.startAssistantMessage);
+  const newConversation = useChatStore((s) => s.newConversation);
+  const switchConversation = useChatStore((s) => s.switchConversation);
 
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { size, startResize } = useResize({
@@ -150,7 +161,7 @@ export function ChatPanel() {
       startAssistantMessage();
 
       const systemPrompt = buildSystemPrompt();
-      sendChatMessage(content, systemPrompt, sessionId ?? undefined);
+      sendChatMessage(content, systemPrompt, sessionId ?? undefined, selectedModel);
     },
     [
       addUserMessage,
@@ -159,6 +170,7 @@ export function ChatPanel() {
       isPanelOpen,
       togglePanel,
       isStreaming,
+      selectedModel,
     ],
   );
 
@@ -221,8 +233,51 @@ export function ChatPanel() {
         onMouseDown={(e) => startResize(e, "both")}
       />
 
-      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <span className="text-[13px] font-medium text-secondary">AI Chat</span>
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <div className="relative min-w-0 flex-1">
+          <select
+            value={activeConversationId ?? ""}
+            onChange={(e) => switchConversation(e.target.value)}
+            disabled={isStreaming}
+            className="w-full appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
+          >
+            {conversations.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <CaretDown
+            size={10}
+            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
+          />
+        </div>
+        <div className="relative">
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={isStreaming}
+            className="appearance-none rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
+          >
+            {SUPPORTED_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.displayName}
+              </option>
+            ))}
+          </select>
+          <CaretDown
+            size={10}
+            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
+          />
+        </div>
+        <button
+          onClick={newConversation}
+          disabled={isStreaming}
+          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary disabled:opacity-50"
+          aria-label="New chat"
+        >
+          <Plus size={14} />
+        </button>
         <button
           onClick={togglePanel}
           className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"

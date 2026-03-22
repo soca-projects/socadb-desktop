@@ -26,6 +26,15 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export interface Conversation {
+  id: string;
+  name: string;
+  sessionId: string | null;
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ChatStatusResult {
   loggedIn: boolean;
   email: string | null;
