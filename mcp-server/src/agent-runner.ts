@@ -1,6 +1,22 @@
 #!/usr/bin/env node
 import { query, listSessions, type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
 import { createInterface } from "readline";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import { existsSync } from "fs";
+import { platform, arch } from "os";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function getMcpBinaryPath(): string {
+  const os = platform() === "darwin" ? "darwin" : platform() === "win32" ? "windows" : "linux";
+  const cpu = arch() === "arm64" ? "arm64" : arch();
+  const ext = os === "windows" ? ".exe" : "";
+  const binaryName = `socadb-mcp-${os}-${cpu}${ext}`;
+  const distPath = join(__dirname, "..", "dist", binaryName);
+  if (existsSync(distPath)) return distPath;
+  return join(__dirname, "..", "dist", "socadb-mcp");
+}
 
 interface ChatSendCommand {
   type: "chat_send";
@@ -41,8 +57,15 @@ async function handleChatSend(cmd: ChatSendCommand) {
       },
       abortController,
       maxTurns: 500,
-      allowedTools: ["mcp__socadb"],
+      allowedTools: ["mcp__socadb", "WebSearch", "WebFetch"],
       permissionMode: "bypassPermissions" as const,
+      mcpServers: {
+        socadb: {
+          command: getMcpBinaryPath(),
+          args: [],
+          env: {},
+        },
+      },
     };
 
     if (cmd.sessionId) {
