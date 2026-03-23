@@ -8,7 +8,20 @@ import {
   serializeColumn,
   serializeRelation,
 } from "./schemaQueries";
-import type { Column, Table, Schema, RelationType } from "../types/schema";
+import {
+  McpCreateTableZ,
+  McpUpdateTableZ,
+  McpTableNameZ,
+  McpAddColumnZ,
+  McpUpdateColumnZ,
+  McpDeleteColumnZ,
+  McpCreateRelationZ,
+  McpRelationEndpointsZ,
+  McpColumnInputZ,
+  ColumnTypeZ,
+} from "./zodSchemas";
+import type { z } from "zod";
+import type { Column, Table, Schema } from "../types/schema";
 
 type McpResult = { ok: true; data: unknown } | { ok: false; error: string };
 
@@ -18,11 +31,6 @@ function success(data: unknown): McpResult {
 
 function fail(error: string): McpResult {
   return { ok: false, error };
-}
-
-function getString(obj: Record<string, unknown>, key: string): string | undefined {
-  const val = obj[key];
-  return typeof val === "string" ? val : undefined;
 }
 
 type RelationEndpoints =
@@ -35,36 +43,34 @@ type RelationEndpoints =
       schema: Schema;
     };
 
-function resolveRelationEndpoints(p: Record<string, unknown>): RelationEndpoints {
-  const fromTableName = getString(p, "fromTable");
-  const toTableName = getString(p, "toTable");
-  const fromColName = getString(p, "fromColumn");
-  const toColName = getString(p, "toColumn");
-  if (!fromTableName || !toTableName || !fromColName || !toColName)
-    return {
-      error: fail("Missing fromTable, toTable, fromColumn, or toColumn"),
-    };
+function resolveRelationEndpoints(
+  data: z.output<typeof McpRelationEndpointsZ>,
+): RelationEndpoints {
   const { schema } = useSchemaStore.getState();
-  const fromTable = findTableByName(schema, fromTableName);
-  const toTable = findTableByName(schema, toTableName);
+  const fromTable = findTableByName(schema, data.fromTable);
+  const toTable = findTableByName(schema, data.toTable);
   if (!fromTable || !toTable) return { error: success(false) };
-  const fromCol = findColumnByName(fromTable, fromColName);
-  const toCol = findColumnByName(toTable, toColName);
+  const fromCol = findColumnByName(fromTable, data.fromColumn);
+  const toCol = findColumnByName(toTable, data.toColumn);
   if (!fromCol || !toCol) return { error: success(false) };
   return { fromTable, toTable, fromCol, toCol, schema };
 }
 
-function buildColumn(raw: Record<string, unknown>): Column {
+const VALID_COLUMN_TYPES = new Set<string>(ColumnTypeZ.options);
+
+function buildColumn(raw: z.output<typeof McpColumnInputZ>): Column {
   return {
     id: genId(),
-    name: raw.name as string,
-    type: (raw.type as Column["type"]) ?? "varchar",
-    isPrimaryKey: (raw.isPrimaryKey as boolean) ?? false,
+    name: raw.name,
+    type: VALID_COLUMN_TYPES.has(raw.type ?? "")
+      ? (raw.type as Column["type"])
+      : "varchar",
+    isPrimaryKey: raw.isPrimaryKey ?? false,
     isForeignKey: false,
-    isNullable: (raw.isNullable as boolean) ?? true,
-    isUnique: (raw.isUnique as boolean) ?? false,
-    isAutoIncrement: (raw.isAutoIncrement as boolean) ?? false,
-    defaultValue: (raw.defaultValue as string) ?? null,
+    isNullable: raw.isNullable ?? true,
+    isUnique: raw.isUnique ?? false,
+    isAutoIncrement: raw.isAutoIncrement ?? false,
+    defaultValue: raw.defaultValue ?? null,
   };
 }
 
@@ -85,10 +91,10 @@ const handlers: Record<string, ActionHandler> = {
   },
 
   get_table: (p) => {
-    const name = getString(p, "name");
-    if (!name) return fail("Missing name");
+    const parsed = McpTableNameZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
     const { schema } = useSchemaStore.getState();
-    const table = findTableByName(schema, name);
+    const table = findTableByName(schema, parsed.data.name);
     return success(
       table ? { name: table.name, columns: table.columns.map(serializeColumn) } : null,
     );
@@ -106,26 +112,21 @@ const handlers: Record<string, ActionHandler> = {
   },
 
   create_table: (p) => {
-    const name = getString(p, "name");
-    if (!name) return fail("Missing name");
-    const rawColumns = (Array.isArray(p.columns) ? p.columns : []) as Record<
-      string,
-      unknown
-    >[];
-    const columns = rawColumns.length > 0 ? rawColumns.map(buildColumn) : undefined;
-    createTable({ name, columns });
+    const parsed = McpCreateTableZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
+    const columns = parsed.data.columns?.map(buildColumn);
+    createTable({ name: parsed.data.name, columns });
     return success(true);
   },
 
   update_table: (p) => {
-    const name = getString(p, "name");
-    if (!name) return fail("Missing name");
+    const parsed = McpUpdateTableZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
+    const { name, newName, color } = parsed.data;
     const store = useSchemaStore.getState();
     const table = findTableByName(store.schema, name);
     if (!table) return success(false);
     const updates: Partial<{ name: string; color: string }> = {};
-    const newName = getString(p, "newName");
-    const color = getString(p, "color");
     if (newName) updates.name = newName;
     if (color) updates.color = color;
     if (Object.keys(updates).length === 0) return fail("Missing newName or color");
@@ -134,61 +135,68 @@ const handlers: Record<string, ActionHandler> = {
   },
 
   delete_table: (p) => {
-    const name = getString(p, "name");
-    if (!name) return fail("Missing name");
+    const parsed = McpTableNameZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
     const store = useSchemaStore.getState();
-    const table = findTableByName(store.schema, name);
+    const table = findTableByName(store.schema, parsed.data.name);
     if (!table) return success(false);
     store.deleteTable(table.id);
     return success(true);
   },
 
   add_column: (p) => {
-    const tableName = getString(p, "table");
-    if (!tableName || typeof p.column !== "object" || !p.column)
-      return fail("Missing table or column");
+    const parsed = McpAddColumnZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
     const store = useSchemaStore.getState();
-    const table = findTableByName(store.schema, tableName);
+    const table = findTableByName(store.schema, parsed.data.table);
     if (!table) return success(false);
-    store.addColumn(table.id, buildColumn(p.column as Record<string, unknown>));
+    store.addColumn(table.id, buildColumn(parsed.data.column));
     return success(true);
   },
 
   update_column: (p) => {
-    const tableName = getString(p, "table");
-    const colName = getString(p, "column");
-    if (!tableName || !colName) return fail("Missing table or column");
+    const parsed = McpUpdateColumnZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
+    const { table: tableName, column: colName, updates } = parsed.data;
     const store = useSchemaStore.getState();
     const table = findTableByName(store.schema, tableName);
     if (!table) return success(false);
     const col = findColumnByName(table, colName);
     if (!col) return success(false);
-    store.updateColumn(table.id, col.id, p.updates as Partial<Column>);
+    const { type: rawType, ...rest } = updates;
+    const columnUpdates: Partial<Column> = { ...rest };
+    if (rawType !== undefined) {
+      columnUpdates.type = VALID_COLUMN_TYPES.has(rawType)
+        ? (rawType as Column["type"])
+        : "varchar";
+    }
+    store.updateColumn(table.id, col.id, columnUpdates);
     return success(true);
   },
 
   delete_column: (p) => {
-    const tableName = getString(p, "table");
-    const colName = getString(p, "column");
-    if (!tableName || !colName) return fail("Missing table or column");
+    const parsed = McpDeleteColumnZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
     const store = useSchemaStore.getState();
-    const table = findTableByName(store.schema, tableName);
+    const table = findTableByName(store.schema, parsed.data.table);
     if (!table) return success(false);
-    const col = findColumnByName(table, colName);
+    const col = findColumnByName(table, parsed.data.column);
     if (!col) return success(false);
     store.deleteColumn(table.id, col.id);
     return success(true);
   },
 
   create_relation: (p) => {
-    const endpoints = resolveRelationEndpoints(p);
+    const parsed = McpCreateRelationZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
+    const endpoints = resolveRelationEndpoints(parsed.data);
     if ("error" in endpoints) return endpoints.error;
     const { fromTable, toTable, fromCol, toCol } = endpoints;
     useSchemaStore.getState().addRelation({
       id: genId(),
       from: { tableId: fromTable.id, columnId: fromCol.id },
       to: { tableId: toTable.id, columnId: toCol.id },
-      type: (p.type as RelationType) ?? "1:N",
+      type: parsed.data.type ?? "1:N",
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     });
@@ -196,7 +204,9 @@ const handlers: Record<string, ActionHandler> = {
   },
 
   delete_relation: (p) => {
-    const endpoints = resolveRelationEndpoints(p);
+    const parsed = McpRelationEndpointsZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
+    const endpoints = resolveRelationEndpoints(parsed.data);
     if ("error" in endpoints) return endpoints.error;
     const { fromTable, toTable, fromCol, toCol, schema } = endpoints;
     const relation = schema.relations.find(
