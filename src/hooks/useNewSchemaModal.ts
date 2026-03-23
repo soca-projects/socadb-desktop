@@ -2,25 +2,24 @@ import { useState, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
 import { migrateSchema } from "../utils/fileOperations";
-import type { DbType, Schema } from "../types/schema";
+import { SchemaZ } from "../utils/zodSchemas";
+import type { DbType } from "../types/schema";
 
 const LAST_SESSION_KEY = "socadb_last_session";
-
-interface LastSession {
-  schema: Schema;
-  filePath: string | null;
-}
 
 function getInitialState(): { modal: ModalState; restored: boolean } {
   const raw = localStorage.getItem(LAST_SESSION_KEY);
   if (!raw) return { modal: "first-launch", restored: false };
 
   try {
-    const session = JSON.parse(raw) as LastSession;
+    const session = JSON.parse(raw);
+    if (!session?.schema) throw new Error("No schema in session");
     migrateSchema(session.schema);
+    const parsed = SchemaZ.safeParse(session.schema);
+    if (!parsed.success) throw new Error("Invalid session schema");
     const { setSchema, setFilePath } = useSchemaStore.getState();
-    setSchema(session.schema);
-    setFilePath(session.filePath);
+    setSchema(parsed.data);
+    setFilePath(session.filePath ?? null);
     return { modal: null, restored: true };
   } catch {
     localStorage.removeItem(LAST_SESSION_KEY);
