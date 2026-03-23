@@ -434,7 +434,7 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
   if (!isOpen) return null;
 
   return (
-    <div className="flex w-[280px] shrink-0 flex-col border-r border-border bg-surface-sidebar">
+    <div className="flex w-[280px] shrink-0 flex-col overflow-hidden border-r border-border bg-surface-sidebar">
       <div className="flex items-center justify-between px-3 py-3">
         <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-tertiary">
           Tables

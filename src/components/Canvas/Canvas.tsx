@@ -256,7 +256,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
         />
       )}
 
-      <div className="relative flex flex-1">
+      <div className="relative flex flex-1 overflow-hidden">
         {!focusMode && (
           <SidePanel
             isOpen={sidePanelOpen}
