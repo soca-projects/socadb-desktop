@@ -1,15 +1,23 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import type { Schema } from "../types/schema";
+import { SchemaZ } from "./zodSchemas";
 
-export function migrateSchema(schema: Schema) {
+export function migrateSchema(data: unknown) {
+  if (!data || typeof data !== "object") return;
+  const schema = data as Record<string, unknown>;
   if (!schema.dbType) schema.dbType = "postgresql";
+  if (!Array.isArray(schema.tables)) return;
   for (const table of schema.tables) {
-    for (const col of table.columns) {
-      if (col.isAutoIncrement === undefined) {
-        (col as { isAutoIncrement: boolean }).isAutoIncrement =
-          col.defaultValue === "AUTO_INCREMENT";
-        if (col.defaultValue === "AUTO_INCREMENT") col.defaultValue = null;
+    if (!table || typeof table !== "object") continue;
+    const cols = (table as Record<string, unknown>).columns;
+    if (!Array.isArray(cols)) continue;
+    for (const col of cols) {
+      if (!col || typeof col !== "object") continue;
+      const c = col as Record<string, unknown>;
+      if (c.isAutoIncrement === undefined) {
+        c.isAutoIncrement = c.defaultValue === "AUTO_INCREMENT";
+        if (c.defaultValue === "AUTO_INCREMENT") c.defaultValue = null;
       }
     }
   }
@@ -33,14 +41,18 @@ export async function openSchemaFile(): Promise<{
   if (!selected) return null;
 
   const content = await readTextFile(selected);
-  let schema: Schema;
+  let raw: unknown;
   try {
-    schema = JSON.parse(content) as Schema;
+    raw = JSON.parse(content);
   } catch {
     throw new Error("Invalid .soca file: could not parse JSON");
   }
-  migrateSchema(schema);
-  return { schema, path: selected };
+  migrateSchema(raw);
+  const parsed = SchemaZ.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(`Invalid .soca file: ${parsed.error.message}`);
+  }
+  return { schema: parsed.data, path: selected };
 }
 
 export async function saveSchemaFile(schema: Schema, filePath: string): Promise<void> {

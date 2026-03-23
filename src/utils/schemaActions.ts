@@ -3,6 +3,8 @@ import { genId } from "./id";
 import { createDefaultIdColumn } from "./columnDefaults";
 import { computeAutoLayout } from "./autoLayout";
 import { getNextTableColor } from "./tableColors";
+import { findTableById } from "./schemaQueries";
+import type { Column } from "../types/schema";
 
 export function handleUndo() {
   useSchemaStore.temporal.getState().undo();
@@ -21,6 +23,7 @@ export async function handleAutoLayout() {
 export function createTable(options?: {
   name?: string;
   position?: { x: number; y: number };
+  columns?: Column[];
 }): string {
   const { schema, addTable } = useSchemaStore.getState();
   const tables = schema.tables;
@@ -33,14 +36,14 @@ export function createTable(options?: {
       x: 100 + tables.length * 50,
       y: 100 + tables.length * 50,
     },
-    columns: [createDefaultIdColumn(schema.dbType)],
+    columns: options?.columns ?? [createDefaultIdColumn(schema.dbType)],
   });
   return newId;
 }
 
 export function duplicateTable(tableId: string): string | null {
   const { schema, addTable } = useSchemaStore.getState();
-  const source = schema.tables.find((t) => t.id === tableId);
+  const source = findTableById(schema, tableId);
   if (!source) return null;
   const newId = genId();
   addTable({

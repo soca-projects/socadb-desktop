@@ -6,8 +6,9 @@ import {
   PaperPlaneRightIcon as PaperPlaneRight,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
-import { sendChatMessage, stopChat, initChat } from "../../hooks/useChatStream";
+import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
 import { useSchemaStore } from "../../stores/schemaStore";
+import { serializeColumn, serializeRelation } from "../../utils/schemaQueries";
 import { SUPPORTED_MODELS, DEFAULT_MODEL } from "../../types/chat";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
@@ -29,23 +30,14 @@ function buildSystemPrompt(): string {
     dbType: schema.dbType,
     tables: schema.tables.map((t) => ({
       name: t.name,
-      columns: t.columns.map((c) => ({
-        name: c.name,
-        type: c.type,
-        isPrimaryKey: c.isPrimaryKey,
-        isNullable: c.isNullable,
-        isUnique: c.isUnique,
-      })),
+      columns: t.columns.map(serializeColumn),
     })),
     relations: schema.relations.map((r) => {
-      const fromTable = schema.tables.find((t) => t.id === r.from.tableId);
-      const toTable = schema.tables.find((t) => t.id === r.to.tableId);
-      const fromCol = fromTable?.columns.find((c) => c.id === r.from.columnId);
-      const toCol = toTable?.columns.find((c) => c.id === r.to.columnId);
+      const sr = serializeRelation(schema, r);
       return {
-        type: r.type,
-        from: `${fromTable?.name}.${fromCol?.name}`,
-        to: `${toTable?.name}.${toCol?.name}`,
+        type: sr.type,
+        from: `${sr.from.table}.${sr.from.column}`,
+        to: `${sr.to.table}.${sr.to.column}`,
       };
     }),
   };
