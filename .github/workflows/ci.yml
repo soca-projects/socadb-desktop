@@ -33,6 +33,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm test
+
   rust:
     name: Rust checks
     runs-on: ubuntu-24.04
