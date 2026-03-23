@@ -25,3 +25,36 @@ export interface ChatMessage {
   toolCalls: ToolCallInfo[];
   timestamp: string;
 }
+
+export interface Conversation {
+  id: string;
+  name: string;
+  sessionId: string | null;
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatStatusResult {
+  loggedIn: boolean;
+  email: string | null;
+  loginType: ConnectionMethod | null;
+}
+
+export interface SupportedModel {
+  id: string;
+  displayName: string;
+  description: string;
+}
+
+export const SUPPORTED_MODELS: SupportedModel[] = [
+  { id: "claude-opus-4-6", displayName: "Claude Opus 4.6", description: "Most capable" },
+  {
+    id: "claude-sonnet-4-6",
+    displayName: "Claude Sonnet 4.6",
+    description: "Fast, balanced",
+  },
+  { id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5", description: "Fastest" },
+];
+
+export const DEFAULT_MODEL = "claude-sonnet-4-6";

@@ -1,8 +1,14 @@
 import { useRef, useEffect, useCallback, useState } from "react";
-import { XIcon as X, ChatCircleIcon as ChatCircle } from "@phosphor-icons/react";
-import { invoke } from "@tauri-apps/api/core";
+import {
+  XIcon as X,
+  CaretDownIcon as CaretDown,
+  PlusIcon as Plus,
+  PaperPlaneRightIcon as PaperPlaneRight,
+} from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
+import { sendChatMessage, stopChat, initChat } from "../../hooks/useChatStream";
 import { useSchemaStore } from "../../stores/schemaStore";
+import { SUPPORTED_MODELS, DEFAULT_MODEL } from "../../types/chat";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
@@ -120,10 +126,15 @@ export function ChatPanel() {
   const isStreaming = useChatStore((s) => s.isStreaming);
   const sessionId = useChatStore((s) => s.sessionId);
   const provider = useChatStore((s) => s.provider);
+  const conversations = useChatStore((s) => s.conversations);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
   const togglePanel = useChatStore((s) => s.togglePanel);
   const addUserMessage = useChatStore((s) => s.addUserMessage);
   const startAssistantMessage = useChatStore((s) => s.startAssistantMessage);
+  const newConversation = useChatStore((s) => s.newConversation);
+  const switchConversation = useChatStore((s) => s.switchConversation);
 
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { size, startResize } = useResize({
@@ -136,56 +147,65 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (isPanelOpen) {
+      void initChat();
+    }
+  }, [isPanelOpen]);
+
   const handleSend = useCallback(
     (content: string) => {
+      if (isStreaming) return;
       if (!isPanelOpen) togglePanel();
       addUserMessage(content);
       startAssistantMessage();
 
       const systemPrompt = buildSystemPrompt();
-
-      void invoke("chat_send", {
-        message: content,
-        systemPrompt,
-        sessionId: sessionId ?? undefined,
-      });
+      sendChatMessage(content, systemPrompt, sessionId ?? undefined, selectedModel);
     },
-    [addUserMessage, startAssistantMessage, sessionId, isPanelOpen, togglePanel],
+    [
+      addUserMessage,
+      startAssistantMessage,
+      sessionId,
+      isPanelOpen,
+      togglePanel,
+      isStreaming,
+      selectedModel,
+    ],
   );
+
+  const handleStop = useCallback(() => {
+    stopChat();
+  }, []);
 
   const isConnected = provider?.connected ?? false;
 
   if (focusMode) return null;
 
   if (!isPanelOpen) {
+    const activeConv = conversations.find((c) => c.id === activeConversationId);
+    const convName =
+      activeConv && activeConv.messages.length > 0 ? activeConv.name : "New conversation";
     return (
-      <div className="fixed bottom-4 right-4 z-50 flex w-[340px] items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-card transition-shadow hover:shadow-float">
-        <ChatCircle size={16} className="flex-shrink-0 text-tertiary" />
-        <input
-          type="text"
-          placeholder={
-            isConnected
+      <div
+        className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
+        onClick={togglePanel}
+      >
+        <div className="border-b border-border px-3 py-1.5">
+          <span className="block truncate text-[11px] font-medium text-tertiary">
+            {convName}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2">
+          <span className="flex-1 text-[13px] text-tertiary">
+            {isConnected
               ? "Ask AI to modify your schema..."
-              : "Connect a provider to start..."
-          }
-          disabled={!isConnected}
-          readOnly={!isConnected}
-          className="flex-1 bg-transparent text-[13px] text-secondary placeholder:text-tertiary outline-none disabled:opacity-50"
-          autoCorrect="off"
-          autoComplete="off"
-          spellCheck={false}
-          onFocus={() => togglePanel()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              const val = (e.target as HTMLInputElement).value.trim();
-              if (val) {
-                handleSend(val);
-                (e.target as HTMLInputElement).value = "";
-              }
-            }
-          }}
-        />
+              : "Connect a provider to start..."}
+          </span>
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white opacity-40">
+            <PaperPlaneRight size={12} weight="fill" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -209,8 +229,50 @@ export function ChatPanel() {
         onMouseDown={(e) => startResize(e, "both")}
       />
 
-      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <span className="text-[13px] font-medium text-secondary">AI Chat</span>
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <div className="relative min-w-0 flex-1">
+          <select
+            value={activeConversationId ?? ""}
+            onChange={(e) => switchConversation(e.target.value)}
+            disabled={isStreaming}
+            className="w-full appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
+          >
+            {conversations.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <CaretDown
+            size={10}
+            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
+          />
+        </div>
+        <div className="relative">
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={isStreaming}
+            className="appearance-none rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
+          >
+            {SUPPORTED_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.displayName}
+              </option>
+            ))}
+          </select>
+          <CaretDown
+            size={10}
+            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
+          />
+        </div>
+        <button
+          onClick={newConversation}
+          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          aria-label="New chat"
+        >
+          <Plus size={14} />
+        </button>
         <button
           onClick={togglePanel}
           className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
@@ -257,7 +319,12 @@ export function ChatPanel() {
         )}
       </div>
 
-      <ChatInput onSend={handleSend} disabled={isStreaming || !isConnected} />
+      <ChatInput
+        onSend={handleSend}
+        onStop={handleStop}
+        disabled={!isConnected}
+        isStreaming={isStreaming}
+      />
     </div>
   );
 }

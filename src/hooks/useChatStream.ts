@@ -1,17 +1,18 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../stores/chatStore";
+import type { ChatStatusResult } from "../types/chat";
+import { DEFAULT_MODEL } from "../types/chat";
 
 interface StreamEvent {
   raw: string;
 }
 
-interface DoneEvent {
-  session_id: string | null;
-}
-
-interface ErrorEvent {
-  error: string;
+interface ChatEvent {
+  type: "chat_event" | "chat_status_result" | "ready";
+  event?: string;
+  [key: string]: unknown;
 }
 
 function ensureAssistantMessage() {
@@ -22,146 +23,142 @@ function ensureAssistantMessage() {
   }
 }
 
+let statusResolve: ((result: ChatStatusResult) => void) | null = null;
+
+function handleEvent(parsed: ChatEvent) {
+  if (parsed.type === "chat_status_result") {
+    const store = useChatStore.getState();
+    const provider = {
+      id: "claude-code" as const,
+      name: "Claude Code",
+      connected: parsed.loggedIn as boolean,
+      connectionMethod: (parsed.loginType as "subscription" | "api-key") ?? null,
+      email: (parsed.email as string) ?? null,
+    };
+    store.setProvider(provider);
+    if (statusResolve) {
+      statusResolve({
+        loggedIn: provider.connected,
+        email: provider.email,
+        loginType: provider.connectionMethod,
+      });
+      statusResolve = null;
+    }
+    return;
+  }
+
+  if (parsed.type !== "chat_event") return;
+
+  const store = useChatStore.getState();
+
+  switch (parsed.event) {
+    case "session_init":
+      store.setSessionId((parsed.sessionId as string) ?? null);
+      break;
+
+    case "text_delta":
+      ensureAssistantMessage();
+      store.appendAssistantText(parsed.text as string);
+      break;
+
+    case "tool_use":
+      ensureAssistantMessage();
+      store.addToolCall({
+        id: parsed.toolUseId as string,
+        name: parsed.toolName as string,
+        input: (parsed.toolInput as Record<string, unknown>) ?? {},
+        result: null,
+        isSuccess: false,
+      });
+      break;
+
+    case "tool_result":
+      store.updateLastToolCall(
+        parsed.toolUseId as string,
+        typeof parsed.output === "string"
+          ? parsed.output
+          : JSON.stringify(parsed.output ?? ""),
+        !(parsed.isError as boolean),
+      );
+      break;
+
+    case "done":
+      if (parsed.response) {
+        ensureAssistantMessage();
+        store.setAssistantText(parsed.response as string);
+      }
+      store.finishResponse((parsed.sessionId as string) ?? "");
+      break;
+
+    case "error":
+      ensureAssistantMessage();
+      store.appendAssistantText(`Error: ${parsed.message as string}`);
+      store.finishResponse("");
+      break;
+  }
+}
+
 export function useChatStream() {
   useEffect(() => {
     let cancelled = false;
-    const unlisteners: (() => void)[] = [];
 
-    function registerListener<T>(
-      event: string,
-      handler: (event: { payload: T }) => void,
-    ) {
-      listen<T>(event, (e) => {
-        if (!cancelled) handler(e);
-      }).then((fn) => {
-        if (cancelled) fn();
-        else unlisteners.push(fn);
-      });
-    }
-
-    registerListener<StreamEvent>("chat-stream", (event) => {
-      const { raw } = event.payload;
-
+    const unlistenPromise = listen<StreamEvent>("chat-stream", (event) => {
+      if (cancelled) return;
+      console.log("[chat-stream raw]", event.payload.raw);
       try {
-        const parsed = JSON.parse(raw);
-        console.log("[chat-stream]", parsed.type, parsed);
-
-        if (parsed.type === "assistant" && parsed.message?.content) {
-          ensureAssistantMessage();
-
-          let text = "";
-          const toolCalls: {
-            id: string;
-            name: string;
-            input: Record<string, unknown>;
-            result: string | null;
-            isSuccess: boolean;
-          }[] = [];
-
-          for (const block of parsed.message.content) {
-            if (block.type === "text") {
-              text += block.text;
-            }
-
-            if (block.type === "tool_use") {
-              toolCalls.push({
-                id: block.id ?? "",
-                name: block.name,
-                input: block.input ?? {},
-                result: null,
-                isSuccess: false,
-              });
-            }
-
-            if (block.type === "tool_result") {
-              const tc = toolCalls.find((t) => t.id === block.tool_use_id);
-              if (tc) {
-                tc.result =
-                  typeof block.content === "string"
-                    ? block.content
-                    : JSON.stringify(block.content);
-                tc.isSuccess = !block.is_error;
-              }
-            }
-          }
-
-          if (text) {
-            useChatStore.getState().setAssistantText(text);
-          }
-
-          const existing = useChatStore.getState().messages;
-          const lastMsg = existing[existing.length - 1];
-          if (lastMsg?.role === "assistant" && toolCalls.length > 0) {
-            const merged = toolCalls.map((tc) => {
-              const prev = lastMsg.toolCalls.find((p) => p.id === tc.id);
-              if (prev?.result && !tc.result) {
-                return { ...tc, result: prev.result, isSuccess: prev.isSuccess };
-              }
-              return tc;
-            });
-            useChatStore.getState().setToolCalls(merged);
-          }
-        }
-
-        if (parsed.type === "user" && parsed.message?.content) {
-          const store = useChatStore.getState();
-          const msgs = store.messages;
-          const lastMsg = msgs[msgs.length - 1];
-          if (lastMsg?.role === "assistant" && lastMsg.toolCalls.length > 0) {
-            const updated = lastMsg.toolCalls.map((tc) => {
-              const result = parsed.message.content.find(
-                (b: { type: string; tool_use_id?: string }) =>
-                  b.type === "tool_result" && b.tool_use_id === tc.id,
-              );
-              if (result) {
-                return {
-                  ...tc,
-                  result:
-                    typeof result.content === "string"
-                      ? result.content
-                      : JSON.stringify(result.content ?? ""),
-                  isSuccess: !result.is_error,
-                };
-              }
-              return tc;
-            });
-            store.setToolCalls(updated);
-          }
-        }
-
-        if (parsed.type === "result") {
-          const last =
-            useChatStore.getState().messages[useChatStore.getState().messages.length - 1];
-          if (!last || last.role !== "assistant" || !last.content) {
-            ensureAssistantMessage();
-            if (parsed.result) {
-              useChatStore.getState().setAssistantText(parsed.result);
-            }
-          }
-          if (parsed.session_id) {
-            useChatStore.getState().finishResponse(parsed.session_id);
-          }
-        }
-      } catch {
-        // Not valid JSON or unexpected format — ignore
+        const parsed = JSON.parse(event.payload.raw) as ChatEvent;
+        console.log("[chat-stream parsed]", parsed.type, parsed.event);
+        handleEvent(parsed);
+      } catch (e) {
+        console.error("[chat-stream parse error]", e, event.payload.raw);
       }
-    });
-
-    registerListener<DoneEvent>("chat-done", (event) => {
-      console.log("[chat-done]", event.payload);
-      useChatStore.getState().finishResponse(event.payload.session_id ?? "");
-    });
-
-    registerListener<ErrorEvent>("chat-error", (event) => {
-      console.log("[chat-error]", event.payload);
-      ensureAssistantMessage();
-      useChatStore.getState().appendAssistantText(`Error: ${event.payload.error}`);
-      useChatStore.getState().finishResponse("");
     });
 
     return () => {
       cancelled = true;
-      for (const unlisten of unlisteners) unlisten();
+      void unlistenPromise.then((fn) => fn());
     };
   }, []);
+}
+
+export function sendChatMessage(
+  message: string,
+  systemPrompt: string,
+  sessionId?: string,
+  model?: string,
+) {
+  void invoke("chat_send", {
+    message,
+    systemPrompt,
+    sessionId: sessionId ?? null,
+    model: model ?? DEFAULT_MODEL,
+  });
+}
+
+export function stopChat() {
+  void invoke("chat_stop");
+}
+
+function requestStatus(command: string): Promise<ChatStatusResult> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      statusResolve = null;
+      reject(new Error("Status check timed out"));
+    }, 10000);
+
+    statusResolve = (result) => {
+      clearTimeout(timeout);
+      resolve(result);
+    };
+
+    void invoke(command);
+  });
+}
+
+export function initChat(): Promise<ChatStatusResult> {
+  return requestStatus("chat_init");
+}
+
+export function checkChatStatus(): Promise<ChatStatusResult> {
+  return requestStatus("chat_status");
 }

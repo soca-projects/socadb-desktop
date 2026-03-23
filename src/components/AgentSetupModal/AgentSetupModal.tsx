@@ -5,6 +5,7 @@ import {
   ArrowClockwiseIcon as ArrowClockwise,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
+import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
 import { detectClaudeCode } from "../../utils/providerDetection";
 import { saveProviderConfig } from "../../utils/chatPersistence";
 
@@ -23,7 +24,7 @@ async function runDetection(
     id: "claude-code";
     name: string;
     connected: boolean;
-    connectionMethod: "subscription";
+    connectionMethod: "subscription" | "api-key";
     email: string | null;
   }) => void,
 ) {
@@ -35,7 +36,9 @@ async function runDetection(
       id: "claude-code" as const,
       name: "Anthropic Claude Code",
       connected: true,
-      connectionMethod: "subscription" as const,
+      connectionMethod: (result.loginType === "api-key" ? "api-key" : "subscription") as
+        | "subscription"
+        | "api-key",
       email: result.email,
     };
     setProvider(p);
@@ -84,8 +87,8 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
           <div className="rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-[14px]">
-                  ⬡
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#D97757]/10">
+                  <ClaudeIcon size={18} />
                 </div>
                 <div>
                   <p className="text-[13px] font-medium text-secondary">
@@ -94,7 +97,8 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
                   {isConnected ? (
                     <p className="flex items-center gap-1 text-[12px] text-emerald-600">
                       <CheckCircle size={12} weight="fill" />
-                      Connected{provider?.email ? ` (${provider.email})` : ""}
+                      Connected via {provider?.connectionMethod ?? "subscription"}
+                      {provider?.email ? ` (${provider.email})` : ""}
                     </p>
                   ) : status && !status.installed ? (
                     <p className="text-[12px] text-tertiary">Not installed</p>
