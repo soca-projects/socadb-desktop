@@ -1,8 +1,13 @@
 import { useSchemaStore } from "../stores/schemaStore";
 import { genId } from "./id";
-import { createDefaultIdColumn } from "./columnDefaults";
-import { getNextTableColor } from "./tableColors";
 import { computeAutoLayout } from "./autoLayout";
+import { createTable } from "./schemaActions";
+import {
+  findTableByName,
+  findColumnByName,
+  serializeColumn,
+  serializeRelation,
+} from "./schemaQueries";
 import type { Column, Table, Schema, RelationType } from "../types/schema";
 
 type McpResult = { ok: true; data: unknown } | { ok: false; error: string };
@@ -18,14 +23,6 @@ function fail(error: string): McpResult {
 function getString(obj: Record<string, unknown>, key: string): string | undefined {
   const val = obj[key];
   return typeof val === "string" ? val : undefined;
-}
-
-function resolveTable(schema: Schema, name: string): Table | undefined {
-  return schema.tables.find((t) => t.name === name);
-}
-
-function resolveColumn(table: Table, name: string): Column | undefined {
-  return table.columns.find((c) => c.name === name);
 }
 
 type RelationEndpoints =
@@ -48,11 +45,11 @@ function resolveRelationEndpoints(p: Record<string, unknown>): RelationEndpoints
       error: fail("Missing fromTable, toTable, fromColumn, or toColumn"),
     };
   const { schema } = useSchemaStore.getState();
-  const fromTable = resolveTable(schema, fromTableName);
-  const toTable = resolveTable(schema, toTableName);
+  const fromTable = findTableByName(schema, fromTableName);
+  const toTable = findTableByName(schema, toTableName);
   if (!fromTable || !toTable) return { error: success(false) };
-  const fromCol = resolveColumn(fromTable, fromColName);
-  const toCol = resolveColumn(toTable, toColName);
+  const fromCol = findColumnByName(fromTable, fromColName);
+  const toCol = findColumnByName(toTable, toColName);
   if (!fromCol || !toCol) return { error: success(false) };
   return { fromTable, toTable, fromCol, toCol, schema };
 }
@@ -71,19 +68,6 @@ function buildColumn(raw: Record<string, unknown>): Column {
   };
 }
 
-function serializeColumn(c: Column) {
-  return {
-    name: c.name,
-    type: c.type,
-    isPrimaryKey: c.isPrimaryKey,
-    isForeignKey: c.isForeignKey,
-    isNullable: c.isNullable,
-    isUnique: c.isUnique,
-    isAutoIncrement: c.isAutoIncrement,
-    defaultValue: c.defaultValue,
-  };
-}
-
 type ActionHandler = (p: Record<string, unknown>) => McpResult | Promise<McpResult>;
 
 const handlers: Record<string, ActionHandler> = {
@@ -96,17 +80,7 @@ const handlers: Record<string, ActionHandler> = {
         name: t.name,
         columns: t.columns.map(serializeColumn),
       })),
-      relations: schema.relations.map((r) => {
-        const fromTable = schema.tables.find((t) => t.id === r.from.tableId);
-        const toTable = schema.tables.find((t) => t.id === r.to.tableId);
-        const fromCol = fromTable?.columns.find((c) => c.id === r.from.columnId);
-        const toCol = toTable?.columns.find((c) => c.id === r.to.columnId);
-        return {
-          type: r.type,
-          from: { table: fromTable?.name, column: fromCol?.name },
-          to: { table: toTable?.name, column: toCol?.name },
-        };
-      }),
+      relations: schema.relations.map((r) => serializeRelation(schema, r)),
     });
   },
 
@@ -114,7 +88,7 @@ const handlers: Record<string, ActionHandler> = {
     const name = getString(p, "name");
     if (!name) return fail("Missing name");
     const { schema } = useSchemaStore.getState();
-    const table = resolveTable(schema, name);
+    const table = findTableByName(schema, name);
     return success(
       table ? { name: table.name, columns: table.columns.map(serializeColumn) } : null,
     );
@@ -134,26 +108,12 @@ const handlers: Record<string, ActionHandler> = {
   create_table: (p) => {
     const name = getString(p, "name");
     if (!name) return fail("Missing name");
-    const store = useSchemaStore.getState();
-    const { schema } = store;
     const rawColumns = (Array.isArray(p.columns) ? p.columns : []) as Record<
       string,
       unknown
     >[];
-    const columns =
-      rawColumns.length > 0
-        ? rawColumns.map(buildColumn)
-        : [createDefaultIdColumn(schema.dbType)];
-    store.addTable({
-      id: genId(),
-      name,
-      color: getNextTableColor(schema.tables),
-      position: {
-        x: 100 + schema.tables.length * 50,
-        y: 100 + schema.tables.length * 50,
-      },
-      columns,
-    });
+    const columns = rawColumns.length > 0 ? rawColumns.map(buildColumn) : undefined;
+    createTable({ name, columns });
     return success(true);
   },
 
@@ -161,7 +121,7 @@ const handlers: Record<string, ActionHandler> = {
     const name = getString(p, "name");
     if (!name) return fail("Missing name");
     const store = useSchemaStore.getState();
-    const table = resolveTable(store.schema, name);
+    const table = findTableByName(store.schema, name);
     if (!table) return success(false);
     const updates: Partial<{ name: string; color: string }> = {};
     const newName = getString(p, "newName");
@@ -177,7 +137,7 @@ const handlers: Record<string, ActionHandler> = {
     const name = getString(p, "name");
     if (!name) return fail("Missing name");
     const store = useSchemaStore.getState();
-    const table = resolveTable(store.schema, name);
+    const table = findTableByName(store.schema, name);
     if (!table) return success(false);
     store.deleteTable(table.id);
     return success(true);
@@ -188,7 +148,7 @@ const handlers: Record<string, ActionHandler> = {
     if (!tableName || typeof p.column !== "object" || !p.column)
       return fail("Missing table or column");
     const store = useSchemaStore.getState();
-    const table = resolveTable(store.schema, tableName);
+    const table = findTableByName(store.schema, tableName);
     if (!table) return success(false);
     store.addColumn(table.id, buildColumn(p.column as Record<string, unknown>));
     return success(true);
@@ -199,9 +159,9 @@ const handlers: Record<string, ActionHandler> = {
     const colName = getString(p, "column");
     if (!tableName || !colName) return fail("Missing table or column");
     const store = useSchemaStore.getState();
-    const table = resolveTable(store.schema, tableName);
+    const table = findTableByName(store.schema, tableName);
     if (!table) return success(false);
-    const col = resolveColumn(table, colName);
+    const col = findColumnByName(table, colName);
     if (!col) return success(false);
     store.updateColumn(table.id, col.id, p.updates as Partial<Column>);
     return success(true);
@@ -212,9 +172,9 @@ const handlers: Record<string, ActionHandler> = {
     const colName = getString(p, "column");
     if (!tableName || !colName) return fail("Missing table or column");
     const store = useSchemaStore.getState();
-    const table = resolveTable(store.schema, tableName);
+    const table = findTableByName(store.schema, tableName);
     if (!table) return success(false);
-    const col = resolveColumn(table, colName);
+    const col = findColumnByName(table, colName);
     if (!col) return success(false);
     store.deleteColumn(table.id, col.id);
     return success(true);

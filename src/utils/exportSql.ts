@@ -1,19 +1,8 @@
 import { save, message } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useSchemaStore } from "../stores/schemaStore";
-import type { Schema, Table, Column, Relation } from "../types/schema";
-
-function findTableById(schema: Schema, id: string) {
-  return schema.tables.find((t) => t.id === id);
-}
-
-function findColumnById(table: Table, id: string) {
-  return table.columns.find((c) => c.id === id);
-}
-
-function getForeignKeysFromTable(schema: Schema, tableId: string): Relation[] {
-  return schema.relations.filter((r) => r.from.tableId === tableId);
-}
+import type { Schema, Table, Column } from "../types/schema";
+import { findTableById, findColumnById, getRelationsFromTable } from "./schemaQueries";
 
 // --- MySQL DDL ---
 
@@ -58,7 +47,7 @@ function generateMysqlTable(schema: Schema, table: Table): string {
     defs.push(`  UNIQUE KEY \`uk_${table.name}_${col.name}\` (\`${col.name}\`)`);
   }
 
-  const fks = getForeignKeysFromTable(schema, table.id);
+  const fks = getRelationsFromTable(schema, table.id);
   for (const rel of fks) {
     const fromCol = findColumnById(table, rel.from.columnId);
     const toTable = findTableById(schema, rel.to.tableId);
@@ -131,7 +120,7 @@ function generatePostgresqlForeignKeys(schema: Schema): string {
   const fks: string[] = [];
 
   for (const table of schema.tables) {
-    for (const rel of getForeignKeysFromTable(schema, table.id)) {
+    for (const rel of getRelationsFromTable(schema, table.id)) {
       const fromCol = findColumnById(table, rel.from.columnId);
       const toTable = findTableById(schema, rel.to.tableId);
       const toCol = toTable ? findColumnById(toTable, rel.to.columnId) : undefined;

@@ -1,4 +1,4 @@
-import type { Table, DbType, ColumnType } from "../types/schema";
+import type { Table, Relation, DbType, ColumnType } from "../types/schema";
 import { COLUMN_TYPES_BY_DB } from "../types/schema";
 import {
   stripComments,
@@ -14,7 +14,7 @@ export { detectDbType } from "./sqlParser";
 
 export interface SqlImportResult {
   tables: Table[];
-  relations: import("../types/schema").Relation[];
+  relations: Relation[];
   detectedDbType: DbType | null;
   attempted: number;
 }

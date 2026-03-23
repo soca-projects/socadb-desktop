@@ -54,7 +54,7 @@ export function splitStatements(sql: string): string[] {
   return statements;
 }
 
-export function stripQuotes(name: string): string {
+function stripQuotes(name: string): string {
   const trimmed = name.trim();
   if (
     (trimmed.startsWith("`") && trimmed.endsWith("`")) ||
@@ -65,7 +65,7 @@ export function stripQuotes(name: string): string {
   return trimmed;
 }
 
-export function splitTopLevelCommas(body: string): string[] {
+function splitTopLevelCommas(body: string): string[] {
   const parts: string[] = [];
   let current = "";
   let depth = 0;
@@ -147,7 +147,7 @@ export function detectDbType(sql: string): DbType | null {
   return null;
 }
 
-export const TYPE_ALIASES: Record<string, ColumnType> = {
+const TYPE_ALIASES: Record<string, ColumnType> = {
   int: "int",
   integer: "integer",
   bigint: "bigint",
@@ -187,7 +187,7 @@ export const TYPE_ALIASES: Record<string, ColumnType> = {
   bigserial: "bigserial",
 };
 
-export function normalizeColumnType(rawType: string): ColumnType {
+function normalizeColumnType(rawType: string): ColumnType {
   const withParens = rawType.trim().toLowerCase();
   if (withParens === "tinyint(1)") return "boolean";
 
@@ -199,7 +199,7 @@ export function normalizeColumnType(rawType: string): ColumnType {
   return TYPE_ALIASES[base] ?? "varchar";
 }
 
-export function parseReferentialAction(value: string): ReferentialAction {
+function parseReferentialAction(value: string): ReferentialAction {
   const upper = value.toUpperCase().trim();
   if (upper === "CASCADE") return "CASCADE";
   if (upper === "SET NULL") return "SET NULL";
@@ -207,7 +207,7 @@ export function parseReferentialAction(value: string): ReferentialAction {
   return "NO ACTION";
 }
 
-export function extractReferentialActions(def: string): {
+function extractReferentialActions(def: string): {
   onDelete: ReferentialAction;
   onUpdate: ReferentialAction;
 } {
@@ -227,7 +227,7 @@ export function extractReferentialActions(def: string): {
   return { onDelete, onUpdate };
 }
 
-export function parseColumnDef(def: string): Column | null {
+function parseColumnDef(def: string): Column | null {
   const upper = def.toUpperCase().trim();
 
   if (
