@@ -1,4 +1,4 @@
-import { checkChatStatus } from "../hooks/useChatStream";
+import { checkChatStatus } from "./chatCommands";
 import type { ChatStatusResult } from "../types/chat";
 
 export interface ProviderStatus {

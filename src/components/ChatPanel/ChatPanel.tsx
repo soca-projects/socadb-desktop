@@ -6,7 +6,7 @@ import {
   PaperPlaneRightIcon as PaperPlaneRight,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
-import { sendChatMessage, stopChat, initChat } from "../../hooks/useChatStream";
+import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { serializeColumn, serializeRelation } from "../../utils/schemaQueries";
 import { SUPPORTED_MODELS, DEFAULT_MODEL } from "../../types/chat";

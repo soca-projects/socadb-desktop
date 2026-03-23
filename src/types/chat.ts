@@ -58,3 +58,9 @@ export const SUPPORTED_MODELS: SupportedModel[] = [
 ];
 
 export const DEFAULT_MODEL = "claude-sonnet-4-6";
+
+export interface ChatEvent {
+  type: "chat_event" | "chat_status_result" | "ready";
+  event?: string;
+  [key: string]: unknown;
+}
