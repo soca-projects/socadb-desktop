@@ -32,17 +32,41 @@ const PRO_OPTIONS = { hideAttribution: true };
 const DELETE_KEY_CODE = ["Delete", "Backspace"];
 const SIDE_PANEL_PX = 280;
 
-function ViewportCompensator({ isSidePanelOpen }: { isSidePanelOpen: boolean }) {
+const TOOLBAR_PX = 40;
+
+function ViewportCompensator({
+  isSidePanelOpen,
+  focusMode,
+}: {
+  isSidePanelOpen: boolean;
+  focusMode: boolean;
+}) {
   const { getViewport, setViewport } = useReactFlow();
-  const prevOpen = useRef(isSidePanelOpen);
+  const prev = useRef({ panel: isSidePanelOpen, focus: focusMode });
 
   useEffect(() => {
-    if (prevOpen.current === isSidePanelOpen) return;
-    prevOpen.current = isSidePanelOpen;
+    const { panel: prevPanel, focus: prevFocus } = prev.current;
+    prev.current = { panel: isSidePanelOpen, focus: focusMode };
+
+    let dx = 0;
+    let dy = 0;
+
+    if (focusMode !== prevFocus) {
+      if (focusMode) {
+        dx += prevPanel ? SIDE_PANEL_PX : 0;
+        dy += TOOLBAR_PX;
+      } else {
+        dx -= isSidePanelOpen ? SIDE_PANEL_PX : 0;
+        dy -= TOOLBAR_PX;
+      }
+    } else if (isSidePanelOpen !== prevPanel) {
+      dx += isSidePanelOpen ? -SIDE_PANEL_PX : SIDE_PANEL_PX;
+    }
+
+    if (dx === 0 && dy === 0) return;
     const { x, y, zoom } = getViewport();
-    const offset = isSidePanelOpen ? -SIDE_PANEL_PX : SIDE_PANEL_PX;
-    setViewport({ x: x + offset, y, zoom });
-  }, [isSidePanelOpen, getViewport, setViewport]);
+    setViewport({ x: x + dx, y: y + dy, zoom });
+  }, [isSidePanelOpen, focusMode, getViewport, setViewport]);
 
   return null;
 }
@@ -294,8 +318,8 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
             proOptions={PRO_OPTIONS}
           >
             <Background gap={12} size={2} color={gridColor} />
-            <ViewportCompensator isSidePanelOpen={sidePanelOpen} />
-            {!focusMode && <CanvasControls />}
+            <ViewportCompensator isSidePanelOpen={sidePanelOpen} focusMode={focusMode} />
+            <CanvasControls />
           </ReactFlow>
           {focusMode && (
             <button
