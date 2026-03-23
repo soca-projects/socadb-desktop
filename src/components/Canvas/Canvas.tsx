@@ -1,5 +1,11 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { ReactFlow, Background, applyNodeChanges, applyEdgeChanges } from "@xyflow/react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import {
+  ReactFlow,
+  Background,
+  applyNodeChanges,
+  applyEdgeChanges,
+  useReactFlow,
+} from "@xyflow/react";
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -24,6 +30,22 @@ const nodeTypes = { table: TableNode };
 const edgeTypes = { relation: RelationEdge };
 const PRO_OPTIONS = { hideAttribution: true };
 const DELETE_KEY_CODE = ["Delete", "Backspace"];
+const SIDE_PANEL_PX = 280;
+
+function ViewportCompensator({ isSidePanelOpen }: { isSidePanelOpen: boolean }) {
+  const { getViewport, setViewport } = useReactFlow();
+  const prevOpen = useRef(isSidePanelOpen);
+
+  useEffect(() => {
+    if (prevOpen.current === isSidePanelOpen) return;
+    prevOpen.current = isSidePanelOpen;
+    const { x, y, zoom } = getViewport();
+    const offset = isSidePanelOpen ? -SIDE_PANEL_PX : SIDE_PANEL_PX;
+    setViewport({ x: x + offset, y, zoom });
+  }, [isSidePanelOpen, getViewport, setViewport]);
+
+  return null;
+}
 
 function tablesToNodes(tables: Table[]) {
   return tables.map((table) => ({
@@ -272,7 +294,8 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
             proOptions={PRO_OPTIONS}
           >
             <Background gap={12} size={2} color={gridColor} />
-            {!focusMode && <CanvasControls isSidePanelOpen={sidePanelOpen} />}
+            <ViewportCompensator isSidePanelOpen={sidePanelOpen} />
+            {!focusMode && <CanvasControls />}
           </ReactFlow>
           {focusMode && (
             <button
