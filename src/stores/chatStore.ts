@@ -95,6 +95,7 @@ export const useChatStore = create<ChatState>()((set) => ({
         activeConversationId: conv.id,
         messages: [],
         sessionId: null,
+        isStreaming: false,
       };
     }),
 
@@ -119,6 +120,7 @@ export const useChatStore = create<ChatState>()((set) => ({
         activeConversationId: id,
         messages: target.messages,
         sessionId: target.sessionId,
+        isStreaming: false,
       };
     }),
 

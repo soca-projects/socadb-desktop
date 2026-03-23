@@ -1,9 +1,9 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import {
   XIcon as X,
-  ChatCircleIcon as ChatCircle,
   CaretDownIcon as CaretDown,
   PlusIcon as Plus,
+  PaperPlaneRightIcon as PaperPlaneRight,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../hooks/useChatStream";
@@ -183,33 +183,29 @@ export function ChatPanel() {
   if (focusMode) return null;
 
   if (!isPanelOpen) {
+    const activeConv = conversations.find((c) => c.id === activeConversationId);
+    const convName =
+      activeConv && activeConv.messages.length > 0 ? activeConv.name : "New conversation";
     return (
-      <div className="fixed bottom-4 right-4 z-50 flex w-[340px] items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-card transition-shadow hover:shadow-float">
-        <ChatCircle size={16} className="flex-shrink-0 text-tertiary" />
-        <input
-          type="text"
-          placeholder={
-            isConnected
+      <div
+        className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
+        onClick={togglePanel}
+      >
+        <div className="border-b border-border px-3 py-1.5">
+          <span className="block truncate text-[11px] font-medium text-tertiary">
+            {convName}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2">
+          <span className="flex-1 text-[13px] text-tertiary">
+            {isConnected
               ? "Ask AI to modify your schema..."
-              : "Connect a provider to start..."
-          }
-          disabled={!isConnected}
-          className="flex-1 bg-transparent text-[13px] text-secondary placeholder:text-tertiary outline-none disabled:opacity-50"
-          autoCorrect="off"
-          autoComplete="off"
-          spellCheck={false}
-          onFocus={() => togglePanel()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              const val = (e.target as HTMLInputElement).value.trim();
-              if (val) {
-                handleSend(val);
-                (e.target as HTMLInputElement).value = "";
-              }
-            }
-          }}
-        />
+              : "Connect a provider to start..."}
+          </span>
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white opacity-40">
+            <PaperPlaneRight size={12} weight="fill" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -272,8 +268,7 @@ export function ChatPanel() {
         </div>
         <button
           onClick={newConversation}
-          disabled={isStreaming}
-          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary disabled:opacity-50"
+          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
           aria-label="New chat"
         >
           <Plus size={14} />

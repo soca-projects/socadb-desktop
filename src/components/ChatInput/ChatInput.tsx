@@ -43,7 +43,7 @@ export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputPr
   }, []);
 
   return (
-    <div className="flex items-end gap-2 border-t border-border p-3">
+    <div className="flex items-center gap-2 border-t border-border p-3">
       <textarea
         ref={textareaRef}
         value={value}
@@ -55,12 +55,12 @@ export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputPr
         autoComplete="off"
         spellCheck={false}
         rows={1}
-        className="flex-1 resize-none rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-secondary placeholder:text-tertiary outline-none transition-colors focus:border-accent disabled:opacity-50"
+        className="flex-1 resize-none rounded-lg border border-border bg-surface px-3 py-2 text-[13px] leading-[18px] text-secondary placeholder:text-tertiary outline-none transition-colors focus:border-accent disabled:opacity-50"
       />
       {isStreaming ? (
         <button
           onClick={onStop}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-stone-500 text-white transition-colors hover:bg-stone-600"
+          className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-lg bg-stone-500 text-white transition-colors hover:bg-stone-600"
           aria-label="Stop"
         >
           <Stop size={14} weight="fill" />
@@ -69,7 +69,7 @@ export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputPr
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+          className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
           aria-label="Send message"
         >
           <PaperPlaneRight size={14} weight="fill" />
