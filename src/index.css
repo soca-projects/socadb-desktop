@@ -2,7 +2,165 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Satoshi";
+  src: url("./assets/fonts/Satoshi-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("./assets/fonts/Satoshi-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("./assets/fonts/Satoshi-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./assets/fonts/IBMPlexMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./assets/fonts/IBMPlexMono-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./assets/fonts/IBMPlexMono-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root,
+[data-theme="light"] {
+  --color-accent: 199 75 104;
+  --color-accent-hover: #b34058;
+  --color-accent-light: #fdf2f5;
+
+  --color-surface: #fdfcfc;
+  --color-surface-canvas: #f9f8f8;
+  --color-surface-muted: 244 242 243;
+  --color-surface-sidebar: #f9f8f8;
+
+  --color-fg: #292524;
+  --color-fg-secondary: #44403c;
+  --color-fg-tertiary: #78716c;
+  --color-fg-muted: #d6d3d1;
+
+  --color-border: #e8e5e6;
+  --color-border-light: #f2f0f1;
+  --color-border-hover: #d6d3d1;
+
+  --color-badge-primary-text: #d97706;
+  --color-badge-primary-bg: #fffbeb;
+  --color-badge-primary-border: rgba(217, 119, 6, 0.2);
+  --color-badge-unique-text: #2563eb;
+  --color-badge-unique-bg: #eff6ff;
+  --color-badge-unique-border: rgba(37, 99, 235, 0.2);
+
+  --color-edge-default: #a8a29e;
+  --color-edge-hovered: #d4667e;
+  --color-edge-selected: #c74b68;
+  --color-edge-hover-zone: rgba(199, 75, 104, 0.125);
+
+  --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
+  --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  --color-accent: 199 75 104;
+  --color-accent-hover: #d4667e;
+  --color-accent-light: #2a1f23;
+
+  --color-surface: #242222;
+  --color-surface-canvas: #1c1b1a;
+  --color-surface-muted: 47 44 45;
+  --color-surface-sidebar: #242222;
+
+  --color-fg: #e7e5e4;
+  --color-fg-secondary: #d6d3d1;
+  --color-fg-tertiary: #8a8380;
+  --color-fg-muted: #57534e;
+
+  --color-border: #3d3a3b;
+  --color-border-light: #322f30;
+  --color-border-hover: #4a4647;
+
+  --color-badge-primary-text: #f59e0b;
+  --color-badge-primary-bg: #2a2215;
+  --color-badge-primary-border: rgba(245, 158, 11, 0.25);
+  --color-badge-unique-text: #60a5fa;
+  --color-badge-unique-bg: #1a2235;
+  --color-badge-unique-border: rgba(96, 165, 250, 0.25);
+
+  --color-edge-default: #57534e;
+  --color-edge-hovered: #d4667e;
+  --color-edge-selected: #c74b68;
+  --color-edge-hover-zone: rgba(199, 75, 104, 0.15);
+
+  --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.15), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.35);
+  --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.4);
+}
+
 body {
   margin: 0;
   padding: 0;
+  font-family: "Satoshi", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--color-surface);
+  color: var(--color-fg);
+}
+
+[data-theme-transition] *,
+[data-theme-transition] *::before,
+[data-theme-transition] *::after {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.15s ease,
+    box-shadow 0.3s ease !important;
+}
+
+@keyframes thinking-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

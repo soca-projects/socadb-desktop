@@ -33,6 +33,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm test
+
   rust:
     name: Rust checks
     runs-on: ubuntu-24.04
@@ -55,6 +58,9 @@ jobs:
       - name: Format check
         working-directory: src-tauri
         run: cargo fmt --check
+
+      - name: Create MCP binary placeholder for Tauri resource glob
+        run: mkdir -p mcp-server/dist && touch mcp-server/dist/socadb-mcp-linux-x64
 
       - name: Clippy
         working-directory: src-tauri

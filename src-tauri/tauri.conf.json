@@ -5,7 +5,7 @@
   "identifier": "com.socadb.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:all",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },
@@ -16,7 +16,9 @@
         "width": 1280,
         "height": 800,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {
@@ -26,6 +28,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": {
+      "../mcp-server/dist/socadb-mcp-*": ""
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
