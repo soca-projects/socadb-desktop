@@ -1,10 +1,11 @@
 import { useState } from "react";
 import {
   XIcon as X,
-  FileCodeIcon as FileCode,
-  ImageIcon as Image,
-  BracketsAngleIcon as BracketsAngle,
+  FileImageIcon as FileImage,
+  BracketsCurlyIcon as BracketsCurly,
 } from "@phosphor-icons/react";
+import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
+import { MysqlIcon } from "../../assets/icons/MysqlIcon";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { exportCanvasPng } from "../../utils/exportPng";
 import { exportCanvasSvg } from "../../utils/exportSvg";
@@ -49,19 +50,19 @@ export function ExportModal({ onClose }: ExportModalProps) {
       type: "sql",
       label: dbType === "mysql" ? "MySQL" : "PostgreSQL",
       description: "Export as SQL DDL statements",
-      icon: <FileCode size={24} />,
+      icon: dbType === "mysql" ? <MysqlIcon size={24} /> : <PostgresqlIcon size={24} />,
     },
     {
       type: "image",
       label: "Image",
       description: "Export diagram as an image",
-      icon: <Image size={24} />,
+      icon: <FileImage size={24} />,
     },
     {
       type: "json",
       label: "JSON",
       description: "Export schema as JSON data",
-      icon: <BracketsAngle size={24} />,
+      icon: <BracketsCurly size={24} />,
     },
   ];
 

@@ -3,7 +3,6 @@ import {
   PlusIcon as Plus,
   ArrowLeftIcon as ArrowLeft,
 } from "@phosphor-icons/react";
-import { SIDE_PANEL_WIDTH } from "../../utils/layout";
 
 interface EmptyCanvasProps {
   onAddTable: () => void;
@@ -13,12 +12,7 @@ interface EmptyCanvasProps {
 export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-      <div
-        className="pointer-events-auto flex max-w-[320px] flex-col items-center text-center"
-        style={{
-          marginLeft: isSidePanelOpen ? -(SIDE_PANEL_WIDTH / 2) : 0,
-        }}
-      >
+      <div className="pointer-events-auto flex max-w-[320px] flex-col items-center text-center">
         <div
           className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/[0.07] animate-fade-in"
           style={{ animationDelay: "0.05s" }}

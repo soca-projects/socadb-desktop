@@ -11,7 +11,6 @@ import {
 import { useStore as useZustandStore } from "zustand";
 import { handleAutoLayout, handleUndo, handleRedo } from "../../utils/schemaActions";
 import { useSchemaStore } from "../../stores/schemaStore";
-import { SIDE_PANEL_WIDTH } from "../../utils/layout";
 
 const zoomSelector = (s: ReactFlowState) => Math.round(s.transform[2] * 100);
 
@@ -19,11 +18,7 @@ const btnClass =
   "px-2 py-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary";
 const btnDisabledClass = "px-2 py-1.5 text-muted cursor-not-allowed";
 
-interface CanvasControlsProps {
-  isSidePanelOpen: boolean;
-}
-
-export function CanvasControls({ isSidePanelOpen }: CanvasControlsProps) {
+export function CanvasControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const percentage = useStore(zoomSelector);
   const canUndo = useZustandStore(
@@ -37,10 +32,7 @@ export function CanvasControls({ isSidePanelOpen }: CanvasControlsProps) {
 
   return (
     <Panel position="bottom-left">
-      <div
-        className="flex items-center gap-2 transition-[margin] duration-200"
-        style={{ marginLeft: isSidePanelOpen ? SIDE_PANEL_WIDTH : 0 }}
-      >
+      <div className="flex items-center gap-2">
         <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface shadow-soft">
           <button
             onClick={() => void zoomOut()}
