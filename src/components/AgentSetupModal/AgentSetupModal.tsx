@@ -283,7 +283,7 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
             />
             <button
               onClick={() => void connectWithApiKey()}
-              disabled={!apiKeyInput.trim() || connecting}
+              disabled={apiKeyInput.trim().length < 20 || connecting}
               className="rounded-md bg-primary px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
             >
               {connecting ? "Connecting..." : "Connect"}
