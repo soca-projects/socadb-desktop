@@ -59,6 +59,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             mcp_respond,
@@ -66,6 +67,8 @@ pub fn run() {
             chat::chat_send,
             chat::chat_stop,
             chat::chat_status,
+            chat::chat_set_api_key,
+            chat::chat_reset,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

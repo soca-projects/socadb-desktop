@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../stores/chatStore";
 import type { ChatStatusResult, ChatEvent } from "../types/chat";
-import { DEFAULT_MODEL } from "../types/chat";
+import { DEFAULT_MODEL, makeClaudeCodeProvider } from "../types/chat";
+import { ChatStatusResultZ, ChatErrorZ } from "./zodSchemas";
 
 let statusResolve: ((result: ChatStatusResult) => void) | null = null;
 
@@ -15,22 +16,18 @@ function ensureAssistantMessage() {
 
 export function handleChatEvent(parsed: ChatEvent) {
   if (parsed.type === "chat_status_result") {
-    const store = useChatStore.getState();
-    const provider = {
-      id: "claude-code" as const,
-      name: "Claude Code",
-      connected: parsed.loggedIn as boolean,
-      connectionMethod: (parsed.loginType as "subscription" | "api-key") ?? null,
-      email: (parsed.email as string) ?? null,
-    };
-    store.setProvider(provider);
+    const parse = ChatStatusResultZ.safeParse(parsed);
+    if (!parse.success) return;
+    const result: ChatStatusResult = parse.data;
     if (statusResolve) {
-      statusResolve({
-        loggedIn: provider.connected,
-        email: provider.email,
-        loginType: provider.connectionMethod,
-      });
+      statusResolve(result);
       statusResolve = null;
+    } else {
+      useChatStore
+        .getState()
+        .setProvider(
+          makeClaudeCodeProvider(result.loggedIn, result.loginType, result.email),
+        );
     }
     return;
   }
@@ -78,11 +75,25 @@ export function handleChatEvent(parsed: ChatEvent) {
       store.finishResponse((parsed.sessionId as string) ?? "");
       break;
 
-    case "error":
+    case "error": {
       ensureAssistantMessage();
-      store.appendAssistantText(`Error: ${parsed.message as string}`);
+      const errorParse = ChatErrorZ.safeParse(parsed);
+      const errorMsg = errorParse.success ? errorParse.data.message : "Unknown error";
+      const lower = errorMsg.toLowerCase();
+      if (lower.includes("not logged in")) {
+        store.appendAssistantText(`Error: ${errorMsg}`);
+        store.setProvider(makeClaudeCodeProvider(false, null, null));
+      } else if (lower.includes("credit balance")) {
+        store.appendAssistantText(
+          `Error: ${errorMsg}\n\nAdd credits on the [Anthropic Console](https://console.anthropic.com/settings/billing), then try again. If it still fails, reconnect your API key in Settings.`,
+        );
+        resetAgent();
+      } else {
+        store.appendAssistantText(`Error: ${errorMsg}`);
+      }
       store.finishResponse("");
       break;
+    }
   }
 }
 
@@ -126,4 +137,12 @@ export function initChat(): Promise<ChatStatusResult> {
 
 export function checkChatStatus(): Promise<ChatStatusResult> {
   return requestStatus("chat_status");
+}
+
+export function setApiKey(apiKey: string | null) {
+  void invoke("chat_set_api_key", { apiKey });
+}
+
+function resetAgent() {
+  void invoke("chat_reset");
 }
