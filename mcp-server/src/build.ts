@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync, copyFileSync, chmodSync, mkdirSync } from "node:fs";
 import { platform, arch } from "node:process";
+import { resolve } from "node:path";
 import { build } from "esbuild";
 
 const osMap: Record<string, string> = {
@@ -63,11 +64,11 @@ if (os === "darwin") {
 }
 
 // Inject the SEA blob
-execFileSync(
-  "npx",
-  ["postject", outfile, "NODE_SEA_BLOB", "dist/sea-prep.blob", "--sentinel-fuse", "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2"],
-  { stdio: "inherit" },
-);
+const postjectBin = resolve("node_modules/.bin/postject");
+const postjectCmd = platform === "win32" ? `${postjectBin}.cmd` : postjectBin;
+execFileSync(postjectCmd, [outfile, "NODE_SEA_BLOB", "dist/sea-prep.blob", "--sentinel-fuse", "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2"], {
+  stdio: "inherit",
+});
 
 // Re-sign on macOS
 if (os === "darwin") {
