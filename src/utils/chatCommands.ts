@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../stores/chatStore";
 import type { ChatStatusResult, ChatEvent } from "../types/chat";
 import { DEFAULT_MODEL, makeClaudeCodeProvider } from "../types/chat";
+import { ChatStatusResultZ, ChatErrorZ } from "./zodSchemas";
 
 let statusResolve: ((result: ChatStatusResult) => void) | null = null;
 
@@ -15,11 +16,9 @@ function ensureAssistantMessage() {
 
 export function handleChatEvent(parsed: ChatEvent) {
   if (parsed.type === "chat_status_result") {
-    const result: ChatStatusResult = {
-      loggedIn: parsed.loggedIn as boolean,
-      email: (parsed.email as string) ?? null,
-      loginType: (parsed.loginType as "subscription" | "api-key") ?? null,
-    };
+    const parse = ChatStatusResultZ.safeParse(parsed);
+    if (!parse.success) return;
+    const result: ChatStatusResult = parse.data;
     if (statusResolve) {
       statusResolve(result);
       statusResolve = null;
@@ -78,7 +77,8 @@ export function handleChatEvent(parsed: ChatEvent) {
 
     case "error": {
       ensureAssistantMessage();
-      const errorMsg = parsed.message as string;
+      const errorParse = ChatErrorZ.safeParse(parsed);
+      const errorMsg = errorParse.success ? errorParse.data.message : "Unknown error";
       const lower = errorMsg.toLowerCase();
       if (lower.includes("not logged in")) {
         store.appendAssistantText(`Error: ${errorMsg}`);

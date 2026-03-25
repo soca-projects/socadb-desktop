@@ -121,11 +121,6 @@ export async function saveApiKey(apiKey: string) {
   }
 }
 
-export async function loadApiKey(): Promise<string | null> {
-  const config = await loadConfigFile();
-  return config?.apiKey ?? null;
-}
-
 export async function clearApiKey() {
   try {
     const existing = await loadConfigFile();
