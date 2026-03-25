@@ -1,4 +1,4 @@
-export type ProviderId = "claude-code";
+export type ProviderId = "claude" | "codex";
 
 export type ConnectionMethod = "subscription" | "api-key";
 
@@ -10,19 +10,98 @@ export interface Provider {
   email: string | null;
 }
 
-export function makeClaudeCodeProvider(
+export interface SupportedModel {
+  id: string;
+  displayName: string;
+  description: string;
+}
+
+export interface ProviderMeta {
+  id: ProviderId;
+  name: string;
+  models: SupportedModel[];
+  apiKeyPlaceholder: string;
+  apiKeyMinLength: number;
+  consoleUrl: string;
+  consoleName: string;
+  subscriptionLabel: string;
+  installCommand: string;
+  startCommand: string;
+  loginCommand: string;
+  logoutCommand: string;
+}
+
+export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
+  claude: {
+    id: "claude",
+    name: "Anthropic Claude Code",
+    models: [
+      {
+        id: "claude-opus-4-6",
+        displayName: "Claude Opus 4.6",
+        description: "Most capable",
+      },
+      {
+        id: "claude-sonnet-4-6",
+        displayName: "Claude Sonnet 4.6",
+        description: "Fast, balanced",
+      },
+      { id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5", description: "Fastest" },
+    ],
+    apiKeyPlaceholder: "sk-ant-...",
+    apiKeyMinLength: 20,
+    consoleUrl: "https://console.anthropic.com/settings/keys",
+    consoleName: "Anthropic Console",
+    subscriptionLabel: "Claude Subscription (Pro, Max...)",
+    installCommand: "curl -fsSL https://claude.ai/install.sh | bash",
+    startCommand: "claude",
+    loginCommand: "claude /login",
+    logoutCommand: "claude /logout",
+  },
+  codex: {
+    id: "codex",
+    name: "OpenAI Codex",
+    models: [
+      { id: "gpt-5.3-codex", displayName: "GPT 5.3 Codex", description: "Best" },
+      { id: "gpt-5.4", displayName: "GPT 5.4", description: "Latest" },
+      { id: "gpt-5.2-codex", displayName: "GPT 5.2 Codex", description: "Fast" },
+    ],
+    apiKeyPlaceholder: "sk-proj-...",
+    apiKeyMinLength: 20,
+    consoleUrl: "https://platform.openai.com/settings/organization/api-keys",
+    consoleName: "OpenAI Dashboard",
+    subscriptionLabel: "ChatGPT Subscription (Plus, Pro...)",
+    installCommand: "npm install -g @openai/codex",
+    startCommand: "codex",
+    loginCommand: "codex auth login",
+    logoutCommand: "codex auth logout",
+  },
+};
+
+export const PROVIDER_IDS: ProviderId[] = ["claude", "codex"];
+
+export function getProviderFromModel(modelId: string): ProviderId {
+  return modelId.startsWith("gpt-") ? "codex" : "claude";
+}
+
+export function makeProvider(
+  id: ProviderId,
   connected: boolean,
   connectionMethod: ConnectionMethod | null,
   email: string | null,
 ): Provider {
-  return {
-    id: "claude-code",
-    name: "Anthropic Claude Code",
-    connected,
-    connectionMethod,
-    email,
-  };
+  return { id, name: PROVIDERS[id].name, connected, connectionMethod, email };
 }
+
+export function getAvailableModels(
+  providers: Record<string, Provider>,
+): SupportedModel[] {
+  return PROVIDER_IDS.flatMap((id) =>
+    providers[id]?.connected ? PROVIDERS[id].models : [],
+  );
+}
+
+export const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 export interface ToolCallInfo {
   id: string;
@@ -54,24 +133,6 @@ export interface ChatStatusResult {
   email: string | null;
   loginType: ConnectionMethod | null;
 }
-
-export interface SupportedModel {
-  id: string;
-  displayName: string;
-  description: string;
-}
-
-export const SUPPORTED_MODELS: SupportedModel[] = [
-  { id: "claude-opus-4-6", displayName: "Claude Opus 4.6", description: "Most capable" },
-  {
-    id: "claude-sonnet-4-6",
-    displayName: "Claude Sonnet 4.6",
-    description: "Fast, balanced",
-  },
-  { id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5", description: "Fastest" },
-];
-
-export const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 export interface ChatEvent {
   type: "chat_event" | "chat_status_result" | "ready";
