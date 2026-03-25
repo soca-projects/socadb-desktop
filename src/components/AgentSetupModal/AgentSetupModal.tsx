@@ -16,6 +16,7 @@ import { persistProvider, saveApiKey, clearApiKey } from "../../utils/chatPersis
 import { setApiKey as setApiKeyOnAgent } from "../../utils/chatCommands";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { makeClaudeCodeProvider } from "../../types/chat";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 type View = "main" | "subscription" | "api-key";
 
@@ -136,16 +137,16 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
   const provider = useChatStore((s) => s.provider);
 
   const [view, setView] = useState<View>("main");
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(!provider?.connected);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [connecting, setConnecting] = useState(false);
 
   const isConnected = provider?.connected ?? false;
 
   const runDetection = useCallback(async () => {
-    setChecking(true);
+    const wasConnected = useChatStore.getState().provider?.connected ?? false;
+    if (!wasConnected) setChecking(true);
     const result = await detectClaudeCode();
-    const current = useChatStore.getState().provider;
     if (result.authenticated) {
       persistProvider(
         makeClaudeCodeProvider(
@@ -154,8 +155,14 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
           result.email,
         ),
       );
-    } else if (current?.connectionMethod === "subscription") {
-      persistProvider(makeClaudeCodeProvider(false, null, null));
+    } else if (
+      wasConnected &&
+      useChatStore.getState().provider?.connectionMethod === "subscription"
+    ) {
+      const confirm = await detectClaudeCode();
+      if (!confirm.authenticated) {
+        persistProvider(makeClaudeCodeProvider(false, null, null));
+      }
     }
     setChecking(false);
   }, []);
@@ -253,14 +260,13 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
         <div className="p-5">
           <p className="mb-4 text-[13px] text-secondary">
             Get your API key from the{" "}
-            <a
-              href="https://console.anthropic.com/settings/keys"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => void openUrl("https://console.anthropic.com/settings/keys")}
               className="font-medium text-accent underline-offset-2 hover:underline"
             >
               Anthropic Console
-            </a>
+            </button>
             .
           </p>
           <div className="flex items-center gap-2">

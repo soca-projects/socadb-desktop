@@ -79,11 +79,19 @@ export function handleChatEvent(parsed: ChatEvent) {
     case "error": {
       ensureAssistantMessage();
       const errorMsg = parsed.message as string;
-      store.appendAssistantText(`Error: ${errorMsg}`);
-      store.finishResponse("");
-      if (errorMsg.toLowerCase().includes("not logged in")) {
+      const lower = errorMsg.toLowerCase();
+      if (lower.includes("not logged in")) {
+        store.appendAssistantText(`Error: ${errorMsg}`);
         store.setProvider(makeClaudeCodeProvider(false, null, null));
+      } else if (lower.includes("credit balance")) {
+        store.appendAssistantText(
+          `Error: ${errorMsg}\n\nAdd credits on the [Anthropic Console](https://console.anthropic.com/settings/billing), then try again. If it still fails, reconnect your API key in Settings.`,
+        );
+        resetAgent();
+      } else {
+        store.appendAssistantText(`Error: ${errorMsg}`);
       }
+      store.finishResponse("");
       break;
     }
   }
@@ -133,4 +141,8 @@ export function checkChatStatus(): Promise<ChatStatusResult> {
 
 export function setApiKey(apiKey: string | null) {
   void invoke("chat_set_api_key", { apiKey });
+}
+
+function resetAgent() {
+  void invoke("chat_reset");
 }

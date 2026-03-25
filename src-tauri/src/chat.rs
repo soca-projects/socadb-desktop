@@ -179,7 +179,14 @@ pub async fn chat_set_api_key(api_key: Option<String>) -> Result<(), String> {
     let agent = get_agent();
     let mut guard = agent.lock().await;
     guard.api_key = api_key;
-    // Kill current agent so it respawns with new env on next call
+    guard.process = None;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn chat_reset() -> Result<(), String> {
+    let agent = get_agent();
+    let mut guard = agent.lock().await;
     guard.process = None;
     Ok(())
 }
