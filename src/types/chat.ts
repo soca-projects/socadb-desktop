@@ -10,6 +10,20 @@ export interface Provider {
   email: string | null;
 }
 
+export function makeClaudeCodeProvider(
+  connected: boolean,
+  connectionMethod: ConnectionMethod | null,
+  email: string | null,
+): Provider {
+  return {
+    id: "claude-code",
+    name: "Anthropic Claude Code",
+    connected,
+    connectionMethod,
+    email,
+  };
+}
+
 export interface ToolCallInfo {
   id: string;
   name: string;

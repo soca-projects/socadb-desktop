@@ -66,6 +66,7 @@ pub fn run() {
             chat::chat_send,
             chat::chat_stop,
             chat::chat_status,
+            chat::chat_set_api_key,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

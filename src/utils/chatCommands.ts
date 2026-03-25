@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../stores/chatStore";
 import type { ChatStatusResult, ChatEvent } from "../types/chat";
-import { DEFAULT_MODEL } from "../types/chat";
+import { DEFAULT_MODEL, makeClaudeCodeProvider } from "../types/chat";
 
 let statusResolve: ((result: ChatStatusResult) => void) | null = null;
 
@@ -15,22 +15,20 @@ function ensureAssistantMessage() {
 
 export function handleChatEvent(parsed: ChatEvent) {
   if (parsed.type === "chat_status_result") {
-    const store = useChatStore.getState();
-    const provider = {
-      id: "claude-code" as const,
-      name: "Claude Code",
-      connected: parsed.loggedIn as boolean,
-      connectionMethod: (parsed.loginType as "subscription" | "api-key") ?? null,
+    const result: ChatStatusResult = {
+      loggedIn: parsed.loggedIn as boolean,
       email: (parsed.email as string) ?? null,
+      loginType: (parsed.loginType as "subscription" | "api-key") ?? null,
     };
-    store.setProvider(provider);
     if (statusResolve) {
-      statusResolve({
-        loggedIn: provider.connected,
-        email: provider.email,
-        loginType: provider.connectionMethod,
-      });
+      statusResolve(result);
       statusResolve = null;
+    } else {
+      useChatStore
+        .getState()
+        .setProvider(
+          makeClaudeCodeProvider(result.loggedIn, result.loginType, result.email),
+        );
     }
     return;
   }
@@ -78,11 +76,16 @@ export function handleChatEvent(parsed: ChatEvent) {
       store.finishResponse((parsed.sessionId as string) ?? "");
       break;
 
-    case "error":
+    case "error": {
       ensureAssistantMessage();
-      store.appendAssistantText(`Error: ${parsed.message as string}`);
+      const errorMsg = parsed.message as string;
+      store.appendAssistantText(`Error: ${errorMsg}`);
       store.finishResponse("");
+      if (errorMsg.toLowerCase().includes("not logged in")) {
+        store.setProvider(makeClaudeCodeProvider(false, null, null));
+      }
       break;
+    }
   }
 }
 
@@ -126,4 +129,8 @@ export function initChat(): Promise<ChatStatusResult> {
 
 export function checkChatStatus(): Promise<ChatStatusResult> {
   return requestStatus("chat_status");
+}
+
+export function setApiKey(apiKey: string | null) {
+  void invoke("chat_set_api_key", { apiKey });
 }

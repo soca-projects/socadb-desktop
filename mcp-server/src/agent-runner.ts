@@ -190,12 +190,11 @@ async function handleChatStatus() {
       loginType = "api-key";
     }
 
-    if (info.tokenSource && info.tokenSource !== "") {
-      loggedIn = true;
-      loginType = "subscription";
-    }
+    const hasSubscription =
+      (info.tokenSource && info.tokenSource !== "") ||
+      (info.subscriptionType && info.subscriptionType !== "");
 
-    if (info.subscriptionType && info.subscriptionType !== "") {
+    if (hasSubscription && info.email) {
       loggedIn = true;
       loginType = "subscription";
     }
