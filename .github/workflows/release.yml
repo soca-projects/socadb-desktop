@@ -36,8 +36,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: oven-sh/setup-bun@v2
-
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -56,10 +54,7 @@ jobs:
       - run: npm ci
 
       - name: Install MCP server dependencies
-        run: cd mcp-server && bun install
-
-      - name: Build MCP server
-        run: npm run build:mcp
+        run: cd mcp-server && npm install
 
       - uses: tauri-apps/tauri-action@v0
         env:

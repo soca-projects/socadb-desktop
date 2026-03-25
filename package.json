@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:mcp": "cd mcp-server && bun run build",
+    "build:mcp": "npm run --prefix mcp-server build",
     "build:all": "npm run build:mcp && npm run build",
     "preview": "vite preview",
     "tauri": "tauri",
