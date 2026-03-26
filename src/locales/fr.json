@@ -153,6 +153,23 @@
     "suggestion3": "Schéma pour une app type Spotify",
     "suggestion4": "Analyser mon schéma et suggérer des améliorations"
   },
+  "provider": {
+    "claude": {
+      "consoleName": "Console Anthropic",
+      "subscriptionLabel": "Abonnement Claude (Pro, Max...)",
+      "signInHint": "Sélectionnez « Claude account with subscription » pour vous connecter."
+    },
+    "codex": {
+      "consoleName": "Dashboard OpenAI",
+      "subscriptionLabel": "Abonnement ChatGPT (Plus, Pro...)",
+      "signInHint": "Connectez-vous avec votre abonnement ChatGPT."
+    }
+  },
+  "chatError": {
+    "generic": "Erreur : {{message}}",
+    "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres.",
+    "statusTimeout": "Vérification du statut expirée"
+  },
   "toolCall": {
     "create_table": "table créée",
     "update_table": "table renommée",

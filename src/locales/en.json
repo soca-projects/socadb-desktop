@@ -153,6 +153,23 @@
     "suggestion3": "Schema for a Spotify-like music app",
     "suggestion4": "Explain my current schema and suggest improvements"
   },
+  "provider": {
+    "claude": {
+      "consoleName": "Anthropic Console",
+      "subscriptionLabel": "Claude Subscription (Pro, Max...)",
+      "signInHint": "Select \"Claude account with subscription\" to sign in."
+    },
+    "codex": {
+      "consoleName": "OpenAI Dashboard",
+      "subscriptionLabel": "ChatGPT Subscription (Plus, Pro...)",
+      "signInHint": "Sign in with your ChatGPT subscription."
+    }
+  },
+  "chatError": {
+    "generic": "Error: {{message}}",
+    "creditBalance": "Error: {{message}}\n\nAdd credits on the [{{consoleName}}]({{consoleUrl}}), then try again. If it still fails, reconnect your API key in Settings.",
+    "statusTimeout": "Status check timed out"
+  },
   "toolCall": {
     "create_table": "created table",
     "update_table": "renamed table",

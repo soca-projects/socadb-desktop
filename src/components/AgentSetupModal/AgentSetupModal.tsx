@@ -106,8 +106,6 @@ function SignInDropdown({
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
 
-  const meta = PROVIDERS[providerId];
-
   return (
     <div className="relative" ref={ref}>
       <button
@@ -127,7 +125,7 @@ function SignInDropdown({
             className="flex w-full flex-col px-3 py-2 text-left transition-colors hover:bg-surface-muted"
           >
             <span className="text-[12px] font-medium text-primary">
-              {meta.subscriptionLabel}
+              {t(`provider.${providerId}.subscriptionLabel`)}
             </span>
             <span className="text-[11px] text-tertiary">
               {t("agent.subscriptionIncluded")}
@@ -318,7 +316,9 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
   if (view === "subscription") {
     return (
       <ModalShell
-        title={t("agent.signInTitle", { label: activeMeta.subscriptionLabel })}
+        title={t("agent.signInTitle", {
+          label: t(`provider.${activeProviderId}.subscriptionLabel`),
+        })}
         onClose={() => setView("main")}
         maxWidth="max-w-lg"
       >
@@ -343,7 +343,9 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
                 {t("agent.stepSignIn", { name: activeMeta.cliName })}
               </p>
               <CopyableCommand>{activeMeta.startCommand}</CopyableCommand>
-              <p className="mt-1.5 text-[11px] text-tertiary">{activeMeta.signInHint}</p>
+              <p className="mt-1.5 text-[11px] text-tertiary">
+                {t(`provider.${activeProviderId}.signInHint`)}
+              </p>
             </div>
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
@@ -389,7 +391,7 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
               onClick={() => void openUrl(activeMeta.consoleUrl)}
               className="font-medium text-accent underline-offset-2 hover:underline"
             >
-              {activeMeta.consoleName}
+              {t(`provider.${activeProviderId}.consoleName`)}
             </button>
             .
           </p>
