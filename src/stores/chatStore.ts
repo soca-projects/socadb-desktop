@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import type { ChatMessage, Provider, ToolCallInfo, Conversation } from "../types/chat";
+import type {
+  ChatMessage,
+  Provider,
+  ToolCallInfo,
+  Conversation,
+  ProviderId,
+} from "../types/chat";
 import { genId } from "../utils/id";
 
 function createConversation(): Conversation {
@@ -19,7 +25,7 @@ interface ChatState {
   activeConversationId: string | null;
   isStreaming: boolean;
   isPanelOpen: boolean;
-  provider: Provider | null;
+  providers: Record<string, Provider>;
 
   messages: ChatMessage[];
   sessionId: string | null;
@@ -38,7 +44,7 @@ interface ChatState {
   finishResponse: (sessionId: string) => void;
   togglePanel: () => void;
   clearHistory: () => void;
-  setProvider: (provider: Provider) => void;
+  setProvider: (id: ProviderId, provider: Provider) => void;
   setMessages: (messages: ChatMessage[]) => void;
   setSessionId: (sessionId: string | null) => void;
 }
@@ -73,7 +79,7 @@ export const useChatStore = create<ChatState>()((set) => ({
   sessionId: null,
   isStreaming: false,
   isPanelOpen: false,
-  provider: null,
+  providers: {},
 
   newConversation: () =>
     set((state) => {
@@ -271,7 +277,10 @@ export const useChatStore = create<ChatState>()((set) => ({
 
   clearHistory: () => set({ messages: [], sessionId: null }),
 
-  setProvider: (provider) => set({ provider }),
+  setProvider: (id, provider) =>
+    set((state) => ({
+      providers: { ...state.providers, [id]: provider },
+    })),
 
   setMessages: (messages) => set({ messages }),
 

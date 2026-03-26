@@ -8,15 +8,24 @@ import {
   CheckIcon as Check,
   KeyIcon as Key,
   SignOutIcon as SignOut,
+  TerminalWindowIcon as TerminalWindow,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
-import { detectClaudeCode } from "../../utils/providerDetection";
+import { CodexIcon } from "../../assets/icons/CodexIcon";
+import { detectProvider } from "../../utils/providerDetection";
 import { persistProvider, saveApiKey, clearApiKey } from "../../utils/chatPersistence";
 import { setApiKey as setApiKeyOnAgent } from "../../utils/chatCommands";
 import { useClickOutside } from "../../hooks/useClickOutside";
-import { makeClaudeCodeProvider } from "../../types/chat";
+import {
+  makeProvider,
+  PROVIDERS,
+  PROVIDER_IDS,
+  type ProviderId,
+  type Provider,
+} from "../../types/chat";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
 
 type View = "main" | "subscription" | "api-key";
 
@@ -68,7 +77,7 @@ function CopyableCommand({ children }: { children: string }) {
   return (
     <button
       onClick={copy}
-      className="flex w-full items-center justify-between rounded-md bg-surface px-3 py-2 text-left font-mono text-[11px] text-tertiary transition-colors hover:bg-surface-muted"
+      className="flex w-full items-center justify-between rounded-md bg-surface px-3 py-2 text-left font-mono text-[11px] text-tertiary transition-colors hover:bg-surface-muted dark:bg-stone-700 dark:text-stone-300 dark:hover:bg-stone-600/70"
     >
       <span>{children}</span>
       {copied ? (
@@ -81,15 +90,19 @@ function CopyableCommand({ children }: { children: string }) {
 }
 
 function SignInDropdown({
+  providerId,
   onSubscription,
   onApiKey,
 }: {
+  providerId: ProviderId;
   onSubscription: () => void;
   onApiKey: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
+
+  const meta = PROVIDERS[providerId];
 
   return (
     <div className="relative" ref={ref}>
@@ -110,7 +123,7 @@ function SignInDropdown({
             className="flex w-full flex-col px-3 py-2 text-left transition-colors hover:bg-surface-muted"
           >
             <span className="text-[12px] font-medium text-primary">
-              Claude Subscription (Pro, Max...)
+              {meta.subscriptionLabel}
             </span>
             <span className="text-[11px] text-tertiary">
               Usage included with your plan
@@ -133,23 +146,44 @@ function SignInDropdown({
   );
 }
 
-export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
-  const provider = useChatStore((s) => s.provider);
+const PROVIDER_ICONS: Record<ProviderId, typeof ClaudeIcon> = {
+  claude: ClaudeIcon,
+  codex: CodexIcon,
+};
 
-  const [view, setView] = useState<View>("main");
-  const [checking, setChecking] = useState(!provider?.connected);
-  const [apiKeyInput, setApiKeyInput] = useState("");
-  const [connecting, setConnecting] = useState(false);
+const PROVIDER_ICON_BG: Record<ProviderId, string> = {
+  claude: "bg-[#D97757]/10",
+  codex: "bg-stone-500/10 dark:bg-stone-400/10",
+};
 
+function ProviderRow({
+  providerId,
+  provider,
+  onSubscription,
+  onApiKey,
+  onDisconnect,
+}: {
+  providerId: ProviderId;
+  provider: Provider | undefined;
+  onSubscription: () => void;
+  onApiKey: () => void;
+  onDisconnect: () => void;
+}) {
   const isConnected = provider?.connected ?? false;
+  const [checking, setChecking] = useState(false);
+  const meta = PROVIDERS[providerId];
+  const Icon = PROVIDER_ICONS[providerId];
 
   const runDetection = useCallback(async () => {
-    const wasConnected = useChatStore.getState().provider?.connected ?? false;
+    const wasConnected =
+      useChatStore.getState().providers[providerId]?.connected ?? false;
     if (!wasConnected) setChecking(true);
-    const result = await detectClaudeCode();
+    const result = await detectProvider(providerId);
     if (result.authenticated) {
       persistProvider(
-        makeClaudeCodeProvider(
+        providerId,
+        makeProvider(
+          providerId,
           true,
           result.loginType === "api-key" ? "api-key" : "subscription",
           result.email,
@@ -157,88 +191,168 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
       );
     } else if (
       wasConnected &&
-      useChatStore.getState().provider?.connectionMethod === "subscription"
+      useChatStore.getState().providers[providerId]?.connectionMethod === "subscription"
     ) {
-      const confirm = await detectClaudeCode();
+      const confirm = await detectProvider(providerId);
       if (!confirm.authenticated) {
-        persistProvider(makeClaudeCodeProvider(false, null, null));
+        persistProvider(providerId, makeProvider(providerId, false, null, null));
       }
     }
     setChecking(false);
-  }, []);
+  }, [providerId]);
 
   useState(() => {
     void runDetection();
   });
 
   useEffect(() => {
-    if (view === "api-key" || isConnected) return;
+    if (isConnected) return;
     const interval = setInterval(() => void runDetection(), 5000);
     return () => clearInterval(interval);
-  }, [view, isConnected, runDetection]);
+  }, [isConnected, runDetection]);
+
+  return (
+    <div className="rounded-lg border border-border p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div
+            className={`flex h-8 w-8 items-center justify-center rounded-lg ${PROVIDER_ICON_BG[providerId]}`}
+          >
+            <Icon size={18} />
+          </div>
+          <div>
+            <p className="text-[13px] font-medium text-secondary">{meta.name}</p>
+            {isConnected ? (
+              <p className="flex items-center gap-1 text-[12px] text-emerald-600 dark:text-emerald-400">
+                <CheckCircle size={12} weight="fill" />
+                Connected via {provider?.connectionMethod ?? "subscription"}
+                {provider?.email ? ` (${provider.email})` : ""}
+              </p>
+            ) : checking ? (
+              <p className="text-[12px] text-tertiary">Checking...</p>
+            ) : (
+              <p className="text-[12px] text-tertiary">Not connected</p>
+            )}
+          </div>
+        </div>
+
+        {isConnected && provider?.connectionMethod === "api-key" && (
+          <button
+            onClick={onDisconnect}
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
+          >
+            <SignOut size={13} />
+            Disconnect
+          </button>
+        )}
+
+        {!isConnected && !checking && (
+          <SignInDropdown
+            providerId={providerId}
+            onSubscription={onSubscription}
+            onApiKey={onApiKey}
+          />
+        )}
+
+        {!isConnected && checking && (
+          <ArrowClockwise size={14} className="animate-spin text-tertiary" />
+        )}
+      </div>
+
+      {isConnected && provider?.connectionMethod === "subscription" && (
+        <p className="mt-3 text-[11px] text-tertiary">
+          To switch to API key, run{" "}
+          <code className="rounded bg-surface-muted px-1 py-0.5 font-mono text-[10px]">
+            {meta.logoutCommand}
+          </code>{" "}
+          in your terminal.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
+  const providers = useChatStore((s) => s.providers);
+
+  const [view, setView] = useState<View>("main");
+  const [activeProviderId, setActiveProviderId] = useState<ProviderId>("claude");
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [connecting, setConnecting] = useState(false);
+
+  const activeMeta = PROVIDERS[activeProviderId];
 
   const connectWithApiKey = useCallback(async () => {
     const key = apiKeyInput.trim();
     if (!key) return;
     setConnecting(true);
-    await saveApiKey(key);
-    setApiKeyOnAgent(key);
-    persistProvider(makeClaudeCodeProvider(true, "api-key", null));
+    await saveApiKey(activeProviderId, key);
+    setApiKeyOnAgent(activeProviderId, key);
+    persistProvider(
+      activeProviderId,
+      makeProvider(activeProviderId, true, "api-key", null),
+    );
     setConnecting(false);
     setView("main");
     setApiKeyInput("");
-  }, [apiKeyInput]);
+  }, [apiKeyInput, activeProviderId]);
 
-  const disconnect = useCallback(async () => {
-    await clearApiKey();
-    setApiKeyOnAgent(null);
-    persistProvider(makeClaudeCodeProvider(false, null, null));
-    setView("main");
+  const disconnect = useCallback(async (id: ProviderId) => {
+    await clearApiKey(id);
+    setApiKeyOnAgent(id, null);
+    persistProvider(id, makeProvider(id, false, null, null));
   }, []);
 
   if (view === "subscription") {
     return (
       <ModalShell
-        title="Sign in with Claude subscription"
+        title={`Sign in with ${activeMeta.subscriptionLabel}`}
         onClose={() => setView("main")}
         maxWidth="max-w-lg"
       >
         <div className="p-5">
-          <p className="mb-5 text-[13px] text-secondary">
+          <p className="mb-3 text-[13px] text-secondary">
             Run these steps in your terminal.
           </p>
+          <button
+            onClick={() => void invoke("open_terminal")}
+            className="mb-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[12px] font-medium text-white transition-colors hover:bg-primary/90 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
+          >
+            <TerminalWindow size={15} />
+            Open Terminal
+          </button>
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
-                1. Install Claude Code (if needed)
+                1. Install {activeMeta.cliName} (if needed)
               </p>
-              <CopyableCommand>
-                curl -fsSL https://claude.ai/install.sh | bash
-              </CopyableCommand>
+              <CopyableCommand>{activeMeta.installCommand}</CopyableCommand>
             </div>
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
-                2. Start Claude Code and sign in
+                2. Start {activeMeta.cliName} and sign in
               </p>
-              <CopyableCommand>claude</CopyableCommand>
-              <p className="mt-1.5 text-[11px] text-tertiary">
-                Select &quot;Claude account with subscription&quot; to sign in.
-              </p>
+              <CopyableCommand>{activeMeta.startCommand}</CopyableCommand>
+              <p className="mt-1.5 text-[11px] text-tertiary">{activeMeta.signInHint}</p>
             </div>
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
-                3. Or login manually in Claude Code
+                3. Or login manually
               </p>
-              <CopyableCommand>claude /login</CopyableCommand>
+              <CopyableCommand>{activeMeta.loginCommand}</CopyableCommand>
             </div>
           </div>
           <div className="mt-5 flex items-center gap-2 rounded-lg bg-surface-muted px-3 py-2.5">
             <ArrowClockwise
               size={13}
-              className={checking ? "animate-spin text-accent" : "text-tertiary"}
+              className={
+                providers[activeProviderId]?.connected
+                  ? "text-emerald-500"
+                  : "animate-spin text-accent"
+              }
             />
             <p className="text-[11px] text-tertiary">
-              {isConnected
+              {providers[activeProviderId]?.connected
                 ? "Connection detected!"
                 : "SocaDB will detect your connection automatically..."}
             </p>
@@ -262,17 +376,17 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
             Get your API key from the{" "}
             <button
               type="button"
-              onClick={() => void openUrl("https://console.anthropic.com/settings/keys")}
+              onClick={() => void openUrl(activeMeta.consoleUrl)}
               className="font-medium text-accent underline-offset-2 hover:underline"
             >
-              Anthropic Console
+              {activeMeta.consoleName}
             </button>
             .
           </p>
           <div className="flex items-center gap-2">
             <input
               type="password"
-              placeholder="sk-ant-..."
+              placeholder={activeMeta.apiKeyPlaceholder}
               value={apiKeyInput}
               onChange={(e) => setApiKeyInput(e.target.value)}
               onKeyDown={(e) => {
@@ -283,7 +397,9 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
             />
             <button
               onClick={() => void connectWithApiKey()}
-              disabled={apiKeyInput.trim().length < 20 || connecting}
+              disabled={
+                apiKeyInput.trim().length < activeMeta.apiKeyMinLength || connecting
+              }
               className="rounded-md bg-primary px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
             >
               {connecting ? "Connecting..." : "Connect"}
@@ -299,61 +415,23 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
       <div className="p-5">
         <p className="mb-4 text-[13px] font-medium text-secondary">Agents on Canvas</p>
 
-        <div className="rounded-lg border border-border p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#D97757]/10">
-                <ClaudeIcon size={18} />
-              </div>
-              <div>
-                <p className="text-[13px] font-medium text-secondary">
-                  Anthropic Claude Code
-                </p>
-                {isConnected ? (
-                  <p className="flex items-center gap-1 text-[12px] text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle size={12} weight="fill" />
-                    Connected via {provider?.connectionMethod ?? "subscription"}
-                    {provider?.email ? ` (${provider.email})` : ""}
-                  </p>
-                ) : checking ? (
-                  <p className="text-[12px] text-tertiary">Checking...</p>
-                ) : (
-                  <p className="text-[12px] text-tertiary">Not connected</p>
-                )}
-              </div>
-            </div>
-
-            {isConnected && provider?.connectionMethod === "api-key" && (
-              <button
-                onClick={() => void disconnect()}
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
-              >
-                <SignOut size={13} />
-                Disconnect
-              </button>
-            )}
-
-            {!isConnected && !checking && (
-              <SignInDropdown
-                onSubscription={() => setView("subscription")}
-                onApiKey={() => setView("api-key")}
-              />
-            )}
-
-            {!isConnected && checking && (
-              <ArrowClockwise size={14} className="animate-spin text-tertiary" />
-            )}
-          </div>
-
-          {isConnected && provider?.connectionMethod === "subscription" && (
-            <p className="mt-3 text-[11px] text-tertiary">
-              To switch to API key, run{" "}
-              <code className="rounded bg-surface-muted px-1 py-0.5 font-mono text-[10px]">
-                claude /logout
-              </code>{" "}
-              in your terminal.
-            </p>
-          )}
+        <div className="space-y-3">
+          {PROVIDER_IDS.map((id) => (
+            <ProviderRow
+              key={id}
+              providerId={id}
+              provider={providers[id]}
+              onSubscription={() => {
+                setActiveProviderId(id);
+                setView("subscription");
+              }}
+              onApiKey={() => {
+                setActiveProviderId(id);
+                setView("api-key");
+              }}
+              onDisconnect={() => void disconnect(id)}
+            />
+          ))}
         </div>
       </div>
     </ModalShell>

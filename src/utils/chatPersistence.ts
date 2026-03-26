@@ -1,17 +1,19 @@
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { homeDir } from "@tauri-apps/api/path";
 import { useChatStore } from "../stores/chatStore";
-import { detectClaudeCode } from "./providerDetection";
+import { detectProvider } from "./providerDetection";
 import { setApiKey as setApiKeyOnAgent } from "./chatCommands";
-import type { Conversation, Provider } from "../types/chat";
-import { makeClaudeCodeProvider } from "../types/chat";
+import type { Conversation, Provider, ProviderId } from "../types/chat";
+import { makeProvider, PROVIDER_IDS } from "../types/chat";
 
 interface ConversationsFile {
   conversations: Conversation[];
 }
 
 interface ConfigFile {
-  provider: Provider | null;
+  providers?: Record<string, Provider>;
+  apiKeys?: Record<string, string>;
+  provider?: Provider | null;
   apiKey?: string;
 }
 
@@ -56,46 +58,9 @@ async function loadConversations() {
     // File doesn't exist yet — first launch
   }
 
-  // Ensure at least one conversation exists
   if (useChatStore.getState().conversations.length === 0) {
     useChatStore.getState().newConversation();
   }
-
-  // Migrate old chat-history.json if it exists
-  try {
-    const dir = await getSocadbDir();
-    const oldPath = `${dir}chat-history.json`;
-    const content = await readTextFile(oldPath);
-    const data = JSON.parse(content) as { messages: unknown[]; sessionId: string | null };
-    if (data.messages?.length > 0 && useChatStore.getState().conversations.length === 0) {
-      useChatStore.getState().setMessages(data.messages as Conversation["messages"]);
-      if (data.sessionId) {
-        useChatStore.getState().setSessionId(data.sessionId);
-      }
-    }
-  } catch {
-    // No old history — normal
-  }
-}
-
-export async function saveProviderConfig(provider: Provider | null) {
-  try {
-    const existing = await loadConfigFile();
-    const data: ConfigFile = { ...existing, provider };
-    await writeTextFile(await configPath(), JSON.stringify(data));
-  } catch {
-    // Write failed — silently ignore
-  }
-}
-
-export async function loadProviderConfig(): Promise<Provider | null> {
-  const config = await loadConfigFile();
-  return config?.provider ?? null;
-}
-
-export function persistProvider(provider: Provider) {
-  useChatStore.getState().setProvider(provider);
-  void saveProviderConfig(provider);
 }
 
 async function loadConfigFile(): Promise<ConfigFile | null> {
@@ -107,26 +72,75 @@ async function loadConfigFile(): Promise<ConfigFile | null> {
   }
 }
 
-export async function saveApiKey(apiKey: string) {
-  try {
-    const existing = await loadConfigFile();
-    const data: ConfigFile = {
-      ...existing,
-      provider: existing?.provider ?? null,
-      apiKey,
+function migrateConfig(config: ConfigFile): ConfigFile {
+  if (config.provider && !config.providers) {
+    const oldProvider = config.provider;
+    const id =
+      oldProvider.id === ("claude-code" as string) ? "claude" : String(oldProvider.id);
+    const migrated: Provider = {
+      ...oldProvider,
+      id: id as ProviderId,
     };
-    await writeTextFile(await configPath(), JSON.stringify(data));
+    const result: ConfigFile = {
+      providers: { [id]: migrated },
+    };
+    if (config.apiKey) {
+      result.apiKeys = { [id]: config.apiKey };
+    }
+    return result;
+  }
+  return config;
+}
+
+async function saveConfig(config: ConfigFile) {
+  try {
+    const clean: ConfigFile = {
+      providers: config.providers,
+      apiKeys: config.apiKeys,
+    };
+    await writeTextFile(await configPath(), JSON.stringify(clean));
   } catch {
     // Write failed — silently ignore
   }
 }
 
-export async function clearApiKey() {
+export async function saveProviderConfig(id: ProviderId, provider: Provider) {
+  try {
+    const existing = await loadConfigFile();
+    const config = existing ? migrateConfig(existing) : {};
+    const providers = { ...(config.providers ?? {}), [id]: provider };
+    await saveConfig({ ...config, providers });
+  } catch {
+    // Write failed — silently ignore
+  }
+}
+
+export function persistProvider(id: ProviderId, provider: Provider) {
+  useChatStore.getState().setProvider(id, provider);
+  void saveProviderConfig(id, provider);
+}
+
+export async function saveApiKey(id: ProviderId, apiKey: string) {
+  try {
+    const existing = await loadConfigFile();
+    const config = existing ? migrateConfig(existing) : {};
+    const apiKeys = { ...(config.apiKeys ?? {}), [id]: apiKey };
+    await saveConfig({ ...config, apiKeys });
+  } catch {
+    // Write failed — silently ignore
+  }
+}
+
+export async function clearApiKey(id: ProviderId) {
   try {
     const existing = await loadConfigFile();
     if (existing) {
-      const data: ConfigFile = { provider: existing.provider };
-      await writeTextFile(await configPath(), JSON.stringify(data));
+      const config = migrateConfig(existing);
+      const allKeys = config.apiKeys ?? {};
+      const apiKeys = Object.fromEntries(
+        Object.entries(allKeys).filter(([k]) => k !== id),
+      );
+      await saveConfig({ ...config, apiKeys });
     }
   } catch {
     // Write failed — silently ignore
@@ -135,25 +149,43 @@ export async function clearApiKey() {
 
 export function initChatPersistence() {
   void loadConversations();
-  void loadConfigFile().then(async (config) => {
-    if (config?.apiKey) {
-      setApiKeyOnAgent(config.apiKey);
+  void loadConfigFile().then(async (raw) => {
+    const config = raw ? migrateConfig(raw) : {};
+
+    if (config.apiKeys) {
+      for (const [id, key] of Object.entries(config.apiKeys)) {
+        setApiKeyOnAgent(id as ProviderId, key);
+      }
     }
 
-    const provider = config?.provider ?? null;
-    if (provider?.connected) {
-      useChatStore.getState().setProvider(provider);
-      return;
+    if (config.providers) {
+      for (const [id, provider] of Object.entries(config.providers)) {
+        if (provider.connected) {
+          useChatStore.getState().setProvider(id as ProviderId, provider);
+        }
+      }
     }
-    const result = await detectClaudeCode();
-    if (result.authenticated) {
-      persistProvider(
-        makeClaudeCodeProvider(
-          true,
-          result.loginType === "api-key" ? "api-key" : "subscription",
-          result.email,
-        ),
-      );
+
+    for (const id of PROVIDER_IDS) {
+      const existing = config.providers?.[id];
+      if (!existing?.connected) {
+        try {
+          const result = await detectProvider(id);
+          if (result.authenticated) {
+            persistProvider(
+              id,
+              makeProvider(
+                id,
+                true,
+                result.loginType === "api-key" ? "api-key" : "subscription",
+                result.email,
+              ),
+            );
+          }
+        } catch {
+          // Detection failed — skip
+        }
+      }
     }
   });
 

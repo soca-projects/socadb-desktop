@@ -9,7 +9,11 @@ import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { serializeColumn, serializeRelation } from "../../utils/schemaQueries";
-import { SUPPORTED_MODELS, DEFAULT_MODEL } from "../../types/chat";
+import {
+  DEFAULT_MODEL,
+  getAvailableModels,
+  getProviderFromModel,
+} from "../../types/chat";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
@@ -117,7 +121,7 @@ export function ChatPanel() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const sessionId = useChatStore((s) => s.sessionId);
-  const provider = useChatStore((s) => s.provider);
+  const providers = useChatStore((s) => s.providers);
   const conversations = useChatStore((s) => s.conversations);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const togglePanel = useChatStore((s) => s.togglePanel);
@@ -139,11 +143,15 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const availableModels = getAvailableModels(providers);
+  const isConnected = availableModels.length > 0;
+  const activeProviderId = getProviderFromModel(selectedModel);
+
   useEffect(() => {
     if (isPanelOpen) {
-      void initChat();
+      void initChat(activeProviderId);
     }
-  }, [isPanelOpen]);
+  }, [isPanelOpen, activeProviderId]);
 
   const handleSend = useCallback(
     (content: string) => {
@@ -153,7 +161,13 @@ export function ChatPanel() {
       startAssistantMessage();
 
       const systemPrompt = buildSystemPrompt();
-      sendChatMessage(content, systemPrompt, sessionId ?? undefined, selectedModel);
+      sendChatMessage(
+        content,
+        systemPrompt,
+        activeProviderId,
+        sessionId ?? undefined,
+        selectedModel,
+      );
     },
     [
       addUserMessage,
@@ -163,14 +177,13 @@ export function ChatPanel() {
       togglePanel,
       isStreaming,
       selectedModel,
+      activeProviderId,
     ],
   );
 
   const handleStop = useCallback(() => {
-    stopChat();
-  }, []);
-
-  const isConnected = provider?.connected ?? false;
+    stopChat(activeProviderId);
+  }, [activeProviderId]);
 
   if (focusMode) return null;
 
@@ -247,7 +260,7 @@ export function ChatPanel() {
             disabled={isStreaming}
             className="appearance-none rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
           >
-            {SUPPORTED_MODELS.map((m) => (
+            {availableModels.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.displayName}
               </option>
