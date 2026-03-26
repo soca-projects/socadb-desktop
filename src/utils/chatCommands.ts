@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../stores/chatStore";
-import type { ChatStatusResult, ChatEvent } from "../types/chat";
-import { DEFAULT_MODEL, makeClaudeCodeProvider } from "../types/chat";
+import type { ChatStatusResult, ChatEvent, ProviderId } from "../types/chat";
+import { DEFAULT_MODEL, makeProvider, PROVIDERS } from "../types/chat";
 import { ChatStatusResultZ, ChatErrorZ } from "./zodSchemas";
 
 let statusResolve: ((result: ChatStatusResult) => void) | null = null;
@@ -22,12 +22,6 @@ export function handleChatEvent(parsed: ChatEvent) {
     if (statusResolve) {
       statusResolve(result);
       statusResolve = null;
-    } else {
-      useChatStore
-        .getState()
-        .setProvider(
-          makeClaudeCodeProvider(result.loggedIn, result.loginType, result.email),
-        );
     }
     return;
   }
@@ -80,14 +74,17 @@ export function handleChatEvent(parsed: ChatEvent) {
       const errorParse = ChatErrorZ.safeParse(parsed);
       const errorMsg = errorParse.success ? errorParse.data.message : "Unknown error";
       const lower = errorMsg.toLowerCase();
+      const providerId = (parsed.providerId as ProviderId) ?? "claude";
+      const meta = PROVIDERS[providerId];
+
       if (lower.includes("not logged in")) {
         store.appendAssistantText(`Error: ${errorMsg}`);
-        store.setProvider(makeClaudeCodeProvider(false, null, null));
+        store.setProvider(providerId, makeProvider(providerId, false, null, null));
       } else if (lower.includes("credit balance")) {
         store.appendAssistantText(
-          `Error: ${errorMsg}\n\nAdd credits on the [Anthropic Console](https://console.anthropic.com/settings/billing), then try again. If it still fails, reconnect your API key in Settings.`,
+          `Error: ${errorMsg}\n\nAdd credits on the [${meta.consoleName}](${meta.consoleUrl}), then try again. If it still fails, reconnect your API key in Settings.`,
         );
-        resetAgent();
+        resetAgent(providerId);
       } else {
         store.appendAssistantText(`Error: ${errorMsg}`);
       }
@@ -100,10 +97,12 @@ export function handleChatEvent(parsed: ChatEvent) {
 export function sendChatMessage(
   message: string,
   systemPrompt: string,
+  providerId: ProviderId,
   sessionId?: string,
   model?: string,
 ) {
   void invoke("chat_send", {
+    providerId,
     message,
     systemPrompt,
     sessionId: sessionId ?? null,
@@ -111,11 +110,14 @@ export function sendChatMessage(
   });
 }
 
-export function stopChat() {
-  void invoke("chat_stop");
+export function stopChat(providerId: ProviderId) {
+  void invoke("chat_stop", { providerId });
 }
 
-function requestStatus(command: string): Promise<ChatStatusResult> {
+function requestStatus(
+  command: string,
+  providerId: ProviderId,
+): Promise<ChatStatusResult> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       statusResolve = null;
@@ -127,22 +129,22 @@ function requestStatus(command: string): Promise<ChatStatusResult> {
       resolve(result);
     };
 
-    void invoke(command);
+    void invoke(command, { providerId });
   });
 }
 
-export function initChat(): Promise<ChatStatusResult> {
-  return requestStatus("chat_init");
+export function initChat(providerId: ProviderId): Promise<ChatStatusResult> {
+  return requestStatus("chat_init", providerId);
 }
 
-export function checkChatStatus(): Promise<ChatStatusResult> {
-  return requestStatus("chat_status");
+export function checkChatStatus(providerId: ProviderId): Promise<ChatStatusResult> {
+  return requestStatus("chat_status", providerId);
 }
 
-export function setApiKey(apiKey: string | null) {
-  void invoke("chat_set_api_key", { apiKey });
+export function setApiKey(providerId: ProviderId, apiKey: string | null) {
+  void invoke("chat_set_api_key", { providerId, apiKey });
 }
 
-function resetAgent() {
-  void invoke("chat_reset");
+function resetAgent(providerId: ProviderId) {
+  void invoke("chat_reset", { providerId });
 }
