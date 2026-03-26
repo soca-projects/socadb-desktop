@@ -12,10 +12,12 @@ import { registerMcpServers } from "./utils/mcpRegistration";
 import { initSessionPersistence } from "./utils/sessionPersistence";
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
+import { initLanguagePersistence } from "./utils/languagePersistence";
 
 initSessionPersistence();
 initChatPersistence();
 initThemePersistence();
+initLanguagePersistence();
 
 function App() {
   useAppMenu();
