@@ -1,6 +1,7 @@
 mod chat;
 mod ws;
 
+use std::process::Command;
 use tauri::Manager;
 use tokio_tungstenite::tungstenite::Message;
 
@@ -55,6 +56,41 @@ async fn mcp_respond(response: String) {
     }
 }
 
+#[tauri::command]
+fn open_terminal() {
+    #[cfg(target_os = "macos")]
+    {
+        let terminals = ["Ghostty", "iTerm", "Warp", "Alacritty", "kitty", "Terminal"];
+        for app in terminals {
+            if let Ok(output) = Command::new("open").args(["-a", app]).output() {
+                if output.status.success() {
+                    break;
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let terminals = ["wt.exe", "powershell.exe"];
+        for term in terminals {
+            if Command::new(term).spawn().is_ok() {
+                break;
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let terminals = ["gnome-terminal", "konsole", "xfce4-terminal", "xterm"];
+        for term in terminals {
+            if Command::new(term).spawn().is_ok() {
+                break;
+            }
+        }
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -63,6 +99,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             mcp_respond,
+            open_terminal,
             chat::chat_init,
             chat::chat_send,
             chat::chat_stop,

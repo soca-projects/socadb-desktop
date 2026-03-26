@@ -8,6 +8,7 @@ import {
   CheckIcon as Check,
   KeyIcon as Key,
   SignOutIcon as SignOut,
+  TerminalWindowIcon as TerminalWindow,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
@@ -24,6 +25,7 @@ import {
   type Provider,
 } from "../../types/chat";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
 
 type View = "main" | "subscription" | "api-key";
 
@@ -309,9 +311,16 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
         maxWidth="max-w-lg"
       >
         <div className="p-5">
-          <p className="mb-5 text-[13px] text-secondary">
+          <p className="mb-3 text-[13px] text-secondary">
             Run these steps in your terminal.
           </p>
+          <button
+            onClick={() => void invoke("open_terminal")}
+            className="mb-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[12px] font-medium text-white transition-colors hover:bg-primary/90 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
+          >
+            <TerminalWindow size={15} />
+            Open Terminal
+          </button>
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
