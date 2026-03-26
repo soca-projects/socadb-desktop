@@ -165,6 +165,26 @@
       "signInHint": "Connectez-vous avec votre abonnement ChatGPT."
     }
   },
+  "menu": {
+    "file": "Fichier",
+    "newSchema": "Nouveau schéma",
+    "open": "Ouvrir...",
+    "save": "Enregistrer",
+    "saveAs": "Enregistrer sous...",
+    "import": "Importer...",
+    "export": "Exporter...",
+    "edit": "Édition",
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "view": "Présentation",
+    "toggleSidebar": "Afficher/Masquer le panneau",
+    "focusMode": "Mode focus",
+    "toggleTheme": "Changer le thème",
+    "window": "Fenêtre",
+    "about": "À propos de SocaDB",
+    "hideSocaDB": "Masquer SocaDB",
+    "quitSocaDB": "Quitter SocaDB"
+  },
   "chatError": {
     "generic": "Erreur : {{message}}",
     "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres.",
