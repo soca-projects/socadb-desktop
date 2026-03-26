@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   XIcon as X,
   CaretDownIcon as CaretDown,
@@ -117,6 +118,7 @@ function useResize(initial: { width: number; height: number }) {
 }
 
 export function ChatPanel() {
+  const { t } = useTranslation();
   const isPanelOpen = useChatStore((s) => s.isPanelOpen);
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
@@ -190,7 +192,9 @@ export function ChatPanel() {
   if (!isPanelOpen) {
     const activeConv = conversations.find((c) => c.id === activeConversationId);
     const convName =
-      activeConv && activeConv.messages.length > 0 ? activeConv.name : "New conversation";
+      activeConv && activeConv.messages.length > 0
+        ? activeConv.name
+        : t("chat.newConversation");
     return (
       <div
         className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
@@ -203,9 +207,7 @@ export function ChatPanel() {
         </div>
         <div className="flex items-center gap-2 px-3 py-2">
           <span className="flex-1 text-[13px] text-tertiary">
-            {isConnected
-              ? "Ask AI to modify your schema..."
-              : "Connect a provider to start..."}
+            {isConnected ? t("chat.askAi") : t("chat.connectProvider")}
           </span>
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white opacity-40">
             <PaperPlaneRight size={12} weight="fill" />
@@ -274,14 +276,14 @@ export function ChatPanel() {
         <button
           onClick={newConversation}
           className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-          aria-label="New chat"
+          aria-label={t("chat.newChat")}
         >
           <Plus size={14} />
         </button>
         <button
           onClick={togglePanel}
           className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-          aria-label="Close chat"
+          aria-label={t("chat.closeChat")}
         >
           <X size={14} />
         </button>
@@ -291,17 +293,15 @@ export function ChatPanel() {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4">
             <p className="text-[13px] text-tertiary">
-              {isConnected
-                ? "What do you want to build?"
-                : "Connect a provider in Settings to start."}
+              {isConnected ? t("chat.whatToBuild") : t("chat.connectInSettings")}
             </p>
             {isConnected && (
               <div className="flex flex-col items-center gap-2">
                 {[
-                  "Complete e-commerce schema with 10 tables",
-                  "Add a users table with auth fields",
-                  "Schema for a Spotify-like music app",
-                  "Explain my current schema and suggest improvements",
+                  t("chat.suggestion1"),
+                  t("chat.suggestion2"),
+                  t("chat.suggestion3"),
+                  t("chat.suggestion4"),
                 ].map((suggestion) => (
                   <button
                     key={suggestion}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { XIcon as X, BracketsCurlyIcon as BracketsCurly } from "@phosphor-icons/react";
 import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
 import { MysqlIcon } from "../../assets/icons/MysqlIcon";
@@ -28,6 +29,7 @@ interface ImportModalProps {
 }
 
 export function ImportModal({ onClose }: ImportModalProps) {
+  const { t } = useTranslation();
   const dbType = useSchemaStore((s) => s.schema.dbType);
   const [format, setFormat] = useState<ImportFormat>("sql");
   const [mode, setMode] = useState<ImportMode>("replace");
@@ -39,18 +41,18 @@ export function ImportModal({ onClose }: ImportModalProps) {
     skipped: number,
     adaptedColumns = 0,
   ) => {
-    const parts = [`Imported ${tableCount} table${tableCount !== 1 ? "s" : ""}`];
+    let text = t("import.importedTables", { count: tableCount });
     if (relationCount > 0) {
-      parts.push(`${relationCount} relation${relationCount !== 1 ? "s" : ""}`);
+      text += t("import.andRelations", { count: relationCount });
     }
-    let text = parts.join(" and ") + ".";
+    text += ".";
     if (skipped > 0) {
-      text += `\n${skipped} table${skipped !== 1 ? "s" : ""} could not be parsed.`;
+      text += "\n" + t("import.skippedTables", { count: skipped });
     }
     if (adaptedColumns > 0) {
-      text += `\n${adaptedColumns} column${adaptedColumns !== 1 ? "s" : ""} had incompatible types and were set to varchar.`;
+      text += "\n" + t("import.adaptedColumns", { count: adaptedColumns });
     }
-    await message(text, { title: "Import Complete" });
+    await message(text, { title: t("import.importComplete") });
   };
 
   const assignColors = (tables: Table[]): Table[] => {
@@ -76,8 +78,15 @@ export function ImportModal({ onClose }: ImportModalProps) {
     try {
       const filters =
         format === "sql"
-          ? [{ name: "SQL File", extensions: ["sql"] }]
-          : [{ name: "JSON File", extensions: ["json"] }];
+          ? [
+              {
+                name: t("import.sqlLabel", {
+                  dbType: dbType === "mysql" ? "MySQL" : "PostgreSQL",
+                }),
+                extensions: ["sql"],
+              },
+            ]
+          : [{ name: t("import.jsonLabel"), extensions: ["json"] }];
 
       const selected = await open({
         multiple: false,
@@ -91,8 +100,8 @@ export function ImportModal({ onClose }: ImportModalProps) {
         format === "sql" ? parseSqlDdl(content) : parseJsonSchema(content);
 
       if (tables.length === 0) {
-        await message("No tables found in the file.", {
-          title: "Import Error",
+        await message(t("import.noTables"), {
+          title: t("import.importError"),
           kind: "error",
         });
         return;
@@ -123,8 +132,8 @@ export function ImportModal({ onClose }: ImportModalProps) {
       await showImportSummary(tables.length, relations.length, skipped);
       onClose();
     } catch (e) {
-      await message(`Failed to import: ${e}`, {
-        title: "Import Error",
+      await message(t("import.importFailed", { error: String(e) }), {
+        title: t("import.importError"),
         kind: "error",
       });
     }
@@ -201,14 +210,14 @@ export function ImportModal({ onClose }: ImportModalProps) {
                 id="import-conflict-title"
                 className="text-base font-semibold text-primary"
               >
-                Database type conflict
+                {t("import.conflictTitle")}
               </h2>
               <p className="mt-1 text-[13px] text-tertiary">
-                The imported file uses{" "}
+                {t("import.conflictDescriptionStart")}{" "}
                 <span className="font-medium text-secondary">
                   {conflict.fileDbType === "mysql" ? "MySQL" : "PostgreSQL"}
                 </span>{" "}
-                but your current schema is{" "}
+                {t("import.conflictDescriptionMiddle")}{" "}
                 <span className="font-medium text-secondary">
                   {conflict.currentDbType === "mysql" ? "MySQL" : "PostgreSQL"}
                 </span>
@@ -218,7 +227,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             <button
               onClick={onClose}
               className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-              aria-label="Close"
+              aria-label={t("import.close")}
             >
               <X size={16} />
             </button>
@@ -229,26 +238,29 @@ export function ImportModal({ onClose }: ImportModalProps) {
               onClick={() => void handleConflictReplace()}
               className="rounded-lg border border-border px-4 py-2.5 text-left text-[13px] font-medium text-secondary transition-all hover:bg-surface-muted"
             >
-              Replace schema
+              {t("import.replaceSchema")}
               <span className="mt-0.5 block text-[12px] font-normal text-tertiary">
-                Switch to {conflict.fileDbType === "mysql" ? "MySQL" : "PostgreSQL"} and
-                replace all tables
+                {t("import.replaceDescription", {
+                  dbType: conflict.fileDbType === "mysql" ? "MySQL" : "PostgreSQL",
+                })}
               </span>
             </button>
             <button
               onClick={() => void handleConflictAdapt()}
               className="rounded-lg border border-border px-4 py-2.5 text-left text-[13px] font-medium text-secondary transition-all hover:bg-surface-muted"
             >
-              Import as {conflict.currentDbType === "mysql" ? "MySQL" : "PostgreSQL"}
+              {t("import.adaptImport", {
+                dbType: conflict.currentDbType === "mysql" ? "MySQL" : "PostgreSQL",
+              })}
               <span className="mt-0.5 block text-[12px] font-normal text-tertiary">
-                Adapt column types to match the current schema
+                {t("import.adaptDescription")}
               </span>
             </button>
             <button
               onClick={onClose}
               className="rounded-lg border border-border px-4 py-2.5 text-[13px] font-medium text-tertiary transition-all hover:bg-surface-muted hover:text-secondary"
             >
-              Cancel
+              {t("import.cancel")}
             </button>
           </div>
         </div>
@@ -264,14 +276,18 @@ export function ImportModal({ onClose }: ImportModalProps) {
   }[] = [
     {
       type: "sql",
-      label: dbType === "mysql" ? "MySQL DDL" : "PostgreSQL DDL",
-      description: `Import from a ${dbType === "mysql" ? "MySQL" : "PostgreSQL"} DDL file`,
+      label: t("import.sqlLabel", {
+        dbType: dbType === "mysql" ? "MySQL" : "PostgreSQL",
+      }),
+      description: t("import.sqlDescription", {
+        dbType: dbType === "mysql" ? "MySQL" : "PostgreSQL",
+      }),
       icon: dbType === "mysql" ? <MysqlIcon size={24} /> : <PostgresqlIcon size={24} />,
     },
     {
       type: "json",
-      label: "JSON",
-      description: "Import from JSON file",
+      label: t("import.jsonLabel"),
+      description: t("import.jsonDescription"),
       icon: <BracketsCurly size={24} />,
     },
   ];
@@ -290,16 +306,14 @@ export function ImportModal({ onClose }: ImportModalProps) {
         <div className="flex items-center justify-between">
           <div>
             <h2 id="import-title" className="text-base font-semibold text-primary">
-              Import schema
+              {t("import.title")}
             </h2>
-            <p className="mt-1 text-[13px] text-tertiary">
-              Import tables from an existing file.
-            </p>
+            <p className="mt-1 text-[13px] text-tertiary">{t("import.description")}</p>
           </div>
           <button
             onClick={onClose}
             className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-            aria-label="Close"
+            aria-label={t("import.close")}
           >
             <X size={16} />
           </button>
@@ -330,7 +344,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             id="import-mode-label"
             className="block text-[12px] font-medium uppercase tracking-wide text-tertiary"
           >
-            Mode
+            {t("import.mode")}
           </label>
           <div
             role="radiogroup"
@@ -343,13 +357,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
                 role="radio"
                 aria-checked={mode === m}
                 onClick={() => setMode(m)}
-                className={`flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium capitalize transition-all ${
+                className={`flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all ${
                   mode === m
                     ? "bg-surface text-accent shadow-soft"
                     : "text-tertiary hover:text-secondary"
                 }`}
               >
-                {m}
+                {t(`import.${m}`)}
               </button>
             ))}
           </div>
@@ -360,7 +374,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             onClick={() => void handleImport()}
             className="rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98]"
           >
-            Import
+            {t("import.importButton")}
           </button>
         </div>
       </div>

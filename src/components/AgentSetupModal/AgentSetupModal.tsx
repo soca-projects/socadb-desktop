@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   XIcon as X,
   CheckCircleIcon as CheckCircle,
@@ -44,6 +45,8 @@ function ModalShell({
   maxWidth?: string;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div
@@ -54,7 +57,7 @@ function ModalShell({
           <button
             onClick={onClose}
             className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-            aria-label="Close"
+            aria-label={t("agent.close")}
           >
             <X size={16} />
           </button>
@@ -98,6 +101,7 @@ function SignInDropdown({
   onSubscription: () => void;
   onApiKey: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
@@ -110,7 +114,7 @@ function SignInDropdown({
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-primary/90 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
       >
-        Sign in with...
+        {t("agent.signInWith")}
         <CaretDown size={11} weight="bold" />
       </button>
       {open && (
@@ -126,7 +130,7 @@ function SignInDropdown({
               {meta.subscriptionLabel}
             </span>
             <span className="text-[11px] text-tertiary">
-              Usage included with your plan
+              {t("agent.subscriptionIncluded")}
             </span>
           </button>
           <div className="mx-3 my-1 border-t border-border" />
@@ -138,7 +142,7 @@ function SignInDropdown({
             className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted"
           >
             <Key size={13} className="text-tertiary" />
-            <span className="text-[12px] text-secondary">Provide your own API key</span>
+            <span className="text-[12px] text-secondary">{t("agent.ownApiKey")}</span>
           </button>
         </div>
       )}
@@ -169,6 +173,7 @@ function ProviderRow({
   onApiKey: () => void;
   onDisconnect: () => void;
 }) {
+  const { t } = useTranslation();
   const isConnected = provider?.connected ?? false;
   const [checking, setChecking] = useState(false);
   const meta = PROVIDERS[providerId];
@@ -225,13 +230,19 @@ function ProviderRow({
             {isConnected ? (
               <p className="flex items-center gap-1 text-[12px] text-emerald-600 dark:text-emerald-400">
                 <CheckCircle size={12} weight="fill" />
-                Connected via {provider?.connectionMethod ?? "subscription"}
-                {provider?.email ? ` (${provider.email})` : ""}
+                {provider?.email
+                  ? t("agent.connectedViaEmail", {
+                      method: provider?.connectionMethod ?? "subscription",
+                      email: provider.email,
+                    })
+                  : t("agent.connectedVia", {
+                      method: provider?.connectionMethod ?? "subscription",
+                    })}
               </p>
             ) : checking ? (
-              <p className="text-[12px] text-tertiary">Checking...</p>
+              <p className="text-[12px] text-tertiary">{t("agent.checking")}</p>
             ) : (
-              <p className="text-[12px] text-tertiary">Not connected</p>
+              <p className="text-[12px] text-tertiary">{t("agent.notConnected")}</p>
             )}
           </div>
         </div>
@@ -242,7 +253,7 @@ function ProviderRow({
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
           >
             <SignOut size={13} />
-            Disconnect
+            {t("agent.disconnect")}
           </button>
         )}
 
@@ -261,11 +272,11 @@ function ProviderRow({
 
       {isConnected && provider?.connectionMethod === "subscription" && (
         <p className="mt-3 text-[11px] text-tertiary">
-          To switch to API key, run{" "}
+          {t("agent.switchToApiKey")}{" "}
           <code className="rounded bg-surface-muted px-1 py-0.5 font-mono text-[10px]">
             {meta.logoutCommand}
           </code>{" "}
-          in your terminal.
+          {t("agent.switchToApiKeyEnd")}
         </p>
       )}
     </div>
@@ -273,6 +284,7 @@ function ProviderRow({
 }
 
 export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
+  const { t } = useTranslation();
   const providers = useChatStore((s) => s.providers);
 
   const [view, setView] = useState<View>("main");
@@ -306,38 +318,36 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
   if (view === "subscription") {
     return (
       <ModalShell
-        title={`Sign in with ${activeMeta.subscriptionLabel}`}
+        title={t("agent.signInTitle", { label: activeMeta.subscriptionLabel })}
         onClose={() => setView("main")}
         maxWidth="max-w-lg"
       >
         <div className="p-5">
-          <p className="mb-3 text-[13px] text-secondary">
-            Run these steps in your terminal.
-          </p>
+          <p className="mb-3 text-[13px] text-secondary">{t("agent.terminalSteps")}</p>
           <button
             onClick={() => void invoke("open_terminal")}
             className="mb-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[12px] font-medium text-white transition-colors hover:bg-primary/90 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
           >
             <TerminalWindow size={15} />
-            Open Terminal
+            {t("agent.openTerminal")}
           </button>
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
-                1. Install {activeMeta.cliName} (if needed)
+                {t("agent.stepInstall", { name: activeMeta.cliName })}
               </p>
               <CopyableCommand>{activeMeta.installCommand}</CopyableCommand>
             </div>
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
-                2. Start {activeMeta.cliName} and sign in
+                {t("agent.stepSignIn", { name: activeMeta.cliName })}
               </p>
               <CopyableCommand>{activeMeta.startCommand}</CopyableCommand>
               <p className="mt-1.5 text-[11px] text-tertiary">{activeMeta.signInHint}</p>
             </div>
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
-                3. Or login manually
+                {t("agent.stepLogin")}
               </p>
               <CopyableCommand>{activeMeta.loginCommand}</CopyableCommand>
             </div>
@@ -353,8 +363,8 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
             />
             <p className="text-[11px] text-tertiary">
               {providers[activeProviderId]?.connected
-                ? "Connection detected!"
-                : "SocaDB will detect your connection automatically..."}
+                ? t("agent.connectionDetected")
+                : t("agent.detectingConnection")}
             </p>
           </div>
         </div>
@@ -365,7 +375,7 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
   if (view === "api-key") {
     return (
       <ModalShell
-        title="Connect with API key"
+        title={t("agent.apiKeyTitle")}
         onClose={() => {
           setView("main");
           setApiKeyInput("");
@@ -373,7 +383,7 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
       >
         <div className="p-5">
           <p className="mb-4 text-[13px] text-secondary">
-            Get your API key from the{" "}
+            {t("agent.apiKeyGetFrom")}{" "}
             <button
               type="button"
               onClick={() => void openUrl(activeMeta.consoleUrl)}
@@ -402,7 +412,7 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
               }
               className="rounded-md bg-primary px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
             >
-              {connecting ? "Connecting..." : "Connect"}
+              {connecting ? t("agent.connecting") : t("agent.connect")}
             </button>
           </div>
         </div>
@@ -411,9 +421,11 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
   }
 
   return (
-    <ModalShell title="Setup Agents" onClose={onClose}>
+    <ModalShell title={t("agent.setupTitle")} onClose={onClose}>
       <div className="p-5">
-        <p className="mb-4 text-[13px] font-medium text-secondary">Agents on Canvas</p>
+        <p className="mb-4 text-[13px] font-medium text-secondary">
+          {t("agent.agentsOnCanvas")}
+        </p>
 
         <div className="space-y-3">
           {PROVIDER_IDS.map((id) => (

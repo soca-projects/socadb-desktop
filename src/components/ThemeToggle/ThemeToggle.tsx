@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { SunIcon as Sun, MoonIcon as Moon } from "@phosphor-icons/react";
 import { useThemeStore } from "../../stores/themeStore";
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
 
@@ -9,8 +11,8 @@ export function ThemeToggle() {
     <button
       onClick={toggleTheme}
       className="relative rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-      title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-      aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+      title={theme === "light" ? t("theme.switchToDark") : t("theme.switchToLight")}
+      aria-label={theme === "light" ? t("theme.switchToDark") : t("theme.switchToLight")}
     >
       <Sun
         size={16}

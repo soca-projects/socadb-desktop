@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   CaretDownIcon as CaretDown,
   CaretRightIcon as CaretRight,
@@ -67,6 +68,7 @@ function ConstraintBadge({
 }
 
 function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
+  const { t } = useTranslation();
   const updateColumn = useSchemaStore((s) => s.updateColumn);
   const deleteColumn = useSchemaStore((s) => s.deleteColumn);
   const columnTypes = useSchemaStore((s) => COLUMN_TYPES_BY_DB[s.schema.dbType]);
@@ -126,7 +128,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
           <button
             onClick={() => deleteColumn(tableId, col.id)}
             className="shrink-0 rounded-[4px] p-[3px] text-muted transition-all hover:bg-red-500/10 hover:text-red-500"
-            aria-label="Delete column"
+            aria-label={t("sidePanel.deleteColumn")}
           >
             <Trash size={13} />
           </button>
@@ -176,6 +178,7 @@ function TableMenu({
   onAddColumn: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -216,7 +219,7 @@ function TableMenu({
         ref={buttonRef}
         onClick={handleToggle}
         className="rounded-[4px] p-1 text-tertiary transition-all hover:bg-surface-muted hover:text-secondary"
-        aria-label="Table options"
+        aria-label={t("sidePanel.tableOptions")}
       >
         <DotsThreeVertical size={14} weight="bold" />
       </button>
@@ -237,7 +240,7 @@ function TableMenu({
             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
           >
             <PencilSimple size={14} />
-            Rename
+            {t("sidePanel.rename")}
           </button>
           <button
             role="menuitem"
@@ -248,7 +251,7 @@ function TableMenu({
             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
           >
             <Plus size={14} />
-            Add column
+            {t("sidePanel.addColumn")}
           </button>
           <div className="mx-2 my-1 h-px bg-border-light" />
           <button
@@ -260,7 +263,7 @@ function TableMenu({
             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10"
           >
             <Trash size={14} />
-            Delete table
+            {t("sidePanel.deleteTable")}
           </button>
         </div>
       )}
@@ -283,6 +286,7 @@ function TableItem({
   onRename: () => void;
   onRenameEnd: () => void;
 }) {
+  const { t } = useTranslation();
   const updateTable = useSchemaStore((s) => s.updateTable);
   const deleteTable = useSchemaStore((s) => s.deleteTable);
   const addColumn = useSchemaStore((s) => s.addColumn);
@@ -386,7 +390,7 @@ function TableItem({
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = isActive ? v.dot : v.bg;
                     }}
-                    aria-label={`Color ${preset}`}
+                    aria-label={t("sidePanel.color", { color: preset })}
                   />
                 );
               })}
@@ -405,7 +409,7 @@ function TableItem({
               className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border py-2 text-xs font-medium text-tertiary transition-all hover:border-accent/40 hover:bg-accent/[0.03] hover:text-accent"
             >
               <Plus size={12} weight="bold" />
-              Add column
+              {t("sidePanel.addColumn")}
             </button>
           </div>
         </div>
@@ -423,6 +427,7 @@ interface SidePanelProps {
 }
 
 export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) {
+  const { t } = useTranslation();
   const tables = useSchemaStore((s) => s.schema.tables);
   const [renamingTableId, setRenamingTableId] = useState<string | null>(null);
 
@@ -437,7 +442,7 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
     <div className="flex w-[280px] shrink-0 flex-col overflow-hidden border-r border-border bg-surface-sidebar">
       <div className="flex items-center justify-between px-3 py-3">
         <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-tertiary">
-          Tables
+          {t("sidePanel.tables")}
         </span>
         <span className="rounded-full border border-border-light bg-surface-muted px-1.5 py-[1px] font-mono text-[11px] text-tertiary">
           {tables.length}
@@ -448,22 +453,23 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
         {tables.length === 0 ? (
           <div className="flex animate-fade-in flex-col items-center px-4 pt-10 text-center">
             <p className="text-[13px] leading-relaxed text-tertiary">
-              No tables yet. Create one to start building your schema.
+              {t("sidePanel.emptyState")}
             </p>
             <div className="mt-5 space-y-1 self-stretch text-left text-[12px] text-tertiary">
               <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
                 <span className="shrink-0 font-mono text-[11px] text-tertiary">1.</span>
-                <span>Add tables and define columns</span>
+                <span>{t("sidePanel.step1")}</span>
               </div>
               <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
                 <span className="shrink-0 font-mono text-[11px] text-tertiary">2.</span>
-                <span>Drag between columns to create relations</span>
+                <span>{t("sidePanel.step2")}</span>
               </div>
               <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
                 <span className="shrink-0 font-mono text-[11px] text-tertiary">3.</span>
                 <span>
-                  Save as <span className="font-mono text-tertiary">.soca</span> and
-                  export
+                  {t("sidePanel.step3Save")}{" "}
+                  <span className="font-mono text-tertiary">.soca</span>{" "}
+                  {t("sidePanel.step3Export")}
                 </span>
               </div>
             </div>
@@ -492,7 +498,7 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-[13px] font-medium text-secondary transition-all hover:border-border-hover hover:bg-surface-muted hover:text-primary active:scale-[0.98]"
         >
           <Plus size={15} weight="bold" />
-          New Table
+          {t("sidePanel.newTable")}
         </button>
       </div>
     </div>
