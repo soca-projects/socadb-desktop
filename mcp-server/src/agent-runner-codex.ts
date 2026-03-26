@@ -1,48 +1,18 @@
 #!/usr/bin/env node
-import { createInterface } from "readline";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-import { existsSync } from "fs";
-import { platform, arch } from "os";
+import {
+  emit,
+  getMcpBinaryPath,
+  getModuleDir,
+  startRunner,
+  type ChatSendCommand,
+} from "./agent-runner-shared.ts";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function getMcpBinaryPath(): string {
-  const os = platform() === "darwin" ? "darwin" : platform() === "win32" ? "windows" : "linux";
-  const cpu = arch() === "arm64" ? "arm64" : arch();
-  const ext = os === "windows" ? ".exe" : "";
-  const binaryName = `socadb-mcp-${os}-${cpu}${ext}`;
-  const distPath = join(__dirname, "..", "dist", binaryName);
-  if (existsSync(distPath)) return distPath;
-  return join(__dirname, "..", "dist", "socadb-mcp");
-}
-
-interface ChatSendCommand {
-  type: "chat_send";
-  message: string;
-  systemPrompt: string;
-  sessionId?: string;
-  model?: string;
-}
-
-interface ChatStopCommand {
-  type: "chat_stop";
-}
-
-interface ChatStatusCommand {
-  type: "chat_status" | "chat_init";
-}
-
-type Command = ChatSendCommand | ChatStopCommand | ChatStatusCommand;
-
-function emit(event: Record<string, unknown>) {
-  process.stdout.write(JSON.stringify(event) + "\n");
-}
+const __dirname = getModuleDir(import.meta.url);
 
 let abortController: AbortController | undefined;
 let currentSessionId: string | undefined;
 
-async function handleChatSend(cmd: ChatSendCommand) {
+async function handleSend(cmd: ChatSendCommand) {
   abortController = new AbortController();
   console.error("[codex-agent] handleChatSend", cmd.message.slice(0, 50));
 
@@ -54,7 +24,7 @@ async function handleChatSend(cmd: ChatSendCommand) {
         developer_instructions: cmd.systemPrompt,
         mcp_servers: {
           socadb: {
-            command: getMcpBinaryPath(),
+            command: getMcpBinaryPath(__dirname),
             args: [],
             env: {},
           },
@@ -164,13 +134,13 @@ async function handleChatSend(cmd: ChatSendCommand) {
   }
 }
 
-function handleChatStop() {
+function handleStop() {
   if (abortController) {
     abortController.abort();
   }
 }
 
-async function handleChatStatus() {
+async function handleStatus() {
   try {
     const { Codex } = await import("@openai/codex-sdk");
     const codex = new Codex();
@@ -191,6 +161,7 @@ async function handleChatStatus() {
         abortCtrl.abort();
         emit({
           type: "chat_status_result",
+          providerId: "codex",
           loggedIn: false,
           email: null,
           loginType: null,
@@ -201,6 +172,7 @@ async function handleChatStatus() {
         abortCtrl.abort();
         emit({
           type: "chat_status_result",
+          providerId: "codex",
           loggedIn: true,
           email: null,
           loginType: "subscription",
@@ -211,6 +183,7 @@ async function handleChatStatus() {
 
     emit({
       type: "chat_status_result",
+      providerId: "codex",
       loggedIn: false,
       email: null,
       loginType: null,
@@ -218,6 +191,7 @@ async function handleChatStatus() {
   } catch {
     emit({
       type: "chat_status_result",
+      providerId: "codex",
       loggedIn: false,
       email: null,
       loginType: null,
@@ -225,31 +199,8 @@ async function handleChatStatus() {
   }
 }
 
-const rl = createInterface({ input: process.stdin });
-
-rl.on("line", (line) => {
-  try {
-    const cmd = JSON.parse(line) as Command;
-
-    switch (cmd.type) {
-      case "chat_send":
-        void handleChatSend(cmd);
-        break;
-      case "chat_stop":
-        handleChatStop();
-        break;
-      case "chat_status":
-      case "chat_init":
-        void handleChatStatus();
-        break;
-    }
-  } catch {
-    emit({ type: "chat_event", event: "error", message: "Invalid command" });
-  }
+startRunner({
+  handleSend,
+  handleStop,
+  handleStatus,
 });
-
-rl.on("close", () => {
-  process.exit(0);
-});
-
-emit({ type: "ready" });

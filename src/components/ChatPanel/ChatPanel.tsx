@@ -145,13 +145,13 @@ export function ChatPanel() {
 
   const availableModels = getAvailableModels(providers);
   const isConnected = availableModels.length > 0;
+  const activeProviderId = getProviderFromModel(selectedModel);
 
   useEffect(() => {
     if (isPanelOpen) {
-      const providerId = getProviderFromModel(selectedModel);
-      void initChat(providerId);
+      void initChat(activeProviderId);
     }
-  }, [isPanelOpen, selectedModel]);
+  }, [isPanelOpen, activeProviderId]);
 
   const handleSend = useCallback(
     (content: string) => {
@@ -161,11 +161,10 @@ export function ChatPanel() {
       startAssistantMessage();
 
       const systemPrompt = buildSystemPrompt();
-      const providerId = getProviderFromModel(selectedModel);
       sendChatMessage(
         content,
         systemPrompt,
-        providerId,
+        activeProviderId,
         sessionId ?? undefined,
         selectedModel,
       );
@@ -178,13 +177,13 @@ export function ChatPanel() {
       togglePanel,
       isStreaming,
       selectedModel,
+      activeProviderId,
     ],
   );
 
   const handleStop = useCallback(() => {
-    const providerId = getProviderFromModel(selectedModel);
-    stopChat(providerId);
-  }, [selectedModel]);
+    stopChat(activeProviderId);
+  }, [activeProviderId]);
 
   if (focusMode) return null;
 

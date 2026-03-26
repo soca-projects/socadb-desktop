@@ -4,7 +4,10 @@ import type { ChatStatusResult, ChatEvent, ProviderId } from "../types/chat";
 import { DEFAULT_MODEL, makeProvider, PROVIDERS } from "../types/chat";
 import { ChatStatusResultZ, ChatErrorZ } from "./zodSchemas";
 
-let statusResolve: ((result: ChatStatusResult) => void) | null = null;
+const statusResolvers = new Map<
+  string,
+  { resolve: (result: ChatStatusResult) => void; timeout: ReturnType<typeof setTimeout> }
+>();
 
 function ensureAssistantMessage() {
   const store = useChatStore.getState();
@@ -19,9 +22,12 @@ export function handleChatEvent(parsed: ChatEvent) {
     const parse = ChatStatusResultZ.safeParse(parsed);
     if (!parse.success) return;
     const result: ChatStatusResult = parse.data;
-    if (statusResolve) {
-      statusResolve(result);
-      statusResolve = null;
+    const pid = (parsed.providerId as string) ?? "claude";
+    const resolver = statusResolvers.get(pid);
+    if (resolver) {
+      clearTimeout(resolver.timeout);
+      statusResolvers.delete(pid);
+      resolver.resolve(result);
     }
     return;
   }
@@ -120,14 +126,11 @@ function requestStatus(
 ): Promise<ChatStatusResult> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      statusResolve = null;
+      statusResolvers.delete(providerId);
       reject(new Error("Status check timed out"));
     }, 10000);
 
-    statusResolve = (result) => {
-      clearTimeout(timeout);
-      resolve(result);
-    };
+    statusResolvers.set(providerId, { resolve, timeout });
 
     void invoke(command, { providerId });
   });

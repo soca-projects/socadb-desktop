@@ -304,7 +304,7 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
   if (view === "subscription") {
     return (
       <ModalShell
-        title={`Sign in with ${activeProviderId === "claude" ? "Claude" : "ChatGPT"} subscription`}
+        title={`Sign in with ${activeMeta.subscriptionLabel}`}
         onClose={() => setView("main")}
         maxWidth="max-w-lg"
       >
@@ -315,22 +315,16 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
-                1. Install {activeProviderId === "claude" ? "Claude Code" : "Codex"} (if
-                needed)
+                1. Install {activeMeta.cliName} (if needed)
               </p>
               <CopyableCommand>{activeMeta.installCommand}</CopyableCommand>
             </div>
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
-                2. Start {activeProviderId === "claude" ? "Claude Code" : "Codex"} and
-                sign in
+                2. Start {activeMeta.cliName} and sign in
               </p>
               <CopyableCommand>{activeMeta.startCommand}</CopyableCommand>
-              <p className="mt-1.5 text-[11px] text-tertiary">
-                {activeProviderId === "claude"
-                  ? 'Select "Claude account with subscription" to sign in.'
-                  : "Sign in with your ChatGPT subscription."}
-              </p>
+              <p className="mt-1.5 text-[11px] text-tertiary">{activeMeta.signInHint}</p>
             </div>
             <div>
               <p className="mb-2 text-[12px] font-semibold text-primary">
