@@ -34,7 +34,7 @@ export interface ProviderMeta {
 export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
   claude: {
     id: "claude",
-    name: "Anthropic Claude Code",
+    name: "Anthropic",
     models: [
       {
         id: "claude-opus-4-6",
@@ -60,7 +60,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
   },
   codex: {
     id: "codex",
-    name: "OpenAI Codex",
+    name: "OpenAI",
     models: [
       { id: "gpt-5.3-codex", displayName: "GPT 5.3 Codex", description: "Best" },
       { id: "gpt-5.4", displayName: "GPT 5.4", description: "Latest" },

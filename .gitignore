@@ -11,4 +11,5 @@ mcp-server/dist/
 mcp-server/node_modules/
 .env
 .env.local
+.env.development
 CLAUDE.md

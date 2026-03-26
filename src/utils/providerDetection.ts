@@ -8,7 +8,13 @@ export interface ProviderStatus {
   loginType: string | null;
 }
 
+const skipDetection =
+  import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_DETECTION === "true";
+
 export async function detectProvider(id: ProviderId): Promise<ProviderStatus> {
+  if (skipDetection) {
+    return { installed: false, authenticated: false, email: null, loginType: null };
+  }
   try {
     const status: ChatStatusResult = await checkChatStatus(id);
     return {
