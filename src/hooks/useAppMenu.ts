@@ -10,37 +10,54 @@ import {
 } from "../utils/fileOperations";
 import { handleUndo, handleRedo } from "../utils/schemaActions";
 import { useThemeStore } from "../stores/themeStore";
-import type { TFunction } from "i18next";
+import { toast } from "sonner";
+import i18next from "../i18n";
 
 async function handleSave() {
-  const { schema, filePath, setFilePath, markSaved } = useSchemaStore.getState();
-  if (filePath) {
-    await saveSchemaFile(schema, filePath);
-    markSaved();
-  } else {
+  try {
+    const { schema, filePath, setFilePath, markSaved } = useSchemaStore.getState();
+    if (filePath) {
+      await saveSchemaFile(schema, filePath);
+      markSaved();
+    } else {
+      const path = await saveSchemaFileAs(schema);
+      if (path) {
+        setFilePath(path);
+        markSaved();
+      }
+    }
+  } catch (e) {
+    toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
+  }
+}
+
+async function handleSaveAs() {
+  try {
+    const { schema, setFilePath, markSaved } = useSchemaStore.getState();
     const path = await saveSchemaFileAs(schema);
     if (path) {
       setFilePath(path);
       markSaved();
     }
-  }
-}
-
-async function handleSaveAs() {
-  const { schema, setFilePath, markSaved } = useSchemaStore.getState();
-  const path = await saveSchemaFileAs(schema);
-  if (path) {
-    setFilePath(path);
-    markSaved();
+  } catch (e) {
+    toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
   }
 }
 
 async function handleOpen() {
-  const { setSchema, setFilePath } = useSchemaStore.getState();
-  const result = await openSchemaFile();
-  if (result) {
-    setSchema(result.schema);
-    setFilePath(result.path);
+  try {
+    const { setSchema, setFilePath } = useSchemaStore.getState();
+    const result = await openSchemaFile();
+    if (result) {
+      setSchema(result.schema);
+      setFilePath(result.path);
+    }
+  } catch (e) {
+    toast.error(
+      e instanceof Error
+        ? e.message
+        : i18next.t("toast.openFailed", { error: String(e) }),
+    );
   }
 }
 
@@ -48,7 +65,9 @@ function handleNew() {
   void emit("new-schema-requested");
 }
 
-async function setupMenu(t: TFunction) {
+async function setupMenu() {
+  const t = i18next.t.bind(i18next);
+
   const appSubmenu = await Submenu.new({
     text: "SocaDB",
     items: [
@@ -179,9 +198,9 @@ async function setupMenu(t: TFunction) {
 }
 
 export function useAppMenu() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
 
   useEffect(() => {
-    void setupMenu(t);
-  }, [t, i18n.resolvedLanguage]);
+    void setupMenu();
+  }, [i18n.resolvedLanguage]);
 }

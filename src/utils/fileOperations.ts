@@ -2,6 +2,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import type { Schema } from "../types/schema";
 import { SchemaZ } from "./zodSchemas";
+import i18next from "../i18n";
 
 export function migrateSchema(data: unknown) {
   if (!data || typeof data !== "object") return;
@@ -23,10 +24,9 @@ export function migrateSchema(data: unknown) {
   }
 }
 
-const SOCA_FILTER = {
-  name: "SocaDB Schema",
-  extensions: ["soca"],
-};
+function getSocaFilter() {
+  return { name: i18next.t("fileFilter.soca"), extensions: ["soca"] };
+}
 
 export async function openSchemaFile(): Promise<{
   schema: Schema;
@@ -35,7 +35,7 @@ export async function openSchemaFile(): Promise<{
   const selected = await open({
     multiple: false,
     directory: false,
-    filters: [SOCA_FILTER],
+    filters: [getSocaFilter()],
   });
 
   if (!selected) return null;
@@ -45,12 +45,12 @@ export async function openSchemaFile(): Promise<{
   try {
     raw = JSON.parse(content);
   } catch {
-    throw new Error("Invalid .soca file: could not parse JSON");
+    throw new Error(i18next.t("toast.invalidFile"));
   }
   migrateSchema(raw);
   const parsed = SchemaZ.safeParse(raw);
   if (!parsed.success) {
-    throw new Error(`Invalid .soca file: ${parsed.error.message}`);
+    throw new Error(i18next.t("toast.invalidFile"));
   }
   return { schema: parsed.data, path: selected };
 }
@@ -63,7 +63,7 @@ export async function saveSchemaFile(schema: Schema, filePath: string): Promise<
 export async function saveSchemaFileAs(schema: Schema): Promise<string | null> {
   const path = await save({
     defaultPath: `${schema.name}.soca`,
-    filters: [SOCA_FILTER],
+    filters: [getSocaFilter()],
   });
 
   if (!path) return null;

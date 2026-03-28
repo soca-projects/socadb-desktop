@@ -5,7 +5,7 @@ import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
 import { MysqlIcon } from "../../assets/icons/MysqlIcon";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { message } from "@tauri-apps/plugin-dialog";
+import { toast } from "sonner";
 import { useSchemaStore, createEmptySchema } from "../../stores/schemaStore";
 import { parseSqlDdl, adaptColumnsToDbType } from "../../utils/importSql";
 import { parseJsonSchema } from "../../utils/importJson";
@@ -35,24 +35,24 @@ export function ImportModal({ onClose }: ImportModalProps) {
   const [mode, setMode] = useState<ImportMode>("replace");
   const [conflict, setConflict] = useState<ConflictState | null>(null);
 
-  const showImportSummary = async (
+  const showImportSummary = (
     tableCount: number,
     relationCount: number,
     skipped: number,
     adaptedColumns = 0,
   ) => {
-    let text = t("import.importedTables", { count: tableCount });
+    let text = t("toast.importComplete", { count: tableCount });
     if (relationCount > 0) {
-      text += t("import.andRelations", { count: relationCount });
+      text += t("toast.importRelations", { count: relationCount });
     }
     text += ".";
     if (skipped > 0) {
-      text += "\n" + t("import.skippedTables", { count: skipped });
+      text += " " + t("toast.importSkipped", { count: skipped });
     }
     if (adaptedColumns > 0) {
-      text += "\n" + t("import.adaptedColumns", { count: adaptedColumns });
+      text += " " + t("toast.importAdapted", { count: adaptedColumns });
     }
-    await message(text, { title: t("import.importComplete") });
+    toast.success(text);
   };
 
   const assignColors = (tables: Table[]): Table[] => {
@@ -100,10 +100,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
         format === "sql" ? parseSqlDdl(content) : parseJsonSchema(content);
 
       if (tables.length === 0) {
-        await message(t("import.noTables"), {
-          title: t("import.importError"),
-          kind: "error",
-        });
+        toast.error(t("toast.importNoTables"));
         return;
       }
 
@@ -129,13 +126,12 @@ export function ImportModal({ onClose }: ImportModalProps) {
         mergeIntoSchema(tables, relations);
       }
 
-      await showImportSummary(tables.length, relations.length, skipped);
+      showImportSummary(tables.length, relations.length, skipped);
       onClose();
     } catch (e) {
-      await message(t("import.importFailed", { error: String(e) }), {
-        title: t("import.importError"),
-        kind: "error",
-      });
+      toast.error(
+        e instanceof Error ? e.message : t("toast.importFailed", { error: String(e) }),
+      );
     }
   };
 
@@ -165,10 +161,10 @@ export function ImportModal({ onClose }: ImportModalProps) {
     void handleAutoLayout();
   };
 
-  const handleConflictReplace = async () => {
+  const handleConflictReplace = () => {
     if (!conflict) return;
     replaceSchema(conflict.tables, conflict.relations, conflict.fileDbType);
-    await showImportSummary(
+    showImportSummary(
       conflict.tables.length,
       conflict.relations.length,
       conflict.skipped,
@@ -176,14 +172,14 @@ export function ImportModal({ onClose }: ImportModalProps) {
     onClose();
   };
 
-  const handleConflictAdapt = async () => {
+  const handleConflictAdapt = () => {
     if (!conflict) return;
     const { tables: adapted, adaptedCount } = adaptColumnsToDbType(
       conflict.tables,
       conflict.currentDbType,
     );
     mergeIntoSchema(adapted, conflict.relations);
-    await showImportSummary(
+    showImportSummary(
       conflict.tables.length,
       conflict.relations.length,
       conflict.skipped,
@@ -235,7 +231,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
 
           <div className="mt-5 flex flex-col gap-2">
             <button
-              onClick={() => void handleConflictReplace()}
+              onClick={handleConflictReplace}
               className="rounded-lg border border-border px-4 py-2.5 text-left text-[13px] font-medium text-secondary transition-all hover:bg-surface-muted"
             >
               {t("import.replaceSchema")}
@@ -246,7 +242,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
               </span>
             </button>
             <button
-              onClick={() => void handleConflictAdapt()}
+              onClick={handleConflictAdapt}
               className="rounded-lg border border-border px-4 py-2.5 text-left text-[13px] font-medium text-secondary transition-all hover:bg-surface-muted"
             >
               {t("import.adaptImport", {

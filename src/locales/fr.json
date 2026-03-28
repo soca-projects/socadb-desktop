@@ -97,19 +97,7 @@
     "replaceDescription": "Passer en {{dbType}} et remplacer toutes les tables",
     "adaptImport": "Importer en {{dbType}}",
     "adaptDescription": "Adapter les types de colonnes au schéma actuel",
-    "cancel": "Annuler",
-    "noTables": "Aucune table trouvée dans le fichier.",
-    "importError": "Erreur d'import",
-    "importFailed": "Échec de l'import : {{error}}",
-    "importComplete": "Import terminé",
-    "importedTables_one": "{{count}} table importée",
-    "importedTables_other": "{{count}} tables importées",
-    "andRelations_one": " et {{count}} relation",
-    "andRelations_other": " et {{count}} relations",
-    "skippedTables_one": "{{count}} table n'a pas pu être analysée.",
-    "skippedTables_other": "{{count}} tables n'ont pas pu être analysées.",
-    "adaptedColumns_one": "{{count}} colonne avait un type incompatible et a été définie en varchar.",
-    "adaptedColumns_other": "{{count}} colonnes avaient des types incompatibles et ont été définies en varchar."
+    "cancel": "Annuler"
   },
   "agent": {
     "setupTitle": "Configurer les agents",
@@ -189,6 +177,34 @@
     "generic": "Erreur : {{message}}",
     "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres.",
     "statusTimeout": "Vérification du statut expirée"
+  },
+  "toast": {
+    "exportSqlFailed": "Échec de l'export SQL : {{error}}",
+    "exportPngFailed": "Échec de l'export PNG : {{error}}",
+    "exportPngGenFailed": "Impossible de générer l'image depuis le canvas.",
+    "exportSvgFailed": "Échec de l'export SVG : {{error}}",
+    "exportJsonFailed": "Échec de l'export JSON : {{error}}",
+    "importNoTables": "Aucune table trouvée dans le fichier.",
+    "importFailed": "Échec de l'import : {{error}}",
+    "importComplete_one": "{{count}} table importée",
+    "importComplete_other": "{{count}} tables importées",
+    "importRelations_one": " et {{count}} relation",
+    "importRelations_other": " et {{count}} relations",
+    "importSkipped_one": "{{count}} table n'a pas pu être analysée.",
+    "importSkipped_other": "{{count}} tables n'ont pas pu être analysées.",
+    "importAdapted_one": "{{count}} colonne avait un type incompatible et a été définie en varchar.",
+    "importAdapted_other": "{{count}} colonnes avaient des types incompatibles et ont été définies en varchar.",
+    "saveFailed": "Échec de l'enregistrement : {{error}}",
+    "openFailed": "Impossible d'ouvrir le fichier : {{error}}",
+    "autoLayoutFailed": "Échec de la disposition auto : {{error}}",
+    "invalidFile": "Ce fichier n'est pas un schéma valide."
+  },
+  "fileFilter": {
+    "sql": "Fichier SQL",
+    "png": "Image PNG",
+    "svg": "Image SVG",
+    "json": "Fichier JSON",
+    "soca": "Schéma SocaDB"
   },
   "toolCall": {
     "create_table": "table créée",

@@ -1,6 +1,8 @@
-import { save, message } from "@tauri-apps/plugin-dialog";
+import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
+import i18next from "../i18n";
 import type { Schema, Table, Column } from "../types/schema";
 import { findTableById, findColumnById, getRelationsFromTable } from "./schemaQueries";
 
@@ -155,12 +157,12 @@ export async function exportSql() {
 
     const path = await save({
       defaultPath: `${schemaName}.sql`,
-      filters: [{ name: "SQL File", extensions: ["sql"] }],
+      filters: [{ name: i18next.t("fileFilter.sql"), extensions: ["sql"] }],
     });
     if (!path) return;
 
     await writeTextFile(path, ddl);
   } catch (e) {
-    await message(`Failed to export SQL: ${e}`, { title: "Export Error", kind: "error" });
+    toast.error(i18next.t("toast.exportSqlFailed", { error: String(e) }));
   }
 }

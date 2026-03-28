@@ -2,6 +2,7 @@ import type { Table, Relation, DbType, Column } from "../types/schema";
 import { migrateSchema } from "./fileOperations";
 import { genId } from "./id";
 import { TableZ, RelationZ } from "./zodSchemas";
+import i18next from "../i18n";
 
 export interface JsonImportResult {
   tables: Table[];
@@ -14,10 +15,10 @@ export function parseJsonSchema(json: string): JsonImportResult {
   const data = JSON.parse(json);
 
   if (!data.tables || !Array.isArray(data.tables)) {
-    throw new Error("Invalid JSON: missing 'tables' array");
+    throw new Error(i18next.t("toast.invalidFile"));
   }
   if (!data.relations || !Array.isArray(data.relations)) {
-    throw new Error("Invalid JSON: missing 'relations' array");
+    throw new Error(i18next.t("toast.invalidFile"));
   }
 
   migrateSchema(data);

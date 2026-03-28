@@ -97,19 +97,7 @@
     "replaceDescription": "Switch to {{dbType}} and replace all tables",
     "adaptImport": "Import as {{dbType}}",
     "adaptDescription": "Adapt column types to match the current schema",
-    "cancel": "Cancel",
-    "noTables": "No tables found in the file.",
-    "importError": "Import Error",
-    "importFailed": "Failed to import: {{error}}",
-    "importComplete": "Import Complete",
-    "importedTables_one": "Imported {{count}} table",
-    "importedTables_other": "Imported {{count}} tables",
-    "andRelations_one": " and {{count}} relation",
-    "andRelations_other": " and {{count}} relations",
-    "skippedTables_one": "{{count}} table could not be parsed.",
-    "skippedTables_other": "{{count}} tables could not be parsed.",
-    "adaptedColumns_one": "{{count}} column had incompatible types and were set to varchar.",
-    "adaptedColumns_other": "{{count}} columns had incompatible types and were set to varchar."
+    "cancel": "Cancel"
   },
   "agent": {
     "setupTitle": "Setup Agents",
@@ -189,6 +177,34 @@
     "generic": "Error: {{message}}",
     "creditBalance": "Error: {{message}}\n\nAdd credits on the [{{consoleName}}]({{consoleUrl}}), then try again. If it still fails, reconnect your API key in Settings.",
     "statusTimeout": "Status check timed out"
+  },
+  "toast": {
+    "exportSqlFailed": "Failed to export SQL: {{error}}",
+    "exportPngFailed": "Failed to export PNG: {{error}}",
+    "exportPngGenFailed": "Failed to generate image from canvas.",
+    "exportSvgFailed": "Failed to export SVG: {{error}}",
+    "exportJsonFailed": "Failed to export JSON: {{error}}",
+    "importNoTables": "No tables found in the file.",
+    "importFailed": "Failed to import: {{error}}",
+    "importComplete_one": "Imported {{count}} table",
+    "importComplete_other": "Imported {{count}} tables",
+    "importRelations_one": " and {{count}} relation",
+    "importRelations_other": " and {{count}} relations",
+    "importSkipped_one": "{{count}} table could not be parsed.",
+    "importSkipped_other": "{{count}} tables could not be parsed.",
+    "importAdapted_one": "{{count}} column had incompatible types and were set to varchar.",
+    "importAdapted_other": "{{count}} columns had incompatible types and were set to varchar.",
+    "saveFailed": "Failed to save: {{error}}",
+    "openFailed": "Failed to open file: {{error}}",
+    "autoLayoutFailed": "Auto layout failed: {{error}}",
+    "invalidFile": "This file is not a valid schema."
+  },
+  "fileFilter": {
+    "sql": "SQL File",
+    "png": "PNG Image",
+    "svg": "SVG Image",
+    "json": "JSON File",
+    "soca": "SocaDB Schema"
   },
   "toolCall": {
     "create_table": "created table",

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { Toaster } from "sonner";
 import { Canvas } from "./components/Canvas/Canvas";
 import { ChatPanel } from "./components/ChatPanel/ChatPanel";
 import { AgentSetupModal } from "./components/AgentSetupModal/AgentSetupModal";
@@ -45,6 +46,7 @@ function App() {
           onCreate={handleCreate}
         />
       )}
+      <Toaster position="bottom-center" richColors />
     </ErrorBoundary>
   );
 }

@@ -1,7 +1,9 @@
 import { toBlob } from "html-to-image";
-import { save, message } from "@tauri-apps/plugin-dialog";
+import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
+import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
+import i18next from "../i18n";
 
 export async function exportCanvasPng() {
   try {
@@ -16,21 +18,18 @@ export async function exportCanvasPng() {
       toBlob(viewport, { backgroundColor: "#FDFCFC", pixelRatio: 2 }),
       save({
         defaultPath: `${schemaName}.png`,
-        filters: [{ name: "PNG Image", extensions: ["png"] }],
+        filters: [{ name: i18next.t("fileFilter.png"), extensions: ["png"] }],
       }),
     ]);
     if (!path) return;
     if (!blob) {
-      await message("Failed to generate image from canvas.", {
-        title: "Export Error",
-        kind: "error",
-      });
+      toast.error(i18next.t("toast.exportPngGenFailed"));
       return;
     }
 
     const bytes = new Uint8Array(await blob.arrayBuffer());
     await writeFile(path, bytes);
   } catch (e) {
-    await message(`Failed to export PNG: ${e}`, { title: "Export Error", kind: "error" });
+    toast.error(i18next.t("toast.exportPngFailed", { error: String(e) }));
   }
 }

@@ -1,7 +1,9 @@
 import { toSvg } from "html-to-image";
-import { save, message } from "@tauri-apps/plugin-dialog";
+import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
+import i18next from "../i18n";
 
 export async function exportCanvasSvg() {
   try {
@@ -16,13 +18,13 @@ export async function exportCanvasSvg() {
       toSvg(viewport, { backgroundColor: "#FDFCFC" }),
       save({
         defaultPath: `${schemaName}.svg`,
-        filters: [{ name: "SVG Image", extensions: ["svg"] }],
+        filters: [{ name: i18next.t("fileFilter.svg"), extensions: ["svg"] }],
       }),
     ]);
     if (!svg || !path) return;
 
     await writeTextFile(path, svg);
   } catch (e) {
-    await message(`Failed to export SVG: ${e}`, { title: "Export Error", kind: "error" });
+    toast.error(i18next.t("toast.exportSvgFailed", { error: String(e) }));
   }
 }

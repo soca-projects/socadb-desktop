@@ -4,6 +4,8 @@ import { createDefaultIdColumn } from "./columnDefaults";
 import { computeAutoLayout } from "./autoLayout";
 import { getNextTableColor } from "./tableColors";
 import { findTableById } from "./schemaQueries";
+import { toast } from "sonner";
+import i18next from "../i18n";
 import type { Column } from "../types/schema";
 
 export function handleUndo() {
@@ -15,9 +17,13 @@ export function handleRedo() {
 }
 
 export async function handleAutoLayout() {
-  const { schema, updateTablePositions } = useSchemaStore.getState();
-  const positions = await computeAutoLayout(schema.tables, schema.relations);
-  updateTablePositions(positions);
+  try {
+    const { schema, updateTablePositions } = useSchemaStore.getState();
+    const positions = await computeAutoLayout(schema.tables, schema.relations);
+    updateTablePositions(positions);
+  } catch (e) {
+    toast.error(i18next.t("toast.autoLayoutFailed", { error: String(e) }));
+  }
 }
 
 export function createTable(options?: {
