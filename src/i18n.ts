@@ -11,10 +11,14 @@ function isLanguage(value: unknown): value is Language {
 }
 
 function getInitialLanguage(): Language {
-  const stored = localStorage.getItem("socadb_language");
-  if (isLanguage(stored)) return stored;
-  const systemLang = navigator.language.split("-")[0];
-  if (isLanguage(systemLang)) return systemLang;
+  try {
+    const stored = localStorage.getItem("socadb_language");
+    if (isLanguage(stored)) return stored;
+    const systemLang = navigator.language.split("-")[0];
+    if (isLanguage(systemLang)) return systemLang;
+  } catch {
+    // localStorage/navigator unavailable (e.g. test environment)
+  }
   return "en";
 }
 
