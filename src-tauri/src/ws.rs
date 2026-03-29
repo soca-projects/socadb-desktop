@@ -23,11 +23,16 @@ pub fn get_ws_sender() -> &'static WsSender {
     WS_SENDER.get_or_init(|| Arc::new(Mutex::new(None)))
 }
 
-pub async fn start_ws_server(app: AppHandle) -> u16 {
+pub async fn start_ws_server(app: AppHandle) -> Result<u16, String> {
+    cleanup_port_file();
+
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
-        .expect("Failed to bind WebSocket");
-    let port = listener.local_addr().unwrap().port();
+        .map_err(|e| format!("Failed to bind WebSocket: {e}"))?;
+    let port = listener
+        .local_addr()
+        .map_err(|e| format!("Failed to get local address: {e}"))?
+        .port();
 
     tokio::spawn(async move {
         write_port_file(port);
@@ -37,7 +42,7 @@ pub async fn start_ws_server(app: AppHandle) -> u16 {
         }
     });
 
-    port
+    Ok(port)
 }
 
 async fn handle_connection(stream: tokio::net::TcpStream, app: AppHandle) {

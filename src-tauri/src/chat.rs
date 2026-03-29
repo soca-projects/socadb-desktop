@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 
 struct AgentProcess {
     stdin: tokio::process::ChildStdin,
+    pid: Option<u32>,
 }
 
 struct AgentState {
@@ -24,6 +25,45 @@ fn get_agent() -> &'static Arc<Mutex<AgentState>> {
             api_keys: HashMap::new(),
         }))
     })
+}
+
+fn kill_process(pid: u32) {
+    #[cfg(unix)]
+    {
+        let _ = std::process::Command::new("kill")
+            .arg(pid.to_string())
+            .output();
+    }
+    #[cfg(windows)]
+    {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/F"])
+            .output();
+    }
+}
+
+fn kill_and_remove_agent(processes: &mut HashMap<String, AgentProcess>, provider_id: &str) {
+    if let Some(process) = processes.remove(provider_id) {
+        if let Some(pid) = process.pid {
+            kill_process(pid);
+        }
+    }
+}
+
+pub fn cleanup_agents() {
+    match get_agent().try_lock() {
+        Ok(mut guard) => {
+            for process in guard.processes.values() {
+                if let Some(pid) = process.pid {
+                    kill_process(pid);
+                }
+            }
+            guard.processes.clear();
+        }
+        Err(_) => {
+            eprintln!("[chat] Could not acquire lock during cleanup, agent processes may linger");
+        }
+    }
 }
 
 fn agent_runner_path(provider_id: &str) -> String {
@@ -71,6 +111,7 @@ async fn spawn_agent(
         .spawn()
         .map_err(|e| format!("Failed to spawn agent-runner-{provider_id}: {e}"))?;
 
+    let child_pid = child.id();
     let stdin = child.stdin.take().ok_or("Failed to capture stdin")?;
     let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
     let stderr = child.stderr.take();
@@ -104,7 +145,10 @@ async fn spawn_agent(
         });
     }
 
-    Ok(AgentProcess { stdin })
+    Ok(AgentProcess {
+        stdin,
+        pid: child_pid,
+    })
 }
 
 async fn ensure_agent(app: &AppHandle, provider_id: &str) -> Result<(), String> {
@@ -226,7 +270,7 @@ pub async fn chat_set_api_key(provider_id: String, api_key: Option<String>) -> R
             guard.api_keys.remove(&provider_id);
         }
     }
-    guard.processes.remove(&provider_id);
+    kill_and_remove_agent(&mut guard.processes, &provider_id);
     Ok(())
 }
 
@@ -234,6 +278,6 @@ pub async fn chat_set_api_key(provider_id: String, api_key: Option<String>) -> R
 pub async fn chat_reset(provider_id: String) -> Result<(), String> {
     let agent = get_agent();
     let mut guard = agent.lock().await;
-    guard.processes.remove(&provider_id);
+    kill_and_remove_agent(&mut guard.processes, &provider_id);
     Ok(())
 }

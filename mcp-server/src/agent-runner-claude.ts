@@ -16,7 +16,6 @@ let currentSessionId: string | undefined;
 
 async function handleSend(cmd: ChatSendCommand) {
   abortController = new AbortController();
-  console.error("[agent] handleChatSend", cmd.message.slice(0, 50));
 
   try {
     const options: Options = {
@@ -49,13 +48,11 @@ async function handleSend(cmd: ChatSendCommand) {
       }
     }
 
-    console.error("[agent] calling query()");
     currentQuery = query({
       prompt: cmd.message,
       options,
     });
 
-    console.error("[agent] starting iteration");
     let finalResponse = "";
 
     for await (const message of currentQuery) {

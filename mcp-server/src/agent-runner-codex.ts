@@ -14,7 +14,6 @@ let currentSessionId: string | undefined;
 
 async function handleSend(cmd: ChatSendCommand) {
   abortController = new AbortController();
-  console.error("[codex-agent] handleChatSend", cmd.message.slice(0, 50));
 
   try {
     const { Codex } = await import("@openai/codex-sdk");
