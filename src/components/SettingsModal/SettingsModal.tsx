@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Modal } from "../Modal/Modal";
 import {
   XIcon as X,
   CheckCircleIcon as CheckCircle,
@@ -52,23 +53,19 @@ function ModalShell({
   const { t } = useTranslation();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
-      <div
-        className={`w-full ${maxWidth} animate-fade-in rounded-xl border border-border bg-surface shadow-float`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-[15px] font-semibold text-primary">{title}</h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-            aria-label={t("settings.close")}
-          >
-            <X size={16} />
-          </button>
-        </div>
-        {children}
+    <Modal onClose={onClose} dismissible={false} maxWidth={maxWidth}>
+      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <h2 className="text-[15px] font-semibold text-primary">{title}</h2>
+        <button
+          onClick={onClose}
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          aria-label={t("settings.close")}
+        >
+          <X size={16} />
+        </button>
       </div>
-    </div>
+      {children}
+    </Modal>
   );
 }
 
@@ -460,94 +457,81 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
-      onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-    >
-      <div
-        className="w-full max-w-2xl animate-fade-in rounded-xl border border-border bg-surface shadow-float"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-[15px] font-semibold text-primary">
-            {t("settings.title")}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-            aria-label={t("settings.close")}
+    <Modal onClose={onClose} maxWidth="max-w-2xl">
+      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <h2 className="text-[15px] font-semibold text-primary">{t("settings.title")}</h2>
+        <button
+          onClick={onClose}
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          aria-label={t("settings.close")}
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      <div className="flex">
+        <div className="w-44 shrink-0 space-y-0.5 border-r border-border p-3">
+          <SidebarItem
+            active={section === "agents"}
+            onClick={() => setSection("agents")}
+            icon={<Robot size={15} />}
           >
-            <X size={16} />
-          </button>
+            {t("settings.agents")}
+          </SidebarItem>
+          <SidebarItem
+            active={section === "language"}
+            onClick={() => setSection("language")}
+            icon={<Globe size={15} />}
+          >
+            {t("settings.language")}
+          </SidebarItem>
         </div>
 
-        <div className="flex">
-          <div className="w-44 shrink-0 space-y-0.5 border-r border-border p-3">
-            <SidebarItem
-              active={section === "agents"}
-              onClick={() => setSection("agents")}
-              icon={<Robot size={15} />}
-            >
-              {t("settings.agents")}
-            </SidebarItem>
-            <SidebarItem
-              active={section === "language"}
-              onClick={() => setSection("language")}
-              icon={<Globe size={15} />}
-            >
-              {t("settings.language")}
-            </SidebarItem>
+        <div className="min-h-[280px] flex-1 p-6">
+          <div className={section !== "agents" ? "hidden" : "space-y-4"}>
+            {PROVIDER_IDS.map((id) => (
+              <ProviderRow
+                key={id}
+                providerId={id}
+                provider={providers[id]}
+                onSubscription={() => {
+                  setActiveProviderId(id);
+                  setAgentView("subscription");
+                }}
+                onApiKey={() => {
+                  setActiveProviderId(id);
+                  setAgentView("api-key");
+                }}
+                onDisconnect={() => void disconnect(id)}
+              />
+            ))}
           </div>
 
-          <div className="min-h-[280px] flex-1 p-6">
-            <div className={section !== "agents" ? "hidden" : "space-y-4"}>
-              {PROVIDER_IDS.map((id) => (
-                <ProviderRow
-                  key={id}
-                  providerId={id}
-                  provider={providers[id]}
-                  onSubscription={() => {
-                    setActiveProviderId(id);
-                    setAgentView("subscription");
-                  }}
-                  onApiKey={() => {
-                    setActiveProviderId(id);
-                    setAgentView("api-key");
-                  }}
-                  onDisconnect={() => void disconnect(id)}
-                />
+          <div className={section !== "language" ? "hidden" : ""}>
+            <p className="mb-4 text-[13px] text-tertiary">
+              {t("settings.languageDescription")}
+            </p>
+            <div className="space-y-2">
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => void i18n.changeLanguage(lang)}
+                  className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-[13px] font-medium transition-all ${
+                    i18n.resolvedLanguage === lang
+                      ? "border-accent bg-accent/[0.05] text-accent"
+                      : "border-border text-secondary hover:border-border-hover hover:bg-surface-muted"
+                  }`}
+                >
+                  {LANGUAGE_LABELS[lang]}
+                  {i18n.resolvedLanguage === lang && (
+                    <CheckCircle size={16} weight="fill" />
+                  )}
+                </button>
               ))}
-            </div>
-
-            <div className={section !== "language" ? "hidden" : ""}>
-              <p className="mb-4 text-[13px] text-tertiary">
-                {t("settings.languageDescription")}
-              </p>
-              <div className="space-y-2">
-                {SUPPORTED_LANGUAGES.map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => void i18n.changeLanguage(lang)}
-                    className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-[13px] font-medium transition-all ${
-                      i18n.resolvedLanguage === lang
-                        ? "border-accent bg-accent/[0.05] text-accent"
-                        : "border-border text-secondary hover:border-border-hover hover:bg-surface-muted"
-                    }`}
-                  >
-                    {LANGUAGE_LABELS[lang]}
-                    {i18n.resolvedLanguage === lang && (
-                      <CheckCircle size={16} weight="fill" />
-                    )}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
