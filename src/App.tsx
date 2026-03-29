@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Toaster } from "sonner";
 import { Canvas } from "./components/Canvas/Canvas";
 import { ChatPanel } from "./components/ChatPanel/ChatPanel";
-import { AgentSetupModal } from "./components/AgentSetupModal/AgentSetupModal";
+import { SettingsModal } from "./components/SettingsModal/SettingsModal";
 import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
 import { NewSchemaModal } from "./components/NewSchemaModal/NewSchemaModal";
 import { useAppMenu } from "./hooks/useAppMenu";
@@ -26,9 +26,9 @@ function App() {
   useChatStream();
 
   const { isOpen, isFirstLaunch, handleCreate, handleClose } = useNewSchemaModal();
-  const [agentSetupOpen, setAgentSetupOpen] = useState(false);
-  const openAgentSetup = useCallback(() => setAgentSetupOpen(true), []);
-  const closeAgentSetup = useCallback(() => setAgentSetupOpen(false), []);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const openSettings = useCallback(() => setSettingsOpen(true), []);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
   useEffect(() => {
     void registerMcpServers();
@@ -36,9 +36,9 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Canvas onOpenAgentSetup={openAgentSetup} />
+      <Canvas onOpenSettings={openSettings} />
       <ChatPanel />
-      {agentSetupOpen && <AgentSetupModal onClose={closeAgentSetup} />}
+      {settingsOpen && <SettingsModal onClose={closeSettings} />}
       {isOpen && (
         <NewSchemaModal
           isFirstLaunch={isFirstLaunch}

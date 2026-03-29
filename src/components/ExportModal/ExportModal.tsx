@@ -88,7 +88,7 @@ export function ExportModal({ onClose }: ExportModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
             aria-label={t("export.close")}
           >
             <X size={16} />

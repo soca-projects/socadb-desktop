@@ -222,7 +222,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             </div>
             <button
               onClick={onClose}
-              className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+              className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
               aria-label={t("import.close")}
             >
               <X size={16} />
@@ -308,7 +308,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
             aria-label={t("import.close")}
           >
             <X size={16} />

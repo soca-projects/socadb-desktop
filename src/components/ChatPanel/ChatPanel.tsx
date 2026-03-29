@@ -275,14 +275,14 @@ export function ChatPanel() {
         </div>
         <button
           onClick={newConversation}
-          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
           aria-label={t("chat.newChat")}
         >
           <Plus size={14} />
         </button>
         <button
           onClick={togglePanel}
-          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
           aria-label={t("chat.closeChat")}
         >
           <X size={14} />

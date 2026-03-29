@@ -3,6 +3,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
+import { useThemeStore } from "../stores/themeStore";
 import i18next from "../i18n";
 
 export async function exportCanvasSvg() {
@@ -15,7 +16,10 @@ export async function exportCanvasSvg() {
     const schemaName = useSchemaStore.getState().schema.name || "schema";
 
     const [svg, path] = await Promise.all([
-      toSvg(viewport, { backgroundColor: "#FDFCFC" }),
+      toSvg(viewport, {
+        backgroundColor:
+          useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FDFCFC",
+      }),
       save({
         defaultPath: `${schemaName}.svg`,
         filters: [{ name: i18next.t("fileFilter.svg"), extensions: ["svg"] }],

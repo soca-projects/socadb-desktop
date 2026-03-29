@@ -23,10 +23,7 @@ export interface ProviderMeta {
   apiKeyPlaceholder: string;
   apiKeyMinLength: number;
   consoleUrl: string;
-  consoleName: string;
   cliName: string;
-  subscriptionLabel: string;
-  signInHint: string;
   installCommand: string;
   startCommand: string;
   loginCommand: string;
@@ -53,10 +50,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     apiKeyPlaceholder: "sk-ant-...",
     apiKeyMinLength: 20,
     consoleUrl: "https://console.anthropic.com/settings/keys",
-    consoleName: "Anthropic Console",
     cliName: "Claude Code",
-    subscriptionLabel: "Claude Subscription (Pro, Max...)",
-    signInHint: 'Select "Claude account with subscription" to sign in.',
     installCommand: "curl -fsSL https://claude.ai/install.sh | bash",
     startCommand: "claude",
     loginCommand: "claude /login",
@@ -73,10 +67,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     apiKeyPlaceholder: "sk-proj-...",
     apiKeyMinLength: 20,
     consoleUrl: "https://platform.openai.com/settings/organization/api-keys",
-    consoleName: "OpenAI Dashboard",
     cliName: "Codex",
-    subscriptionLabel: "ChatGPT Subscription (Plus, Pro...)",
-    signInHint: "Sign in with your ChatGPT subscription.",
     installCommand: "npm install -g @openai/codex",
     startCommand: "codex",
     loginCommand: "codex auth login",

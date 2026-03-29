@@ -55,7 +55,7 @@ export function ContextMenu({
       <button
         role="menuitem"
         onClick={onDelete}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
       >
         <Trash size={14} />
         {t("contextMenu.deleteTable")}

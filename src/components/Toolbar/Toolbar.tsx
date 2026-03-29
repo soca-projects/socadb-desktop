@@ -15,7 +15,7 @@ interface ToolbarProps {
   isSidePanelOpen: boolean;
   onToggleSidePanel: () => void;
   onToggleFocusMode: () => void;
-  onOpenAgentSetup: () => void;
+  onOpenSettings: () => void;
 }
 
 function getFileName(filePath: string | null, fallback: string): string {
@@ -28,7 +28,7 @@ export function Toolbar({
   isSidePanelOpen,
   onToggleSidePanel,
   onToggleFocusMode,
-  onOpenAgentSetup,
+  onOpenSettings,
 }: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -100,10 +100,10 @@ export function Toolbar({
         </button>
         <ThemeToggle />
         <button
-          onClick={onOpenAgentSetup}
+          onClick={onOpenSettings}
           className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-          title={t("toolbar.agentSettings")}
-          aria-label={t("toolbar.agentSettings")}
+          title={t("toolbar.settings")}
+          aria-label={t("toolbar.settings")}
         >
           <GearSix size={16} />
         </button>

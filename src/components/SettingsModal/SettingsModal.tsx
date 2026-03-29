@@ -10,6 +10,8 @@ import {
   KeyIcon as Key,
   SignOutIcon as SignOut,
   TerminalWindowIcon as TerminalWindow,
+  RobotIcon as Robot,
+  GlobeIcon as Globe,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
@@ -25,12 +27,14 @@ import {
   type ProviderId,
   type Provider,
 } from "../../types/chat";
+import { SUPPORTED_LANGUAGES, type Language } from "../../i18n";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 
-type View = "main" | "subscription" | "api-key";
+type Section = "agents" | "language";
+type AgentView = "main" | "subscription" | "api-key";
 
-interface AgentSetupModalProps {
+interface SettingsModalProps {
   onClose: () => void;
 }
 
@@ -48,7 +52,7 @@ function ModalShell({
   const { t } = useTranslation();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
       <div
         className={`w-full ${maxWidth} animate-fade-in rounded-xl border border-border bg-surface shadow-float`}
       >
@@ -56,8 +60,8 @@ function ModalShell({
           <h2 className="text-[15px] font-semibold text-primary">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-            aria-label={t("agent.close")}
+            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+            aria-label={t("settings.close")}
           >
             <X size={16} />
           </button>
@@ -204,9 +208,10 @@ function ProviderRow({
     setChecking(false);
   }, [providerId]);
 
-  useState(() => {
+  useEffect(() => {
     void runDetection();
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (isConnected) return;
@@ -215,7 +220,7 @@ function ProviderRow({
   }, [isConnected, runDetection]);
 
   return (
-    <div className="rounded-lg border border-border p-4">
+    <div className="rounded-lg border border-border px-5 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
@@ -281,11 +286,43 @@ function ProviderRow({
   );
 }
 
-export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
-  const { t } = useTranslation();
+const LANGUAGE_LABELS: Record<Language, string> = {
+  en: "English",
+  fr: "Français",
+};
+
+function SidebarItem({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${
+        active
+          ? "border-l-2 border-accent bg-accent/[0.05] pl-[10px] text-accent"
+          : "border-l-2 border-transparent pl-[10px] text-tertiary hover:bg-surface-muted hover:text-secondary"
+      }`}
+    >
+      {icon}
+      <span className="truncate">{children}</span>
+    </button>
+  );
+}
+
+export function SettingsModal({ onClose }: SettingsModalProps) {
+  const { t, i18n } = useTranslation();
   const providers = useChatStore((s) => s.providers);
 
-  const [view, setView] = useState<View>("main");
+  const [section, setSection] = useState<Section>("agents");
+  const [agentView, setAgentView] = useState<AgentView>("main");
   const [activeProviderId, setActiveProviderId] = useState<ProviderId>("claude");
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [connecting, setConnecting] = useState(false);
@@ -303,7 +340,7 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
       makeProvider(activeProviderId, true, "api-key", null),
     );
     setConnecting(false);
-    setView("main");
+    setAgentView("main");
     setApiKeyInput("");
   }, [apiKeyInput, activeProviderId]);
 
@@ -313,13 +350,13 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
     persistProvider(id, makeProvider(id, false, null, null));
   }, []);
 
-  if (view === "subscription") {
+  if (agentView === "subscription") {
     return (
       <ModalShell
         title={t("agent.signInTitle", {
           label: t(`provider.${activeProviderId}.subscriptionLabel`),
         })}
-        onClose={() => setView("main")}
+        onClose={() => setAgentView("main")}
         maxWidth="max-w-lg"
       >
         <div className="p-5">
@@ -374,12 +411,12 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
     );
   }
 
-  if (view === "api-key") {
+  if (agentView === "api-key") {
     return (
       <ModalShell
         title={t("agent.apiKeyTitle")}
         onClose={() => {
-          setView("main");
+          setAgentView("main");
           setApiKeyInput("");
         }}
       >
@@ -423,31 +460,94 @@ export function AgentSetupModal({ onClose }: AgentSetupModalProps) {
   }
 
   return (
-    <ModalShell title={t("agent.setupTitle")} onClose={onClose}>
-      <div className="p-5">
-        <p className="mb-4 text-[13px] font-medium text-secondary">
-          {t("agent.agentsOnCanvas")}
-        </p>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+    >
+      <div
+        className="w-full max-w-2xl animate-fade-in rounded-xl border border-border bg-surface shadow-float"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="text-[15px] font-semibold text-primary">
+            {t("settings.title")}
+          </h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+            aria-label={t("settings.close")}
+          >
+            <X size={16} />
+          </button>
+        </div>
 
-        <div className="space-y-3">
-          {PROVIDER_IDS.map((id) => (
-            <ProviderRow
-              key={id}
-              providerId={id}
-              provider={providers[id]}
-              onSubscription={() => {
-                setActiveProviderId(id);
-                setView("subscription");
-              }}
-              onApiKey={() => {
-                setActiveProviderId(id);
-                setView("api-key");
-              }}
-              onDisconnect={() => void disconnect(id)}
-            />
-          ))}
+        <div className="flex">
+          <div className="w-44 shrink-0 space-y-0.5 border-r border-border p-3">
+            <SidebarItem
+              active={section === "agents"}
+              onClick={() => setSection("agents")}
+              icon={<Robot size={15} />}
+            >
+              {t("settings.agents")}
+            </SidebarItem>
+            <SidebarItem
+              active={section === "language"}
+              onClick={() => setSection("language")}
+              icon={<Globe size={15} />}
+            >
+              {t("settings.language")}
+            </SidebarItem>
+          </div>
+
+          <div className="min-h-[280px] flex-1 p-6">
+            <div className={section !== "agents" ? "hidden" : "space-y-4"}>
+              {PROVIDER_IDS.map((id) => (
+                <ProviderRow
+                  key={id}
+                  providerId={id}
+                  provider={providers[id]}
+                  onSubscription={() => {
+                    setActiveProviderId(id);
+                    setAgentView("subscription");
+                  }}
+                  onApiKey={() => {
+                    setActiveProviderId(id);
+                    setAgentView("api-key");
+                  }}
+                  onDisconnect={() => void disconnect(id)}
+                />
+              ))}
+            </div>
+
+            <div className={section !== "language" ? "hidden" : ""}>
+              <p className="mb-4 text-[13px] text-tertiary">
+                {t("settings.languageDescription")}
+              </p>
+              <div className="space-y-2">
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => void i18n.changeLanguage(lang)}
+                    className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-[13px] font-medium transition-all ${
+                      i18n.resolvedLanguage === lang
+                        ? "border-accent bg-accent/[0.05] text-accent"
+                        : "border-border text-secondary hover:border-border-hover hover:bg-surface-muted"
+                    }`}
+                  >
+                    {LANGUAGE_LABELS[lang]}
+                    {i18n.resolvedLanguage === lang && (
+                      <CheckCircle size={16} weight="fill" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </ModalShell>
+    </div>
   );
 }

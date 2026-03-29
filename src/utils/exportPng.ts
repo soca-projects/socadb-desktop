@@ -3,6 +3,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
+import { useThemeStore } from "../stores/themeStore";
 import i18next from "../i18n";
 
 export async function exportCanvasPng() {
@@ -15,7 +16,11 @@ export async function exportCanvasPng() {
     const schemaName = useSchemaStore.getState().schema.name || "schema";
 
     const [blob, path] = await Promise.all([
-      toBlob(viewport, { backgroundColor: "#FDFCFC", pixelRatio: 2 }),
+      toBlob(viewport, {
+        backgroundColor:
+          useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FDFCFC",
+        pixelRatio: 2,
+      }),
       save({
         defaultPath: `${schemaName}.png`,
         filters: [{ name: i18next.t("fileFilter.png"), extensions: ["png"] }],

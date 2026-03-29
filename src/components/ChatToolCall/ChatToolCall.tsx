@@ -37,9 +37,17 @@ export function ChatToolCall({ toolCall }: ChatToolCallProps) {
         {isPending ? (
           <span className="h-3.5 w-3.5 animate-spin rounded-full border border-[var(--color-fg-muted)] border-t-[var(--color-fg-tertiary)]" />
         ) : toolCall.isSuccess ? (
-          <CheckCircle size={14} weight="fill" className="text-emerald-500" />
+          <CheckCircle
+            size={14}
+            weight="fill"
+            className="text-emerald-600 dark:text-emerald-400"
+          />
         ) : (
-          <WarningCircle size={14} weight="fill" className="text-red-400" />
+          <WarningCircle
+            size={14}
+            weight="fill"
+            className="text-red-500 dark:text-red-400"
+          />
         )}
         <span>{formatToolLabel(toolCall, t)}</span>
         <CaretRight

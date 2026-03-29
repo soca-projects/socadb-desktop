@@ -12,7 +12,7 @@ function ThinkingIndicator() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="h-1.5 w-1.5 rounded-full bg-stone-400"
+          className="h-1.5 w-1.5 rounded-full bg-stone-400 dark:bg-stone-500"
           style={{
             animation: "thinking-pulse 1.4s ease-in-out infinite",
             animationDelay: `${i * 0.2}s`,

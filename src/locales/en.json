@@ -7,7 +7,7 @@
     "showPanel": "Show side panel",
     "unsavedChanges": "Unsaved changes",
     "focusMode": "Focus mode",
-    "agentSettings": "Agent settings",
+    "settings": "Settings",
     "untitled": "Untitled",
     "mysql": "MySQL",
     "postgresql": "PostgreSQL"
@@ -99,10 +99,14 @@
     "adaptDescription": "Adapt column types to match the current schema",
     "cancel": "Cancel"
   },
+  "settings": {
+    "title": "Settings",
+    "agents": "Agents",
+    "language": "Language",
+    "languageDescription": "Choose the application language.",
+    "close": "Close"
+  },
   "agent": {
-    "setupTitle": "Setup Agents",
-    "agentsOnCanvas": "Agents on Canvas",
-    "close": "Close",
     "signInWith": "Sign in with...",
     "subscriptionIncluded": "Usage included with your plan",
     "ownApiKey": "Provide your own API key",

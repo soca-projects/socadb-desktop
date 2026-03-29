@@ -83,9 +83,9 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
         <div className="flex items-center gap-1.5">
           <div className="flex w-3.5 shrink-0 items-center justify-center">
             {col.isPrimaryKey ? (
-              <Key size={13} weight="fill" className="text-amber-500" />
+              <Key size={13} weight="fill" className="text-badge-primary" />
             ) : col.isForeignKey ? (
-              <Link size={13} weight="bold" className="text-blue-500" />
+              <Link size={13} weight="bold" className="text-badge-unique" />
             ) : (
               <Hash size={13} className="text-muted" />
             )}
@@ -260,7 +260,7 @@ function TableMenu({
               onDelete();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
           >
             <Trash size={14} />
             {t("sidePanel.deleteTable")}
