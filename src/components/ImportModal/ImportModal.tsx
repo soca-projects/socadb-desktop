@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { XIcon as X, BracketsCurlyIcon as BracketsCurly } from "@phosphor-icons/react";
+import { Modal } from "../Modal/Modal";
 import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
 import { MysqlIcon } from "../../assets/icons/MysqlIcon";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -190,16 +191,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
 
   if (conflict) {
     return (
-      <div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
-        onClick={onClose}
+      <Modal
+        onClose={onClose}
+        maxWidth="max-w-[480px]"
+        zIndex={60}
+        ariaLabelledBy="import-conflict-title"
       >
-        <div
-          role="dialog"
-          aria-labelledby="import-conflict-title"
-          className="w-full max-w-[480px] rounded-xl border border-border bg-surface p-6 shadow-float"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2
@@ -260,7 +258,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             </button>
           </div>
         </div>
-      </div>
+      </Modal>
     );
   }
 
@@ -289,16 +287,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
-      onClick={onClose}
+    <Modal
+      onClose={onClose}
+      maxWidth="max-w-[480px]"
+      zIndex={60}
+      ariaLabelledBy="import-title"
     >
-      <div
-        role="dialog"
-        aria-labelledby="import-title"
-        className="w-full max-w-[480px] rounded-xl border border-border bg-surface p-6 shadow-float"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 id="import-title" className="text-base font-semibold text-primary">
@@ -374,6 +369,6 @@ export function ImportModal({ onClose }: ImportModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -157,6 +157,13 @@
       "signInHint": "Sign in with your ChatGPT subscription."
     }
   },
+  "unsavedChanges": {
+    "title": "Unsaved Changes",
+    "description": "Your current schema has unsaved changes that will be lost.",
+    "cancel": "Cancel",
+    "dontSave": "Don't Save",
+    "save": "Save"
+  },
   "menu": {
     "file": "File",
     "newSchema": "New Schema",

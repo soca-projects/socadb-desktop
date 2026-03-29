@@ -1,6 +1,8 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { toast } from "sonner";
 import type { Schema } from "../types/schema";
+import { useSchemaStore } from "../stores/schemaStore";
 import { SchemaZ } from "./zodSchemas";
 import i18next from "../i18n";
 
@@ -70,4 +72,43 @@ export async function saveSchemaFileAs(schema: Schema): Promise<string | null> {
 
   await saveSchemaFile(schema, path);
   return path;
+}
+
+export async function saveCurrentSchema(): Promise<boolean> {
+  try {
+    const { schema, filePath, setFilePath, markSaved } = useSchemaStore.getState();
+    if (filePath) {
+      await saveSchemaFile(schema, filePath);
+      markSaved();
+    } else {
+      const path = await saveSchemaFileAs(schema);
+      if (path) {
+        setFilePath(path);
+        markSaved();
+      } else {
+        return false;
+      }
+    }
+    return true;
+  } catch (e) {
+    toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
+    return false;
+  }
+}
+
+export async function openAndApplySchema(): Promise<void> {
+  try {
+    const { setSchema, setFilePath } = useSchemaStore.getState();
+    const result = await openSchemaFile();
+    if (result) {
+      setSchema(result.schema);
+      setFilePath(result.path);
+    }
+  } catch (e) {
+    toast.error(
+      e instanceof Error
+        ? e.message
+        : i18next.t("toast.openFailed", { error: String(e) }),
+    );
+  }
 }

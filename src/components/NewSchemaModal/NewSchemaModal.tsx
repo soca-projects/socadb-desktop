@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Modal } from "../Modal/Modal";
 import type { DbType } from "../../types/schema";
 
 interface NewSchemaModalProps {
@@ -22,22 +23,17 @@ export function NewSchemaModal({
     onCreate(trimmed, dbType);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleCreate();
-    if (e.key === "Escape" && !isFirstLaunch) onClose();
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
-      onClick={isFirstLaunch ? undefined : onClose}
-      onKeyDown={handleKeyDown}
+    <Modal
+      onClose={onClose}
+      dismissible={!isFirstLaunch}
+      ariaLabelledBy="new-schema-title"
     >
       <div
-        role="dialog"
-        aria-labelledby="new-schema-title"
-        className="w-full max-w-[400px] rounded-xl border border-border bg-surface p-6 shadow-float"
-        onClick={(e) => e.stopPropagation()}
+        className="p-6"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleCreate();
+        }}
       >
         <h2 id="new-schema-title" className="text-base font-semibold text-primary">
           {t("newSchema.title")}
@@ -111,6 +107,6 @@ export function NewSchemaModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -4,31 +4,17 @@ import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/men
 import { emit } from "@tauri-apps/api/event";
 import { useSchemaStore } from "../stores/schemaStore";
 import {
-  openSchemaFile,
-  saveSchemaFile,
+  saveCurrentSchema,
   saveSchemaFileAs,
+  openAndApplySchema,
 } from "../utils/fileOperations";
 import { handleUndo, handleRedo } from "../utils/schemaActions";
 import { useThemeStore } from "../stores/themeStore";
 import { toast } from "sonner";
 import i18next from "../i18n";
 
-async function handleSave() {
-  try {
-    const { schema, filePath, setFilePath, markSaved } = useSchemaStore.getState();
-    if (filePath) {
-      await saveSchemaFile(schema, filePath);
-      markSaved();
-    } else {
-      const path = await saveSchemaFileAs(schema);
-      if (path) {
-        setFilePath(path);
-        markSaved();
-      }
-    }
-  } catch (e) {
-    toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
-  }
+function handleSave() {
+  void saveCurrentSchema();
 }
 
 async function handleSaveAs() {
@@ -44,24 +30,24 @@ async function handleSaveAs() {
   }
 }
 
-async function handleOpen() {
-  try {
-    const { setSchema, setFilePath } = useSchemaStore.getState();
-    const result = await openSchemaFile();
-    if (result) {
-      setSchema(result.schema);
-      setFilePath(result.path);
-    }
-  } catch (e) {
-    toast.error(
-      e instanceof Error
-        ? e.message
-        : i18next.t("toast.openFailed", { error: String(e) }),
-    );
+function isDirty() {
+  const { schema, savedAt } = useSchemaStore.getState();
+  return savedAt !== schema.updatedAt;
+}
+
+function handleOpen() {
+  if (isDirty()) {
+    void emit("unsaved-guard-open");
+    return;
   }
+  void openAndApplySchema();
 }
 
 function handleNew() {
+  if (isDirty()) {
+    void emit("unsaved-guard-new");
+    return;
+  }
   void emit("new-schema-requested");
 }
 

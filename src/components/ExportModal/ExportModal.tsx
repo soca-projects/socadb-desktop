@@ -5,6 +5,7 @@ import {
   FileImageIcon as FileImage,
   BracketsCurlyIcon as BracketsCurly,
 } from "@phosphor-icons/react";
+import { Modal } from "../Modal/Modal";
 import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
 import { MysqlIcon } from "../../assets/icons/MysqlIcon";
 import { useSchemaStore } from "../../stores/schemaStore";
@@ -69,16 +70,13 @@ export function ExportModal({ onClose }: ExportModalProps) {
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
-      onClick={onClose}
+    <Modal
+      onClose={onClose}
+      maxWidth="max-w-[480px]"
+      zIndex={60}
+      ariaLabelledBy="export-title"
     >
-      <div
-        role="dialog"
-        aria-labelledby="export-title"
-        className="w-full max-w-[480px] rounded-xl border border-border bg-surface p-6 shadow-float"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 id="export-title" className="text-base font-semibold text-primary">
@@ -142,6 +140,6 @@ export function ExportModal({ onClose }: ExportModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

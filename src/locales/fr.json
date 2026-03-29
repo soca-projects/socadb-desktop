@@ -157,6 +157,13 @@
       "signInHint": "Connectez-vous avec votre abonnement ChatGPT."
     }
   },
+  "unsavedChanges": {
+    "title": "Modifications non enregistrées",
+    "description": "Votre schéma actuel contient des modifications non enregistrées qui seront perdues.",
+    "cancel": "Annuler",
+    "dontSave": "Ne pas enregistrer",
+    "save": "Enregistrer"
+  },
   "menu": {
     "file": "Fichier",
     "newSchema": "Nouveau schéma",
