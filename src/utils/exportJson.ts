@@ -1,6 +1,8 @@
-import { save, message } from "@tauri-apps/plugin-dialog";
+import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
+import i18next from "../i18n";
 
 export async function exportJson() {
   try {
@@ -10,15 +12,12 @@ export async function exportJson() {
 
     const path = await save({
       defaultPath: `${schemaName}.json`,
-      filters: [{ name: "JSON File", extensions: ["json"] }],
+      filters: [{ name: i18next.t("fileFilter.json"), extensions: ["json"] }],
     });
     if (!path) return;
 
     await writeTextFile(path, json);
   } catch (e) {
-    await message(`Failed to export JSON: ${e}`, {
-      title: "Export Error",
-      kind: "error",
-    });
+    toast.error(i18next.t("toast.exportJsonFailed", { error: String(e) }));
   }
 }

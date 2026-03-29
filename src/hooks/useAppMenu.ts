@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { emit } from "@tauri-apps/api/event";
 import { useSchemaStore } from "../stores/schemaStore";
@@ -9,36 +10,54 @@ import {
 } from "../utils/fileOperations";
 import { handleUndo, handleRedo } from "../utils/schemaActions";
 import { useThemeStore } from "../stores/themeStore";
+import { toast } from "sonner";
+import i18next from "../i18n";
 
 async function handleSave() {
-  const { schema, filePath, setFilePath, markSaved } = useSchemaStore.getState();
-  if (filePath) {
-    await saveSchemaFile(schema, filePath);
-    markSaved();
-  } else {
+  try {
+    const { schema, filePath, setFilePath, markSaved } = useSchemaStore.getState();
+    if (filePath) {
+      await saveSchemaFile(schema, filePath);
+      markSaved();
+    } else {
+      const path = await saveSchemaFileAs(schema);
+      if (path) {
+        setFilePath(path);
+        markSaved();
+      }
+    }
+  } catch (e) {
+    toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
+  }
+}
+
+async function handleSaveAs() {
+  try {
+    const { schema, setFilePath, markSaved } = useSchemaStore.getState();
     const path = await saveSchemaFileAs(schema);
     if (path) {
       setFilePath(path);
       markSaved();
     }
-  }
-}
-
-async function handleSaveAs() {
-  const { schema, setFilePath, markSaved } = useSchemaStore.getState();
-  const path = await saveSchemaFileAs(schema);
-  if (path) {
-    setFilePath(path);
-    markSaved();
+  } catch (e) {
+    toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
   }
 }
 
 async function handleOpen() {
-  const { setSchema, setFilePath } = useSchemaStore.getState();
-  const result = await openSchemaFile();
-  if (result) {
-    setSchema(result.schema);
-    setFilePath(result.path);
+  try {
+    const { setSchema, setFilePath } = useSchemaStore.getState();
+    const result = await openSchemaFile();
+    if (result) {
+      setSchema(result.schema);
+      setFilePath(result.path);
+    }
+  } catch (e) {
+    toast.error(
+      e instanceof Error
+        ? e.message
+        : i18next.t("toast.openFailed", { error: String(e) }),
+    );
   }
 }
 
@@ -46,71 +65,68 @@ function handleNew() {
   void emit("new-schema-requested");
 }
 
-let menuInitialized = false;
-
 async function setupMenu() {
-  if (menuInitialized) return;
-  menuInitialized = true;
+  const t = i18next.t.bind(i18next);
 
   const appSubmenu = await Submenu.new({
     text: "SocaDB",
     items: [
       await MenuItem.new({
         id: "about",
-        text: "About SocaDB",
+        text: t("menu.about"),
         enabled: false,
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Services" }),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await PredefinedMenuItem.new({ item: "Hide", text: "Hide SocaDB" }),
+      await PredefinedMenuItem.new({ item: "Hide", text: t("menu.hideSocaDB") }),
       await PredefinedMenuItem.new({ item: "HideOthers" }),
       await PredefinedMenuItem.new({ item: "ShowAll" }),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await PredefinedMenuItem.new({ item: "Quit", text: "Quit SocaDB" }),
+      await PredefinedMenuItem.new({ item: "Quit", text: t("menu.quitSocaDB") }),
     ],
   });
 
   const fileSubmenu = await Submenu.new({
-    text: "File",
+    text: t("menu.file"),
     items: [
       await MenuItem.new({
         id: "new",
-        text: "New Schema",
+        text: t("menu.newSchema"),
         accelerator: "CmdOrCtrl+N",
         action: () => handleNew(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "open",
-        text: "Open...",
+        text: t("menu.open"),
         accelerator: "CmdOrCtrl+O",
         action: () => void handleOpen(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "save",
-        text: "Save",
+        text: t("menu.save"),
         accelerator: "CmdOrCtrl+S",
         action: () => void handleSave(),
       }),
       await MenuItem.new({
         id: "save_as",
-        text: "Save As...",
+        text: t("menu.saveAs"),
         accelerator: "CmdOrCtrl+Shift+S",
         action: () => void handleSaveAs(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "import",
-        text: "Import...",
+        text: t("menu.import"),
         accelerator: "CmdOrCtrl+I",
         action: () => void emit("open-import"),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "export",
-        text: "Export...",
+        text: t("menu.export"),
         accelerator: "CmdOrCtrl+E",
         action: () => void emit("open-export"),
       }),
@@ -118,17 +134,17 @@ async function setupMenu() {
   });
 
   const editSubmenu = await Submenu.new({
-    text: "Edit",
+    text: t("menu.edit"),
     items: [
       await MenuItem.new({
         id: "undo",
-        text: "Undo",
+        text: t("menu.undo"),
         accelerator: "CmdOrCtrl+Z",
         action: () => handleUndo(),
       }),
       await MenuItem.new({
         id: "redo",
-        text: "Redo",
+        text: t("menu.redo"),
         accelerator: "CmdOrCtrl+Shift+Z",
         action: () => handleRedo(),
       }),
@@ -141,23 +157,23 @@ async function setupMenu() {
   });
 
   const viewSubmenu = await Submenu.new({
-    text: "View",
+    text: t("menu.view"),
     items: [
       await MenuItem.new({
         id: "toggle_sidebar",
-        text: "Toggle Sidebar",
+        text: t("menu.toggleSidebar"),
         accelerator: "CmdOrCtrl+B",
         action: () => void emit("toggle-sidebar"),
       }),
       await MenuItem.new({
         id: "toggle_focus",
-        text: "Focus Mode",
+        text: t("menu.focusMode"),
         accelerator: "CmdOrCtrl+Shift+F",
         action: () => void emit("toggle-focus-mode"),
       }),
       await MenuItem.new({
         id: "toggle_theme",
-        text: "Toggle Theme",
+        text: t("menu.toggleTheme"),
         accelerator: "CmdOrCtrl+Shift+T",
         action: () => useThemeStore.getState().toggleTheme(),
       }),
@@ -167,7 +183,7 @@ async function setupMenu() {
   });
 
   const windowSubmenu = await Submenu.new({
-    text: "Window",
+    text: t("menu.window"),
     items: [
       await PredefinedMenuItem.new({ item: "Minimize" }),
       await PredefinedMenuItem.new({ item: "CloseWindow" }),
@@ -182,7 +198,9 @@ async function setupMenu() {
 }
 
 export function useAppMenu() {
+  const { i18n } = useTranslation();
+
   useEffect(() => {
     void setupMenu();
-  }, []);
+  }, [i18n.resolvedLanguage]);
 }

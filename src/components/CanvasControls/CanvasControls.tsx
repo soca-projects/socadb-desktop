@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useReactFlow, useStore, Panel } from "@xyflow/react";
 import type { ReactFlowState } from "@xyflow/react";
 import {
@@ -19,6 +20,7 @@ const btnClass =
 const btnDisabledClass = "px-2 py-1.5 text-muted cursor-not-allowed";
 
 export function CanvasControls() {
+  const { t } = useTranslation();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const percentage = useStore(zoomSelector);
   const canUndo = useZustandStore(
@@ -37,8 +39,8 @@ export function CanvasControls() {
           <button
             onClick={() => void zoomOut()}
             className={btnClass}
-            title="Zoom out"
-            aria-label="Zoom out"
+            title={t("canvas.zoomOut")}
+            aria-label={t("canvas.zoomOut")}
           >
             <Minus size={14} />
           </button>
@@ -48,16 +50,16 @@ export function CanvasControls() {
           <button
             onClick={() => void zoomIn()}
             className={btnClass}
-            title="Zoom in"
-            aria-label="Zoom in"
+            title={t("canvas.zoomIn")}
+            aria-label={t("canvas.zoomIn")}
           >
             <Plus size={14} />
           </button>
           <button
             onClick={() => void fitView({ padding: 0.2 })}
             className={`border-l border-border-light ${btnClass}`}
-            title="Fit view"
-            aria-label="Fit view"
+            title={t("canvas.fitView")}
+            aria-label={t("canvas.fitView")}
           >
             <CornersOut size={14} />
           </button>
@@ -68,8 +70,8 @@ export function CanvasControls() {
             onClick={handleUndo}
             disabled={!canUndo}
             className={canUndo ? btnClass : btnDisabledClass}
-            title="Undo"
-            aria-label="Undo"
+            title={t("canvas.undo")}
+            aria-label={t("canvas.undo")}
           >
             <Undo size={14} />
           </button>
@@ -77,16 +79,16 @@ export function CanvasControls() {
             onClick={handleRedo}
             disabled={!canRedo}
             className={`border-l border-border-light ${canRedo ? btnClass : btnDisabledClass}`}
-            title="Redo"
-            aria-label="Redo"
+            title={t("canvas.redo")}
+            aria-label={t("canvas.redo")}
           >
             <Redo size={14} />
           </button>
           <button
             onClick={() => void handleAutoLayout()}
             className={`border-l border-border-light ${btnClass}`}
-            title="Auto layout"
-            aria-label="Auto layout"
+            title={t("canvas.autoLayout")}
+            aria-label={t("canvas.autoLayout")}
           >
             <Shuffle size={14} />
           </button>

@@ -105,10 +105,10 @@ interface ContextMenuState {
 }
 
 interface CanvasProps {
-  onOpenAgentSetup: () => void;
+  onOpenSettings: () => void;
 }
 
-export function Canvas({ onOpenAgentSetup }: CanvasProps) {
+export function Canvas({ onOpenSettings }: CanvasProps) {
   const tables = useSchemaStore((s) => s.schema.tables);
   const relations = useSchemaStore((s) => s.schema.relations);
   const updateTable = useSchemaStore((s) => s.updateTable);
@@ -276,7 +276,7 @@ export function Canvas({ onOpenAgentSetup }: CanvasProps) {
           isSidePanelOpen={sidePanelOpen}
           onToggleSidePanel={() => setSidePanelOpen(!sidePanelOpen)}
           onToggleFocusMode={toggleFocusMode}
-          onOpenAgentSetup={onOpenAgentSetup}
+          onOpenSettings={onOpenSettings}
         />
       )}
 

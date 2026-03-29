@@ -67,9 +67,9 @@ export const TableNode = memo(function TableNode({ data, selected }: TableNodePr
 
             <div className="flex w-4 items-center justify-center">
               {col.isPrimaryKey ? (
-                <Key size={13} className="text-amber-500" />
+                <Key size={13} className="text-badge-primary" />
               ) : col.isForeignKey ? (
-                <Link size={13} className="text-blue-500" />
+                <Link size={13} className="text-badge-unique" />
               ) : (
                 <span className="h-1.5 w-1.5" />
               )}

@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { EdgeLabelRenderer, getSmoothStepPath, Position } from "@xyflow/react";
 import type { EdgeProps } from "@xyflow/react";
 import { TrashIcon as Trash } from "@phosphor-icons/react";
@@ -47,6 +48,7 @@ export const RelationEdge = memo(function RelationEdge({
   data,
   selected,
 }: RelationEdgeProps) {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
@@ -141,7 +143,7 @@ export const RelationEdge = memo(function RelationEdge({
               ))}
               <div className="mx-0.5 h-5 w-px bg-border" />
               <button
-                aria-label="Delete relation"
+                aria-label={t("canvas.deleteRelation")}
                 onClick={(e) => {
                   e.stopPropagation();
                   useSchemaStore.getState().deleteRelation(id);

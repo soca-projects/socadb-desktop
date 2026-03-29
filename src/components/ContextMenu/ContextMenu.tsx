@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   TrashIcon as Trash,
   PencilSimpleIcon as PencilSimple,
@@ -23,6 +24,7 @@ export function ContextMenu({
   onDelete,
   onClose,
 }: ContextMenuProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, onClose);
 
@@ -39,7 +41,7 @@ export function ContextMenu({
         className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
       >
         <PencilSimple size={14} />
-        Rename
+        {t("contextMenu.rename")}
       </button>
       <button
         role="menuitem"
@@ -47,16 +49,16 @@ export function ContextMenu({
         className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-colors hover:bg-surface-muted"
       >
         <Copy size={14} />
-        Duplicate
+        {t("contextMenu.duplicate")}
       </button>
       <div className="mx-2 my-1 h-px bg-border-light" />
       <button
         role="menuitem"
         onClick={onDelete}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
       >
         <Trash size={14} />
-        Delete Table
+        {t("contextMenu.deleteTable")}
       </button>
     </div>
   );

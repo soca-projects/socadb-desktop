@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   TableIcon as Table,
   PlusIcon as Plus,
@@ -10,6 +11,8 @@ interface EmptyCanvasProps {
 }
 
 export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
       <div className="pointer-events-auto flex max-w-[320px] flex-col items-center text-center">
@@ -24,14 +27,13 @@ export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
           className="mt-4 text-[15px] font-semibold text-primary animate-fade-in"
           style={{ animationDelay: "0.12s" }}
         >
-          Your schema starts here
+          {t("emptyCanvas.heading")}
         </h3>
         <p
           className="mt-1.5 text-[13px] leading-relaxed text-tertiary animate-fade-in"
           style={{ animationDelay: "0.18s" }}
         >
-          Add your first table to start designing. Tables will appear on the canvas and
-          you can drag to create relations between columns.
+          {t("emptyCanvas.description")}
         </p>
 
         <button
@@ -40,7 +42,7 @@ export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
           style={{ animationDelay: "0.25s" }}
         >
           <Plus size={15} weight="bold" />
-          Create first table
+          {t("emptyCanvas.createFirst")}
         </button>
 
         <div
@@ -51,13 +53,13 @@ export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
             <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary shadow-soft">
               {"\u2318"}N
             </kbd>
-            New schema
+            {t("emptyCanvas.newSchema")}
           </span>
           <span className="flex items-center gap-1.5">
             <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary shadow-soft">
               {"\u2318"}O
             </kbd>
-            Open file
+            {t("emptyCanvas.openFile")}
           </span>
         </div>
 
@@ -67,7 +69,7 @@ export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
             style={{ animationDelay: "0.4s" }}
           >
             <ArrowLeft size={10} />
-            Open the side panel to manage tables
+            {t("emptyCanvas.openSidePanel")}
           </p>
         )}
       </div>

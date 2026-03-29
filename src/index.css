@@ -132,6 +132,20 @@ body {
   color: var(--color-fg);
 }
 
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="menuitem"]:focus-visible,
+[role="radio"]:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px rgb(var(--color-accent) / 0.5);
+  border-radius: inherit;
+}
+
 [data-theme-transition] *,
 [data-theme-transition] *::before,
 [data-theme-transition] *::after {

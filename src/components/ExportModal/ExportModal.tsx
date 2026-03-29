@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   XIcon as X,
   FileImageIcon as FileImage,
@@ -20,6 +21,7 @@ interface ExportModalProps {
 }
 
 export function ExportModal({ onClose }: ExportModalProps) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<ExportType>("sql");
   const [imageFormat, setImageFormat] = useState<ImageFormat>("png");
   const dbType = useSchemaStore((s) => s.schema.dbType);
@@ -48,20 +50,20 @@ export function ExportModal({ onClose }: ExportModalProps) {
   }[] = [
     {
       type: "sql",
-      label: dbType === "mysql" ? "MySQL" : "PostgreSQL",
-      description: "Export as SQL DDL statements",
+      label: dbType === "mysql" ? t("toolbar.mysql") : t("toolbar.postgresql"),
+      description: t("export.sqlDescription"),
       icon: dbType === "mysql" ? <MysqlIcon size={24} /> : <PostgresqlIcon size={24} />,
     },
     {
       type: "image",
-      label: "Image",
-      description: "Export diagram as an image",
+      label: t("export.imageLabel"),
+      description: t("export.imageDescription"),
       icon: <FileImage size={24} />,
     },
     {
       type: "json",
-      label: "JSON",
-      description: "Export schema as JSON data",
+      label: t("export.jsonLabel"),
+      description: t("export.jsonDescription"),
       icon: <BracketsCurly size={24} />,
     },
   ];
@@ -80,16 +82,14 @@ export function ExportModal({ onClose }: ExportModalProps) {
         <div className="flex items-center justify-between">
           <div>
             <h2 id="export-title" className="text-base font-semibold text-primary">
-              Export diagram
+              {t("export.title")}
             </h2>
-            <p className="mt-1 text-[13px] text-tertiary">
-              Choose a format to export your schema.
-            </p>
+            <p className="mt-1 text-[13px] text-tertiary">{t("export.description")}</p>
           </div>
           <button
             onClick={onClose}
-            className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-            aria-label="Close"
+            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+            aria-label={t("export.close")}
           >
             <X size={16} />
           </button>
@@ -138,7 +138,7 @@ export function ExportModal({ onClose }: ExportModalProps) {
             onClick={handleExport}
             className="rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98]"
           >
-            Export
+            {t("export.exportButton")}
           </button>
         </div>
       </div>

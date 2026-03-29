@@ -3,6 +3,7 @@ import { useChatStore } from "../stores/chatStore";
 import type { ChatStatusResult, ChatEvent, ProviderId } from "../types/chat";
 import { DEFAULT_MODEL, makeProvider, PROVIDERS } from "../types/chat";
 import { ChatStatusResultZ, ChatErrorZ } from "./zodSchemas";
+import i18next from "../i18n";
 
 const statusResolvers = new Map<
   string,
@@ -84,15 +85,19 @@ export function handleChatEvent(parsed: ChatEvent) {
       const meta = PROVIDERS[providerId];
 
       if (lower.includes("not logged in")) {
-        store.appendAssistantText(`Error: ${errorMsg}`);
+        store.appendAssistantText(i18next.t("chatError.generic", { message: errorMsg }));
         store.setProvider(providerId, makeProvider(providerId, false, null, null));
       } else if (lower.includes("credit balance")) {
         store.appendAssistantText(
-          `Error: ${errorMsg}\n\nAdd credits on the [${meta.consoleName}](${meta.consoleUrl}), then try again. If it still fails, reconnect your API key in Settings.`,
+          i18next.t("chatError.creditBalance", {
+            message: errorMsg,
+            consoleName: i18next.t(`provider.${providerId}.consoleName`),
+            consoleUrl: meta.consoleUrl,
+          }),
         );
         resetAgent(providerId);
       } else {
-        store.appendAssistantText(`Error: ${errorMsg}`);
+        store.appendAssistantText(i18next.t("chatError.generic", { message: errorMsg }));
       }
       store.finishResponse("");
       break;
@@ -127,7 +132,7 @@ function requestStatus(
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       statusResolvers.delete(providerId);
-      reject(new Error("Status check timed out"));
+      reject(new Error(i18next.t("chatError.statusTimeout")));
     }, 10000);
 
     statusResolvers.set(providerId, { resolve, timeout });
