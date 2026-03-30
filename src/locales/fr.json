@@ -217,6 +217,12 @@
     "json": "Fichier JSON",
     "soca": "Schéma SocaDB"
   },
+  "updater": {
+    "title": "Mise à jour disponible",
+    "description": "Une nouvelle version de SocaDB est disponible ({{version}}). Voulez-vous l'installer maintenant ?",
+    "install": "Installer et redémarrer",
+    "later": "Plus tard"
+  },
   "toolCall": {
     "create_table": "table créée",
     "update_table": "table renommée",

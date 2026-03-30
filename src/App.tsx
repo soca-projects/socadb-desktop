@@ -7,6 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
 import { NewSchemaModal } from "./components/NewSchemaModal/NewSchemaModal";
 import { UnsavedChangesModal } from "./components/UnsavedChangesModal/UnsavedChangesModal";
 import { useAppMenu } from "./hooks/useAppMenu";
+import { useAutoUpdate } from "./hooks/useAutoUpdate";
 import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useChatStream } from "./hooks/useChatStream";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
@@ -24,6 +25,7 @@ initLanguagePersistence();
 
 function App() {
   useAppMenu();
+  useAutoUpdate();
   useMcpBridge();
   useChatStream();
 
