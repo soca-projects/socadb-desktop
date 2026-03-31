@@ -91,8 +91,8 @@ async fn spawn_agent(
     provider_id: &str,
     api_key: Option<&str>,
 ) -> Result<AgentProcess, String> {
-    let mut cmd = Command::new("npx");
-    cmd.args(["tsx", &agent_runner_path(provider_id)])
+    let mut cmd = Command::new("bun");
+    cmd.args([&agent_runner_path(provider_id)])
         .current_dir(
             std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
                 .parent()
