@@ -23,6 +23,8 @@ tokio-tungstenite = "0.24"
 futures-util = "0.3"
 dirs = "6"
 tauri-plugin-opener = "2.5.3"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [profile.dev]
 incremental = true

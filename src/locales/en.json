@@ -217,6 +217,12 @@
     "json": "JSON File",
     "soca": "SocaDB Schema"
   },
+  "updater": {
+    "title": "Update Available",
+    "description": "A new version of SocaDB is available ({{version}}). Would you like to install it now?",
+    "install": "Install & Restart",
+    "later": "Later"
+  },
   "toolCall": {
     "create_table": "created table",
     "update_table": "renamed table",

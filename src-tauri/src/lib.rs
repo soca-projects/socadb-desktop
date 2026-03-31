@@ -96,6 +96,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             mcp_respond,
@@ -110,13 +112,19 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let port = ws::start_ws_server(handle).await;
-                eprintln!("SocaDB MCP WebSocket server on port {port}");
+                match ws::start_ws_server(handle).await {
+                    Ok(_port) => {
+                        #[cfg(debug_assertions)]
+                        eprintln!("SocaDB MCP WebSocket server on port {_port}");
+                    }
+                    Err(e) => eprintln!("Failed to start WebSocket server: {e}"),
+                }
             });
             Ok(())
         })
         .on_window_event(|_window, event| {
             if let tauri::WindowEvent::Destroyed = event {
+                chat::cleanup_agents();
                 ws::cleanup_port_file();
             }
         })
