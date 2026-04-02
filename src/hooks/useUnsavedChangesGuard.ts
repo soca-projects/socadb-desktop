@@ -1,17 +1,26 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { emit } from "@tauri-apps/api/event";
-import { saveCurrentSchema, openAndApplySchema } from "../utils/fileOperations";
+import {
+  saveCurrentSchema,
+  openAndApplySchema,
+  openRecentFile,
+} from "../utils/fileOperations";
 
-type PendingAction = "new" | "open" | null;
+type PendingAction = "new" | "open" | "open-recent" | null;
 
 export function useUnsavedChangesGuard() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const recentPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unlistens = [
       listen("unsaved-guard-new", () => setPendingAction("new")),
       listen("unsaved-guard-open", () => setPendingAction("open")),
+      listen<string>("unsaved-guard-open-recent", (event) => {
+        recentPathRef.current = event.payload;
+        setPendingAction("open-recent");
+      }),
     ];
     return () => {
       for (const u of unlistens) void u.then((fn) => fn());
@@ -23,6 +32,12 @@ export function useUnsavedChangesGuard() {
       void emit("new-schema-requested");
     } else if (action === "open") {
       void openAndApplySchema();
+    } else if (action === "open-recent") {
+      const path = recentPathRef.current;
+      recentPathRef.current = null;
+      if (path) {
+        void openRecentFile(path);
+      }
     }
   }, []);
 

@@ -47,6 +47,22 @@ fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn read_schema_file(path: String) -> Result<String, String> {
+    let p = std::path::Path::new(&path);
+    let canonical = p
+        .canonicalize()
+        .map_err(|e| format!("Failed to read file: {e}"))?;
+    if !canonical
+        .to_string_lossy()
+        .to_lowercase()
+        .ends_with(".soca")
+    {
+        return Err("Only .soca files are allowed".into());
+    }
+    std::fs::read_to_string(&canonical).map_err(|e| format!("Failed to read file: {e}"))
+}
+
+#[tauri::command]
 async fn mcp_respond(response: String) {
     let sender = ws::get_ws_sender();
     let mut guard = sender.lock().await;
@@ -100,6 +116,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
+            read_schema_file,
             mcp_respond,
             open_terminal,
             chat::chat_init,
