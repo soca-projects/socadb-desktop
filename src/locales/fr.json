@@ -168,6 +168,9 @@
     "file": "Fichier",
     "newSchema": "Nouveau schéma",
     "open": "Ouvrir...",
+    "openRecent": "Ouvrir un fichier récent",
+    "clearRecent": "Effacer les récents",
+    "noRecent": "Aucun fichier récent",
     "save": "Enregistrer",
     "saveAs": "Enregistrer sous...",
     "import": "Importer...",
@@ -222,6 +225,9 @@
     "description": "Une nouvelle version de SocaDB est disponible ({{version}}). Voulez-vous l'installer maintenant ?",
     "install": "Installer et redémarrer",
     "later": "Plus tard"
+  },
+  "recent": {
+    "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé."
   },
   "toolCall": {
     "create_table": "table créée",

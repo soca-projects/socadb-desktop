@@ -1,10 +1,12 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import type { Schema } from "../types/schema";
 import { useSchemaStore } from "../stores/schemaStore";
 import { SchemaZ } from "./zodSchemas";
 import i18next from "../i18n";
+import { addRecentFile, removeRecentFile } from "./recentFiles";
 
 export function migrateSchema(data: unknown) {
   if (!data || typeof data !== "object") return;
@@ -30,6 +32,26 @@ function getSocaFilter() {
   return { name: i18next.t("fileFilter.soca"), extensions: ["soca"] };
 }
 
+function parseSchemaContent(content: string): Schema {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(content);
+  } catch {
+    throw new Error(i18next.t("toast.invalidFile"));
+  }
+  migrateSchema(raw);
+  const parsed = SchemaZ.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(i18next.t("toast.invalidFile"));
+  }
+  return parsed.data;
+}
+
+async function readSchemaFromPath(filePath: string): Promise<Schema> {
+  const content = await readTextFile(filePath);
+  return parseSchemaContent(content);
+}
+
 export async function openSchemaFile(): Promise<{
   schema: Schema;
   path: string;
@@ -42,19 +64,8 @@ export async function openSchemaFile(): Promise<{
 
   if (!selected) return null;
 
-  const content = await readTextFile(selected);
-  let raw: unknown;
-  try {
-    raw = JSON.parse(content);
-  } catch {
-    throw new Error(i18next.t("toast.invalidFile"));
-  }
-  migrateSchema(raw);
-  const parsed = SchemaZ.safeParse(raw);
-  if (!parsed.success) {
-    throw new Error(i18next.t("toast.invalidFile"));
-  }
-  return { schema: parsed.data, path: selected };
+  const schema = await readSchemaFromPath(selected);
+  return { schema, path: selected };
 }
 
 export async function saveSchemaFile(schema: Schema, filePath: string): Promise<void> {
@@ -80,11 +91,13 @@ export async function saveCurrentSchema(): Promise<boolean> {
     if (filePath) {
       await saveSchemaFile(schema, filePath);
       markSaved();
+      addRecentFile(filePath);
     } else {
       const path = await saveSchemaFileAs(schema);
       if (path) {
         setFilePath(path);
         markSaved();
+        addRecentFile(path);
       } else {
         return false;
       }
@@ -103,6 +116,7 @@ export async function openAndApplySchema(): Promise<void> {
     if (result) {
       setSchema(result.schema);
       setFilePath(result.path);
+      addRecentFile(result.path);
     }
   } catch (e) {
     toast.error(
@@ -110,5 +124,28 @@ export async function openAndApplySchema(): Promise<void> {
         ? e.message
         : i18next.t("toast.openFailed", { error: String(e) }),
     );
+  }
+}
+
+export async function openRecentFile(filePath: string): Promise<void> {
+  try {
+    const content = await invoke<string>("read_schema_file", { path: filePath });
+    const schema = parseSchemaContent(content);
+    const { setSchema, setFilePath } = useSchemaStore.getState();
+    setSchema(schema);
+    setFilePath(filePath);
+    addRecentFile(filePath);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (
+      msg.includes("Failed to read file") ||
+      msg.includes("No such file") ||
+      msg.includes("cannot find")
+    ) {
+      removeRecentFile(filePath);
+      toast.error(i18next.t("recent.fileNotFound"));
+    } else {
+      toast.error(msg || i18next.t("toast.openFailed", { error: msg }));
+    }
   }
 }

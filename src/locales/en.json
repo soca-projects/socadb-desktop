@@ -168,6 +168,9 @@
     "file": "File",
     "newSchema": "New Schema",
     "open": "Open...",
+    "openRecent": "Open Recent",
+    "clearRecent": "Clear Recent",
+    "noRecent": "No Recent Files",
     "save": "Save",
     "saveAs": "Save As...",
     "import": "Import...",
@@ -222,6 +225,9 @@
     "description": "A new version of SocaDB is available ({{version}}). Would you like to install it now?",
     "install": "Install & Restart",
     "later": "Later"
+  },
+  "recent": {
+    "fileNotFound": "File not found. It may have been moved or deleted."
   },
   "toolCall": {
     "create_table": "created table",

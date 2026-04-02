@@ -1,14 +1,21 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/menu";
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { useSchemaStore } from "../stores/schemaStore";
 import {
   saveCurrentSchema,
   saveSchemaFileAs,
   openAndApplySchema,
+  openRecentFile,
 } from "../utils/fileOperations";
 import { handleUndo, handleRedo } from "../utils/schemaActions";
+import {
+  addRecentFile,
+  getRecentFiles,
+  clearRecentFiles,
+  loadRecentFiles,
+} from "../utils/recentFiles";
 import { useThemeStore } from "../stores/themeStore";
 import { toast } from "sonner";
 import i18next from "../i18n";
@@ -24,6 +31,7 @@ async function handleSaveAs() {
     if (path) {
       setFilePath(path);
       markSaved();
+      addRecentFile(path);
     }
   } catch (e) {
     toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
@@ -51,7 +59,66 @@ function handleNew() {
   void emit("new-schema-requested");
 }
 
+function handleOpenRecent(filePath: string) {
+  if (isDirty()) {
+    void emit("unsaved-guard-open-recent", filePath);
+    return;
+  }
+  void openRecentFile(filePath);
+}
+
+async function buildRecentSubmenu(): Promise<Submenu> {
+  const t = i18next.t.bind(i18next);
+  const recentFiles = getRecentFiles();
+
+  const items: (MenuItem | PredefinedMenuItem)[] = [];
+
+  if (recentFiles.length === 0) {
+    items.push(
+      await MenuItem.new({
+        id: "no_recent",
+        text: t("menu.noRecent"),
+        enabled: false,
+      }),
+    );
+  } else {
+    for (const entry of recentFiles) {
+      const parts = entry.path.split(/[/\\]/);
+      const filename = parts.pop() ?? entry.path;
+      const parent = parts.pop();
+      const label = parent ? `${parent}/${filename}` : filename;
+      items.push(
+        await MenuItem.new({
+          id: `recent_${entry.path}`,
+          text: label,
+          action: () => handleOpenRecent(entry.path),
+        }),
+      );
+    }
+    items.push(await PredefinedMenuItem.new({ item: "Separator" }));
+    items.push(
+      await MenuItem.new({
+        id: "clear_recent",
+        text: t("menu.clearRecent"),
+        action: () => clearRecentFiles(),
+      }),
+    );
+  }
+
+  return Submenu.new({
+    id: "open_recent",
+    text: t("menu.openRecent"),
+    items,
+  });
+}
+
+let recentLoaded = false;
+
 async function setupMenu() {
+  if (!recentLoaded) {
+    await loadRecentFiles();
+    recentLoaded = true;
+  }
   const t = i18next.t.bind(i18next);
 
   const appSubmenu = await Submenu.new({
@@ -89,6 +156,8 @@ async function setupMenu() {
         accelerator: "CmdOrCtrl+O",
         action: () => void handleOpen(),
       }),
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      await buildRecentSubmenu(),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "save",
@@ -188,5 +257,10 @@ export function useAppMenu() {
 
   useEffect(() => {
     void setupMenu();
+
+    const unlistens = [listen("refresh-menu", () => void setupMenu())];
+    return () => {
+      for (const u of unlistens) void u.then((fn) => fn());
+    };
   }, [i18n.resolvedLanguage]);
 }
