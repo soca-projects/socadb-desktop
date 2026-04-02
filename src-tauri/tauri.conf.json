@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.socadb.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build:all",
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build:all",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },
