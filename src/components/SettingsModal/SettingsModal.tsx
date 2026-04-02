@@ -31,6 +31,7 @@ import {
 import { SUPPORTED_LANGUAGES, type Language } from "../../i18n";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 
 type Section = "agents" | "language";
 type AgentView = "main" | "subscription" | "api-key";
@@ -330,7 +331,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     const key = apiKeyInput.trim();
     if (!key) return;
     setConnecting(true);
-    await saveApiKey(activeProviderId, key);
+    const saved = await saveApiKey(activeProviderId, key);
+    if (!saved) {
+      setConnecting(false);
+      toast.error(t("agent.keyringUnavailable"));
+      return;
+    }
     setApiKeyOnAgent(activeProviderId, key);
     persistProvider(
       activeProviderId,
@@ -339,13 +345,20 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     setConnecting(false);
     setAgentView("main");
     setApiKeyInput("");
-  }, [apiKeyInput, activeProviderId]);
+  }, [apiKeyInput, activeProviderId, t]);
 
-  const disconnect = useCallback(async (id: ProviderId) => {
-    await clearApiKey(id);
-    setApiKeyOnAgent(id, null);
-    persistProvider(id, makeProvider(id, false, null, null));
-  }, []);
+  const disconnect = useCallback(
+    async (id: ProviderId) => {
+      const cleared = await clearApiKey(id);
+      if (!cleared) {
+        toast.error(t("agent.disconnectFailed"));
+        return;
+      }
+      setApiKeyOnAgent(id, null);
+      persistProvider(id, makeProvider(id, false, null, null));
+    },
+    [t],
+  );
 
   if (agentView === "subscription") {
     return (

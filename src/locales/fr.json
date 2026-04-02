@@ -128,7 +128,9 @@
     "apiKeyTitle": "Se connecter avec une clé API",
     "apiKeyGetFrom": "Récupérez votre clé API sur la",
     "connecting": "Connexion...",
-    "connect": "Connecter"
+    "connect": "Connecter",
+    "keyringUnavailable": "Impossible de sauvegarder la clé API de manière sécurisée. Veuillez réessayer.",
+    "disconnectFailed": "Impossible de supprimer la clé API. Veuillez réessayer."
   },
   "chat": {
     "newConversation": "Nouvelle conversation",
