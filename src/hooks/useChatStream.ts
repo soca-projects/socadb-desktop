@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { handleChatEvent } from "../utils/chatCommands";
+import { handleChatEvent } from "../utils/chatEventHandler";
 import type { ChatEvent } from "../types/chat";
 
 export function useChatStream() {

@@ -23,6 +23,7 @@ function createConversation(): Conversation {
 interface ChatState {
   conversations: Conversation[];
   activeConversationId: string | null;
+  streamingConversationId: string | null;
   isStreaming: boolean;
   isPanelOpen: boolean;
   providers: Record<string, Provider>;
@@ -75,6 +76,7 @@ function autoName(messages: ChatMessage[]): string {
 export const useChatStore = create<ChatState>()((set) => ({
   conversations: [],
   activeConversationId: null,
+  streamingConversationId: null,
   messages: [],
   sessionId: null,
   isStreaming: false,
@@ -191,6 +193,7 @@ export const useChatStore = create<ChatState>()((set) => ({
       return {
         messages: msgs,
         isStreaming: true,
+        streamingConversationId: activeId,
         conversations: convs.map((c) =>
           c.id === activeId
             ? {
@@ -269,6 +272,7 @@ export const useChatStore = create<ChatState>()((set) => ({
   finishResponse: (sessionId) =>
     set((state) => ({
       isStreaming: false,
+      streamingConversationId: null,
       sessionId,
       ...syncToConversation({ ...state, sessionId }),
     })),
