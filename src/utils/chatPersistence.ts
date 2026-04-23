@@ -1,4 +1,5 @@
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import { useChatStore } from "../stores/chatStore";
 import { detectProvider } from "./providerDetection";
@@ -37,25 +38,50 @@ async function configPath(): Promise<string> {
   return `${dir}config.json`;
 }
 
-async function saveConversations() {
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function writeConversationsToDisk() {
   try {
     const { conversations } = useChatStore.getState();
     const data: ConversationsFile = { conversations };
-    await writeTextFile(await conversationsPath(), JSON.stringify(data));
+    await invoke("atomic_write", {
+      path: await conversationsPath(),
+      content: JSON.stringify(data),
+    });
   } catch {
     // Write failed — silently ignore
   }
 }
 
+function saveConversations() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => void writeConversationsToDisk(), 150);
+}
+
 async function loadConversations() {
+  const path = await conversationsPath();
+  let content: string | null = null;
   try {
-    const content = await readTextFile(await conversationsPath());
-    const data = JSON.parse(content) as ConversationsFile;
-    if (data.conversations?.length > 0) {
-      useChatStore.getState().setConversations(data.conversations);
-    }
+    content = await readTextFile(path);
   } catch {
-    // File doesn't exist yet — first launch
+    // File doesn't exist — first launch
+  }
+
+  if (content !== null) {
+    try {
+      const data = JSON.parse(content) as ConversationsFile;
+      if (data.conversations?.length > 0) {
+        useChatStore.getState().setConversations(data.conversations);
+      }
+    } catch {
+      // Corrupt JSON: back up the original before any rewrite overwrites it.
+      const backup = `${path}.corrupt-${Date.now()}`;
+      try {
+        await invoke("atomic_write", { path: backup, content });
+      } catch {
+        // Backup failed — nothing else we can safely do here
+      }
+    }
   }
 
   if (useChatStore.getState().conversations.length === 0) {
@@ -96,12 +122,29 @@ async function saveConfig(config: ConfigFile) {
   try {
     const clean: ConfigFile = {
       providers: config.providers,
-      apiKeys: config.apiKeys,
+      ...(config.apiKeys ? { apiKeys: config.apiKeys } : {}),
     };
-    await writeTextFile(await configPath(), JSON.stringify(clean));
+    await invoke("atomic_write", {
+      path: await configPath(),
+      content: JSON.stringify(clean),
+    });
   } catch {
     // Write failed — silently ignore
   }
+}
+
+async function migrateApiKeysToKeyring(config: ConfigFile) {
+  if (!config.apiKeys) return;
+  const remaining: Record<string, string> = {};
+  for (const [id, key] of Object.entries(config.apiKeys)) {
+    try {
+      await invoke("keyring_set", { account: id, password: key });
+    } catch {
+      remaining[id] = key;
+    }
+  }
+  config.apiKeys = Object.keys(remaining).length > 0 ? remaining : undefined;
+  await saveConfig(config);
 }
 
 export async function saveProviderConfig(id: ProviderId, provider: Provider) {
@@ -120,41 +163,72 @@ export function persistProvider(id: ProviderId, provider: Provider) {
   void saveProviderConfig(id, provider);
 }
 
-export async function saveApiKey(id: ProviderId, apiKey: string) {
+export async function saveApiKey(id: ProviderId, apiKey: string): Promise<boolean> {
   try {
-    const existing = await loadConfigFile();
-    const config = existing ? migrateConfig(existing) : {};
-    const apiKeys = { ...(config.apiKeys ?? {}), [id]: apiKey };
-    await saveConfig({ ...config, apiKeys });
+    await invoke("keyring_set", { account: id, password: apiKey });
+    return true;
   } catch {
-    // Write failed — silently ignore
+    try {
+      const existing = await loadConfigFile();
+      const config = existing ? migrateConfig(existing) : {};
+      config.apiKeys = { ...(config.apiKeys ?? {}), [id]: apiKey };
+      await saveConfig(config);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 
-export async function clearApiKey(id: ProviderId) {
+export async function clearApiKey(id: ProviderId): Promise<boolean> {
+  let keyringOk = true;
+  try {
+    await invoke("keyring_delete", { account: id });
+  } catch {
+    keyringOk = false;
+  }
+  let configOk = true;
   try {
     const existing = await loadConfigFile();
-    if (existing) {
+    if (existing?.apiKeys?.[id]) {
       const config = migrateConfig(existing);
-      const allKeys = config.apiKeys ?? {};
       const apiKeys = Object.fromEntries(
-        Object.entries(allKeys).filter(([k]) => k !== id),
+        Object.entries(config.apiKeys ?? {}).filter(([k]) => k !== id),
       );
-      await saveConfig({ ...config, apiKeys });
+      config.apiKeys = Object.keys(apiKeys).length > 0 ? apiKeys : undefined;
+      await saveConfig(config);
     }
   } catch {
-    // Write failed — silently ignore
+    configOk = false;
+  }
+  return keyringOk || configOk;
+}
+
+async function loadApiKeyFromKeyring(id: string): Promise<string | null> {
+  try {
+    return await invoke<string | null>("keyring_get", { account: id });
+  } catch {
+    return null;
   }
 }
 
+let chatPersistenceInitialized = false;
+
 export function initChatPersistence() {
+  if (chatPersistenceInitialized) return;
+  chatPersistenceInitialized = true;
   void loadConversations();
   void loadConfigFile().then(async (raw) => {
     const config = raw ? migrateConfig(raw) : {};
 
-    if (config.apiKeys) {
-      for (const [id, key] of Object.entries(config.apiKeys)) {
-        setApiKeyOnAgent(id as ProviderId, key);
+    if (config.apiKeys && Object.keys(config.apiKeys).length > 0) {
+      await migrateApiKeysToKeyring(config);
+    }
+
+    for (const id of PROVIDER_IDS) {
+      const key = (await loadApiKeyFromKeyring(id)) ?? config.apiKeys?.[id] ?? null;
+      if (key) {
+        setApiKeyOnAgent(id, key);
       }
     }
 

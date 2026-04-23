@@ -9,7 +9,7 @@ import {
 import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
 import { useSchemaStore } from "../../stores/schemaStore";
-import { serializeColumn, serializeRelation } from "../../utils/schemaQueries";
+import { serializeRelation } from "../../utils/schemaQueries";
 import {
   DEFAULT_MODEL,
   getAvailableModels,
@@ -30,22 +30,15 @@ import {
 function buildSystemPrompt(): string {
   const { schema } = useSchemaStore.getState();
 
-  const serialized = {
-    name: schema.name,
-    dbType: schema.dbType,
-    tables: schema.tables.map((t) => ({
-      name: t.name,
-      columns: t.columns.map(serializeColumn),
-    })),
-    relations: schema.relations.map((r) => {
-      const sr = serializeRelation(schema, r);
-      return {
-        type: sr.type,
-        from: `${sr.from.table}.${sr.from.column}`,
-        to: `${sr.to.table}.${sr.to.column}`,
-      };
-    }),
-  };
+  const tables = schema.tables.map((t) => {
+    const cols = t.columns.map((c) => c.name).join(", ");
+    return `- ${t.name} (${t.columns.length} cols: ${cols})`;
+  });
+
+  const relations = schema.relations.map((r) => {
+    const sr = serializeRelation(schema, r);
+    return `- ${sr.from.table}.${sr.from.column} → ${sr.to.table}.${sr.to.column} (${sr.type})`;
+  });
 
   return `You are a database schema design assistant in SocaDB.
 
@@ -53,12 +46,12 @@ function buildSystemPrompt(): string {
 - Database: ${schema.dbType}
 - Schema: "${schema.name}"
 - Tables: ${schema.tables.length}
-
-## Current schema
-${JSON.stringify(serialized, null, 2)}
+${tables.length > 0 ? "\n" + tables.join("\n") : ""}
+${relations.length > 0 ? "\n## Relations\n" + relations.join("\n") : ""}
 
 ## Rules
 - Use the SocaDB MCP tools to modify the schema (create_table, add_column, create_relation, etc.)
+- Use get_table to inspect column details (types, constraints) before modifying a table
 - Respect the dbType and use compatible column types
 - After creating or modifying multiple tables, call auto_layout to reorganize the canvas
 - Answer in the user's language
@@ -156,20 +149,27 @@ export function ChatPanel() {
   }, [isPanelOpen, activeProviderId]);
 
   const handleSend = useCallback(
-    (content: string) => {
+    async (content: string) => {
       if (isStreaming) return;
       if (!isPanelOpen) togglePanel();
       addUserMessage(content);
       startAssistantMessage();
 
       const systemPrompt = buildSystemPrompt();
-      sendChatMessage(
-        content,
-        systemPrompt,
-        activeProviderId,
-        sessionId ?? undefined,
-        selectedModel,
-      );
+      try {
+        await sendChatMessage(
+          content,
+          systemPrompt,
+          activeProviderId,
+          sessionId ?? undefined,
+          selectedModel,
+        );
+      } catch (e) {
+        const store = useChatStore.getState();
+        const msg = e instanceof Error ? e.message : String(e);
+        store.appendAssistantText(msg);
+        store.finishResponse("");
+      }
     },
     [
       addUserMessage,
@@ -241,7 +241,7 @@ export function ChatPanel() {
           <select
             value={activeConversationId ?? ""}
             onChange={(e) => switchConversation(e.target.value)}
-            disabled={isStreaming}
+            disabled={isStreaming || conversations.length <= 1}
             className="w-full appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
           >
             {conversations.map((c) => (
@@ -275,7 +275,8 @@ export function ChatPanel() {
         </div>
         <button
           onClick={newConversation}
-          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          disabled={isStreaming}
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary disabled:opacity-50 disabled:pointer-events-none"
           aria-label={t("chat.newChat")}
         >
           <Plus size={14} />

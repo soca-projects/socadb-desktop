@@ -129,9 +129,29 @@ async fn spawn_agent(
             let _ = app_clone.emit("chat-stream", StreamEvent { raw: line });
         }
 
-        let _ = child.wait().await;
+        let status = child.wait().await;
         let mut guard = get_agent().lock().await;
         guard.processes.remove(&pid);
+        drop(guard);
+
+        let exit_info = match status {
+            Ok(s) if s.success() => return,
+            Ok(s) => format!("Agent process exited with code {}", s.code().unwrap_or(-1)),
+            Err(e) => format!("Agent process error: {e}"),
+        };
+
+        let event = serde_json::json!({
+            "type": "chat_event",
+            "event": "error",
+            "message": exit_info,
+            "providerId": pid,
+        });
+        let _ = app_clone.emit(
+            "chat-stream",
+            StreamEvent {
+                raw: event.to_string(),
+            },
+        );
     });
 
     if let Some(stderr) = stderr {

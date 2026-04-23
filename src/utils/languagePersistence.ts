@@ -1,4 +1,5 @@
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import i18next from "../i18n";
 import { isLanguage } from "../i18n";
@@ -42,13 +43,17 @@ async function saveLanguage(lng: string) {
       // file doesn't exist yet
     }
     data.language = lng;
-    await writeTextFile(path, JSON.stringify(data));
+    await invoke("atomic_write", { path, content: JSON.stringify(data) });
   } catch {
     // write failed
   }
 }
 
+let initialized = false;
+
 export function initLanguagePersistence() {
+  if (initialized) return;
+  initialized = true;
   void loadLanguage();
   i18next.on("languageChanged", (lng: string) => {
     void saveLanguage(lng);

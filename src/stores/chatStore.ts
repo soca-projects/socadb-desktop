@@ -23,6 +23,7 @@ function createConversation(): Conversation {
 interface ChatState {
   conversations: Conversation[];
   activeConversationId: string | null;
+  streamingConversationId: string | null;
   isStreaming: boolean;
   isPanelOpen: boolean;
   providers: Record<string, Provider>;
@@ -75,6 +76,7 @@ function autoName(messages: ChatMessage[]): string {
 export const useChatStore = create<ChatState>()((set) => ({
   conversations: [],
   activeConversationId: null,
+  streamingConversationId: null,
   messages: [],
   sessionId: null,
   isStreaming: false,
@@ -191,6 +193,7 @@ export const useChatStore = create<ChatState>()((set) => ({
       return {
         messages: msgs,
         isStreaming: true,
+        streamingConversationId: activeId,
         conversations: convs.map((c) =>
           c.id === activeId
             ? {
@@ -227,7 +230,7 @@ export const useChatStore = create<ChatState>()((set) => ({
       if (last?.role === "assistant") {
         msgs[msgs.length - 1] = { ...last, content: text };
       }
-      return { messages: msgs };
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),
 
   appendAssistantText: (text) =>
@@ -237,7 +240,7 @@ export const useChatStore = create<ChatState>()((set) => ({
       if (last?.role === "assistant") {
         msgs[msgs.length - 1] = { ...last, content: last.content + text };
       }
-      return { messages: msgs };
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),
 
   addToolCall: (toolCall) =>
@@ -250,7 +253,7 @@ export const useChatStore = create<ChatState>()((set) => ({
           toolCalls: [...last.toolCalls, toolCall],
         };
       }
-      return { messages: msgs };
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),
 
   updateLastToolCall: (toolUseId, result, isSuccess) =>
@@ -263,12 +266,13 @@ export const useChatStore = create<ChatState>()((set) => ({
         );
         msgs[msgs.length - 1] = { ...last, toolCalls };
       }
-      return { messages: msgs };
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),
 
   finishResponse: (sessionId) =>
     set((state) => ({
       isStreaming: false,
+      streamingConversationId: null,
       sessionId,
       ...syncToConversation({ ...state, sessionId }),
     })),

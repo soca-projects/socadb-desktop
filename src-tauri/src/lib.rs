@@ -3,7 +3,34 @@ mod ws;
 
 use std::process::Command;
 use tauri::Manager;
-use tokio_tungstenite::tungstenite::Message;
+
+const KEYRING_SERVICE: &str = "socadb-desktop";
+
+#[tauri::command]
+fn keyring_get(account: String) -> Result<Option<String>, String> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, &account).map_err(|e| e.to_string())?;
+    match entry.get_password() {
+        Ok(pw) => Ok(Some(pw)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn keyring_set(account: String, password: String) -> Result<(), String> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, &account).map_err(|e| e.to_string())?;
+    entry.set_password(&password).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn keyring_delete(account: String) -> Result<(), String> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, &account).map_err(|e| e.to_string())?;
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
+}
 
 #[tauri::command]
 fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
@@ -63,13 +90,19 @@ fn read_schema_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn mcp_respond(response: String) {
-    let sender = ws::get_ws_sender();
-    let mut guard = sender.lock().await;
-    if let Some(ref mut ws) = *guard {
-        use futures_util::SinkExt;
-        let _ = ws.send(Message::Text(response)).await;
+async fn mcp_respond(connection_id: u64, response: String) {
+    ws::send_to_client(connection_id, response).await;
+}
+
+#[tauri::command]
+fn atomic_write(path: String, content: String) -> Result<(), String> {
+    let target = std::path::Path::new(&path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
+    let tmp = target.with_extension("tmp");
+    std::fs::write(&tmp, content).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, target).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -118,7 +151,11 @@ pub fn run() {
             get_mcp_binary_path,
             read_schema_file,
             mcp_respond,
+            atomic_write,
             open_terminal,
+            keyring_get,
+            keyring_set,
+            keyring_delete,
             chat::chat_init,
             chat::chat_send,
             chat::chat_stop,

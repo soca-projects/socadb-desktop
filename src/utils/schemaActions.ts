@@ -3,10 +3,10 @@ import { genId } from "./id";
 import { createDefaultIdColumn } from "./columnDefaults";
 import { computeAutoLayout } from "./autoLayout";
 import { getNextTableColor } from "./tableColors";
-import { findTableById } from "./schemaQueries";
+import { findTableById, findTableByName } from "./schemaQueries";
 import { toast } from "sonner";
 import i18next from "../i18n";
-import type { Column } from "../types/schema";
+import type { Column, Schema } from "../types/schema";
 
 export function handleUndo() {
   useSchemaStore.temporal.getState().undo();
@@ -26,6 +26,13 @@ export async function handleAutoLayout() {
   }
 }
 
+function uniqueTableName(base: string, schema: Schema): string {
+  if (!findTableByName(schema, base)) return base;
+  let i = 2;
+  while (findTableByName(schema, `${base}_${i}`)) i++;
+  return `${base}_${i}`;
+}
+
 export function createTable(options?: {
   name?: string;
   position?: { x: number; y: number };
@@ -34,9 +41,10 @@ export function createTable(options?: {
   const { schema, addTable } = useSchemaStore.getState();
   const tables = schema.tables;
   const newId = genId();
+  const name = uniqueTableName(options?.name ?? `new_table_${tables.length + 1}`, schema);
   addTable({
     id: newId,
-    name: options?.name ?? `new_table_${tables.length + 1}`,
+    name,
     color: getNextTableColor(tables),
     position: options?.position ?? {
       x: 100 + tables.length * 50,
@@ -54,7 +62,7 @@ export function duplicateTable(tableId: string): string | null {
   const newId = genId();
   addTable({
     id: newId,
-    name: `${source.name}_copy`,
+    name: uniqueTableName(`${source.name}_copy`, schema),
     color: source.color,
     position: { x: source.position.x + 40, y: source.position.y + 40 },
     columns: source.columns.map((col) => ({ ...col, id: genId(), isForeignKey: false })),

@@ -128,7 +128,9 @@
     "apiKeyTitle": "Connect with API key",
     "apiKeyGetFrom": "Get your API key from the",
     "connecting": "Connecting...",
-    "connect": "Connect"
+    "connect": "Connect",
+    "keyringUnavailable": "Failed to save API key securely. Please try again.",
+    "disconnectFailed": "Failed to remove API key. Please try again."
   },
   "chat": {
     "newConversation": "New conversation",

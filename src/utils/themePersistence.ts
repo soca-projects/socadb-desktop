@@ -1,4 +1,5 @@
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import { useThemeStore } from "../stores/themeStore";
 
@@ -44,13 +45,17 @@ async function saveTheme() {
       // file doesn't exist yet
     }
     data.theme = useThemeStore.getState().theme;
-    await writeTextFile(path, JSON.stringify(data));
+    await invoke("atomic_write", { path, content: JSON.stringify(data) });
   } catch {
     // write failed
   }
 }
 
+let initialized = false;
+
 export function initThemePersistence() {
+  if (initialized) return;
+  initialized = true;
   void loadTheme();
   useThemeStore.subscribe(saveTheme);
 }

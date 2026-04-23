@@ -134,6 +134,16 @@ export const useSchemaStore = create<SchemaState>()(
       addRelation: (relation) =>
         set((state) => ({
           schema: patchSchema(state.schema, {
+            tables: state.schema.tables.map((t) =>
+              t.id === relation.from.tableId
+                ? {
+                    ...t,
+                    columns: t.columns.map((c) =>
+                      c.id === relation.from.columnId ? { ...c, isForeignKey: true } : c,
+                    ),
+                  }
+                : t,
+            ),
             relations: [...state.schema.relations, relation],
           }),
         })),
@@ -148,11 +158,37 @@ export const useSchemaStore = create<SchemaState>()(
         })),
 
       deleteRelation: (id) =>
-        set((state) => ({
-          schema: patchSchema(state.schema, {
-            relations: state.schema.relations.filter((r) => r.id !== id),
-          }),
-        })),
+        set((state) => {
+          const relation = state.schema.relations.find((r) => r.id === id);
+          const remaining = state.schema.relations.filter((r) => r.id !== id);
+          const stillFk =
+            relation &&
+            remaining.some(
+              (r) =>
+                r.from.tableId === relation.from.tableId &&
+                r.from.columnId === relation.from.columnId,
+            );
+          return {
+            schema: patchSchema(state.schema, {
+              tables:
+                relation && !stillFk
+                  ? state.schema.tables.map((t) =>
+                      t.id === relation.from.tableId
+                        ? {
+                            ...t,
+                            columns: t.columns.map((c) =>
+                              c.id === relation.from.columnId
+                                ? { ...c, isForeignKey: false }
+                                : c,
+                            ),
+                          }
+                        : t,
+                    )
+                  : state.schema.tables,
+              relations: remaining,
+            }),
+          };
+        }),
 
       importTables: (tables, relations) =>
         set((state) => ({
