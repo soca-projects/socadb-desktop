@@ -12,10 +12,9 @@ import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useChatStream } from "./hooks/useChatStream";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { registerMcpServers } from "./utils/mcpRegistration";
 import { initSessionPersistence } from "./utils/sessionPersistence";
-import { initChatPersistence, flushPendingWrites } from "./utils/chatPersistence";
+import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
 
@@ -38,10 +37,6 @@ function App() {
 
   useEffect(() => {
     void registerMcpServers();
-    const unlisten = getCurrentWindow().onCloseRequested(async () => {
-      await flushPendingWrites();
-    });
-    return () => void unlisten.then((fn) => fn());
   }, []);
 
   return (

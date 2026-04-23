@@ -1,4 +1,4 @@
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import { useChatStore } from "../stores/chatStore";
@@ -44,7 +44,10 @@ async function writeConversationsToDisk() {
   try {
     const { conversations } = useChatStore.getState();
     const data: ConversationsFile = { conversations };
-    await writeTextFile(await conversationsPath(), JSON.stringify(data));
+    await invoke("atomic_write", {
+      path: await conversationsPath(),
+      content: JSON.stringify(data),
+    });
   } catch {
     // Write failed — silently ignore
   }
@@ -52,26 +55,33 @@ async function writeConversationsToDisk() {
 
 function saveConversations() {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => void writeConversationsToDisk(), 500);
-}
-
-export async function flushPendingWrites() {
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-    await writeConversationsToDisk();
-  }
+  saveTimer = setTimeout(() => void writeConversationsToDisk(), 150);
 }
 
 async function loadConversations() {
+  const path = await conversationsPath();
+  let content: string | null = null;
   try {
-    const content = await readTextFile(await conversationsPath());
-    const data = JSON.parse(content) as ConversationsFile;
-    if (data.conversations?.length > 0) {
-      useChatStore.getState().setConversations(data.conversations);
-    }
+    content = await readTextFile(path);
   } catch {
-    // File doesn't exist yet — first launch
+    // File doesn't exist — first launch
+  }
+
+  if (content !== null) {
+    try {
+      const data = JSON.parse(content) as ConversationsFile;
+      if (data.conversations?.length > 0) {
+        useChatStore.getState().setConversations(data.conversations);
+      }
+    } catch {
+      // Corrupt JSON: back up the original before any rewrite overwrites it.
+      const backup = `${path}.corrupt-${Date.now()}`;
+      try {
+        await invoke("atomic_write", { path: backup, content });
+      } catch {
+        // Backup failed — nothing else we can safely do here
+      }
+    }
   }
 
   if (useChatStore.getState().conversations.length === 0) {
@@ -114,7 +124,10 @@ async function saveConfig(config: ConfigFile) {
       providers: config.providers,
       ...(config.apiKeys ? { apiKeys: config.apiKeys } : {}),
     };
-    await writeTextFile(await configPath(), JSON.stringify(clean));
+    await invoke("atomic_write", {
+      path: await configPath(),
+      content: JSON.stringify(clean),
+    });
   } catch {
     // Write failed — silently ignore
   }
@@ -199,7 +212,11 @@ async function loadApiKeyFromKeyring(id: string): Promise<string | null> {
   }
 }
 
+let chatPersistenceInitialized = false;
+
 export function initChatPersistence() {
+  if (chatPersistenceInitialized) return;
+  chatPersistenceInitialized = true;
   void loadConversations();
   void loadConfigFile().then(async (raw) => {
     const config = raw ? migrateConfig(raw) : {};

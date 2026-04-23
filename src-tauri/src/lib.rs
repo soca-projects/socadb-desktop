@@ -95,6 +95,17 @@ async fn mcp_respond(connection_id: u64, response: String) {
 }
 
 #[tauri::command]
+fn atomic_write(path: String, content: String) -> Result<(), String> {
+    let target = std::path::Path::new(&path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let tmp = target.with_extension("tmp");
+    std::fs::write(&tmp, content).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, target).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn open_terminal() {
     #[cfg(target_os = "macos")]
     {
@@ -140,6 +151,7 @@ pub fn run() {
             get_mcp_binary_path,
             read_schema_file,
             mcp_respond,
+            atomic_write,
             open_terminal,
             keyring_get,
             keyring_set,

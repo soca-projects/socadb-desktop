@@ -230,7 +230,7 @@ export const useChatStore = create<ChatState>()((set) => ({
       if (last?.role === "assistant") {
         msgs[msgs.length - 1] = { ...last, content: text };
       }
-      return { messages: msgs };
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),
 
   appendAssistantText: (text) =>
@@ -240,7 +240,7 @@ export const useChatStore = create<ChatState>()((set) => ({
       if (last?.role === "assistant") {
         msgs[msgs.length - 1] = { ...last, content: last.content + text };
       }
-      return { messages: msgs };
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),
 
   addToolCall: (toolCall) =>
@@ -253,7 +253,7 @@ export const useChatStore = create<ChatState>()((set) => ({
           toolCalls: [...last.toolCalls, toolCall],
         };
       }
-      return { messages: msgs };
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),
 
   updateLastToolCall: (toolUseId, result, isSuccess) =>
@@ -266,7 +266,7 @@ export const useChatStore = create<ChatState>()((set) => ({
         );
         msgs[msgs.length - 1] = { ...last, toolCalls };
       }
-      return { messages: msgs };
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),
 
   finishResponse: (sessionId) =>

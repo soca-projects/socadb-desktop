@@ -11,6 +11,10 @@ function saveLastSession() {
   }
 }
 
+let initialized = false;
+
 export function initSessionPersistence() {
+  if (initialized) return;
+  initialized = true;
   useSchemaStore.subscribe(saveLastSession);
 }
