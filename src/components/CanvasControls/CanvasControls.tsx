@@ -35,7 +35,7 @@ export function CanvasControls() {
   return (
     <Panel position="bottom-left">
       <div className="flex items-center gap-2">
-        <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface shadow-soft">
+        <div className="flex items-center overflow-hidden rounded-lg bg-surface shadow-soft">
           <button
             onClick={() => void zoomOut()}
             className={btnClass}
@@ -65,7 +65,7 @@ export function CanvasControls() {
           </button>
         </div>
 
-        <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface shadow-soft">
+        <div className="flex items-center overflow-hidden rounded-lg bg-surface shadow-soft">
           <button
             onClick={handleUndo}
             disabled={!canUndo}

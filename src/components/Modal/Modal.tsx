@@ -42,7 +42,7 @@ export function Modal({
       <div
         role="dialog"
         aria-labelledby={ariaLabelledBy}
-        className={`w-full ${maxWidth} animate-fade-in rounded-xl border border-border bg-surface shadow-float`}
+        className={`w-full ${maxWidth} animate-fade-in rounded-xl bg-surface shadow-float`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

@@ -117,7 +117,7 @@ function SignInDropdown({
         <CaretDown size={11} weight="bold" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-10 mt-1.5 w-56 rounded-lg border border-border bg-surface py-1 shadow-float">
+        <div className="absolute right-0 top-full z-10 mt-1.5 w-56 rounded-lg bg-surface py-1 shadow-float">
           <button
             onClick={() => {
               setOpen(false);

@@ -197,7 +197,7 @@ export function ChatPanel() {
         : t("chat.newConversation");
     return (
       <div
-        className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
+        className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
         onClick={togglePanel}
       >
         <div className="border-b border-border px-3 py-1.5">
@@ -220,7 +220,7 @@ export function ChatPanel() {
   return (
     <div
       ref={panelRef}
-      className="fixed bottom-4 right-4 z-50 flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-float animate-fade-in"
+      className="fixed bottom-4 right-4 z-50 flex flex-col overflow-hidden rounded-xl bg-surface shadow-float animate-fade-in"
       style={{ width: size.width, height: size.height }}
     >
       <div

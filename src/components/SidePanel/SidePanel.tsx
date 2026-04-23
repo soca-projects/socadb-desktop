@@ -228,7 +228,7 @@ function TableMenu({
         <div
           ref={menuRef}
           style={{ position: "fixed", top: menuPos.top, left: menuPos.left }}
-          className="z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-float"
+          className="z-50 min-w-[160px] overflow-hidden rounded-lg bg-surface py-1 shadow-float"
           role="menu"
         >
           <button

@@ -82,9 +82,13 @@
   --color-edge-selected: #c74b68;
   --color-edge-hover-zone: rgba(199, 75, 104, 0.125);
 
-  --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
-  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
-  --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-card:
+    0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 4px 0 rgba(0, 0, 0, 0.03),
+    0 12px 16px -8px rgba(0, 0, 0, 0.04);
+  --shadow-float:
+    0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 8px 0 rgba(0, 0, 0, 0.05),
+    0 24px 32px -12px rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="dark"] {
@@ -118,9 +122,13 @@
   --color-edge-selected: #c74b68;
   --color-edge-hover-zone: rgba(199, 75, 104, 0.15);
 
-  --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.15), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.35);
-  --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-card:
+    0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 4px 0 rgba(0, 0, 0, 0.25),
+    0 12px 16px -8px rgba(0, 0, 0, 0.3);
+  --shadow-float:
+    0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 8px 0 rgba(0, 0, 0, 0.25),
+    0 24px 32px -12px rgba(0, 0, 0, 0.4);
 }
 
 body {

@@ -123,7 +123,7 @@ export const RelationEdge = memo(function RelationEdge({
           onMouseLeave={() => setHovered(false)}
         >
           {selected ? (
-            <div className="nodrag nopan flex items-center gap-0.5 rounded-lg border border-border bg-surface p-1 shadow-float">
+            <div className="nodrag nopan flex items-center gap-0.5 rounded-lg bg-surface p-1 shadow-float">
               {RELATION_TYPES.map((type) => (
                 <button
                   key={type}

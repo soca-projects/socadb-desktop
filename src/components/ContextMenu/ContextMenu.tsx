@@ -33,7 +33,7 @@ export function ContextMenu({
       ref={ref}
       role="menu"
       style={{ position: "fixed", left: x, top: y }}
-      className="z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-float"
+      className="z-50 min-w-[160px] overflow-hidden rounded-lg bg-surface py-1 shadow-float"
     >
       <button
         role="menuitem"
