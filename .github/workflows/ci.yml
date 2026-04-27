@@ -17,24 +17,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Format check
-        run: npm run format:check
+        run: bun run format:check
 
       - name: Typecheck
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Test
-        run: npm test
+        run: bun run test
 
   rust:
     name: Rust checks

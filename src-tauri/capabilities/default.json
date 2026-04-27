@@ -16,6 +16,9 @@
     "fs:allow-write-text-file",
     "fs:allow-write-file",
     "fs:allow-exists",
+    "opener:default",
+    "updater:default",
+    "process:allow-restart",
     {
       "identifier": "fs:scope",
       "allow": [

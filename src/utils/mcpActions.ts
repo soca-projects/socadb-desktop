@@ -114,6 +114,10 @@ const handlers: Record<string, ActionHandler> = {
   create_table: (p) => {
     const parsed = McpCreateTableZ.safeParse(p);
     if (!parsed.success) return fail(parsed.error.message);
+    const { schema } = useSchemaStore.getState();
+    if (findTableByName(schema, parsed.data.name)) {
+      return fail(`Table "${parsed.data.name}" already exists`);
+    }
     const columns = parsed.data.columns?.map(buildColumn);
     createTable({ name: parsed.data.name, columns });
     return success(true);
@@ -126,6 +130,9 @@ const handlers: Record<string, ActionHandler> = {
     const store = useSchemaStore.getState();
     const table = findTableByName(store.schema, name);
     if (!table) return success(false);
+    if (newName && newName !== name && findTableByName(store.schema, newName)) {
+      return fail(`Table "${newName}" already exists`);
+    }
     const updates: Partial<{ name: string; color: string }> = {};
     if (newName) updates.name = newName;
     if (color) updates.color = color;

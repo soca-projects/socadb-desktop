@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.socadb.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build:all",
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build:all",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },
@@ -38,5 +38,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzMjJBRkY3RjkyREFEQTAKUldTZ3JTMzU5NjhpNDlMYzloeFcvbWxCajl5cVdsMjFURGF3dm1vNEVyK2RWUXNKb3Z1YllnSlMK",
+      "endpoints": [
+        "https://github.com/soca-projects/socadb-desktop/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

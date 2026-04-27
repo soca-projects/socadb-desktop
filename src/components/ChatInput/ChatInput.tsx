@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   PaperPlaneRightIcon as PaperPlaneRight,
   StopIcon as Stop,
@@ -12,6 +13,7 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputProps) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -49,7 +51,7 @@ export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputPr
         value={value}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
-        placeholder="Ask AI to modify your schema..."
+        placeholder={t("chat.askAi")}
         disabled={disabled}
         autoCorrect="off"
         autoComplete="off"
@@ -60,8 +62,8 @@ export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputPr
       {isStreaming ? (
         <button
           onClick={onStop}
-          className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-lg bg-stone-500 text-white transition-colors hover:bg-stone-600"
-          aria-label="Stop"
+          className="flex h-[36px] w-[36px] flex-shrink-0 items-center justify-center rounded-lg bg-stone-500 text-white transition-colors hover:bg-stone-600 dark:bg-stone-400 dark:text-stone-900 dark:hover:bg-stone-300"
+          aria-label={t("chat.stop")}
         >
           <Stop size={14} weight="fill" />
         </button>
@@ -69,8 +71,8 @@ export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputPr
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
-          aria-label="Send message"
+          className="flex h-[36px] w-[36px] flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+          aria-label={t("chat.sendMessage")}
         >
           <PaperPlaneRight size={14} weight="fill" />
         </button>

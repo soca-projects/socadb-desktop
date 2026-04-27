@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   XIcon as X,
   CaretDownIcon as CaretDown,
@@ -8,8 +9,12 @@ import {
 import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
 import { useSchemaStore } from "../../stores/schemaStore";
-import { serializeColumn, serializeRelation } from "../../utils/schemaQueries";
-import { SUPPORTED_MODELS, DEFAULT_MODEL } from "../../types/chat";
+import { serializeRelation } from "../../utils/schemaQueries";
+import {
+  DEFAULT_MODEL,
+  getAvailableModels,
+  getProviderFromModel,
+} from "../../types/chat";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
@@ -25,22 +30,15 @@ import {
 function buildSystemPrompt(): string {
   const { schema } = useSchemaStore.getState();
 
-  const serialized = {
-    name: schema.name,
-    dbType: schema.dbType,
-    tables: schema.tables.map((t) => ({
-      name: t.name,
-      columns: t.columns.map(serializeColumn),
-    })),
-    relations: schema.relations.map((r) => {
-      const sr = serializeRelation(schema, r);
-      return {
-        type: sr.type,
-        from: `${sr.from.table}.${sr.from.column}`,
-        to: `${sr.to.table}.${sr.to.column}`,
-      };
-    }),
-  };
+  const tables = schema.tables.map((t) => {
+    const cols = t.columns.map((c) => c.name).join(", ");
+    return `- ${t.name} (${t.columns.length} cols: ${cols})`;
+  });
+
+  const relations = schema.relations.map((r) => {
+    const sr = serializeRelation(schema, r);
+    return `- ${sr.from.table}.${sr.from.column} → ${sr.to.table}.${sr.to.column} (${sr.type})`;
+  });
 
   return `You are a database schema design assistant in SocaDB.
 
@@ -48,12 +46,12 @@ function buildSystemPrompt(): string {
 - Database: ${schema.dbType}
 - Schema: "${schema.name}"
 - Tables: ${schema.tables.length}
-
-## Current schema
-${JSON.stringify(serialized, null, 2)}
+${tables.length > 0 ? "\n" + tables.join("\n") : ""}
+${relations.length > 0 ? "\n## Relations\n" + relations.join("\n") : ""}
 
 ## Rules
 - Use the SocaDB MCP tools to modify the schema (create_table, add_column, create_relation, etc.)
+- Use get_table to inspect column details (types, constraints) before modifying a table
 - Respect the dbType and use compatible column types
 - After creating or modifying multiple tables, call auto_layout to reorganize the canvas
 - Answer in the user's language
@@ -113,11 +111,12 @@ function useResize(initial: { width: number; height: number }) {
 }
 
 export function ChatPanel() {
+  const { t } = useTranslation();
   const isPanelOpen = useChatStore((s) => s.isPanelOpen);
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const sessionId = useChatStore((s) => s.sessionId);
-  const provider = useChatStore((s) => s.provider);
+  const providers = useChatStore((s) => s.providers);
   const conversations = useChatStore((s) => s.conversations);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const togglePanel = useChatStore((s) => s.togglePanel);
@@ -139,21 +138,38 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const availableModels = getAvailableModels(providers);
+  const isConnected = availableModels.length > 0;
+  const activeProviderId = getProviderFromModel(selectedModel);
+
   useEffect(() => {
     if (isPanelOpen) {
-      void initChat();
+      void initChat(activeProviderId);
     }
-  }, [isPanelOpen]);
+  }, [isPanelOpen, activeProviderId]);
 
   const handleSend = useCallback(
-    (content: string) => {
+    async (content: string) => {
       if (isStreaming) return;
       if (!isPanelOpen) togglePanel();
       addUserMessage(content);
       startAssistantMessage();
 
       const systemPrompt = buildSystemPrompt();
-      sendChatMessage(content, systemPrompt, sessionId ?? undefined, selectedModel);
+      try {
+        await sendChatMessage(
+          content,
+          systemPrompt,
+          activeProviderId,
+          sessionId ?? undefined,
+          selectedModel,
+        );
+      } catch (e) {
+        const store = useChatStore.getState();
+        const msg = e instanceof Error ? e.message : String(e);
+        store.appendAssistantText(msg);
+        store.finishResponse("");
+      }
     },
     [
       addUserMessage,
@@ -163,21 +179,22 @@ export function ChatPanel() {
       togglePanel,
       isStreaming,
       selectedModel,
+      activeProviderId,
     ],
   );
 
   const handleStop = useCallback(() => {
-    stopChat();
-  }, []);
-
-  const isConnected = provider?.connected ?? false;
+    stopChat(activeProviderId);
+  }, [activeProviderId]);
 
   if (focusMode) return null;
 
   if (!isPanelOpen) {
     const activeConv = conversations.find((c) => c.id === activeConversationId);
     const convName =
-      activeConv && activeConv.messages.length > 0 ? activeConv.name : "New conversation";
+      activeConv && activeConv.messages.length > 0
+        ? activeConv.name
+        : t("chat.newConversation");
     return (
       <div
         className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
@@ -190,9 +207,7 @@ export function ChatPanel() {
         </div>
         <div className="flex items-center gap-2 px-3 py-2">
           <span className="flex-1 text-[13px] text-tertiary">
-            {isConnected
-              ? "Ask AI to modify your schema..."
-              : "Connect a provider to start..."}
+            {isConnected ? t("chat.askAi") : t("chat.connectProvider")}
           </span>
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white opacity-40">
             <PaperPlaneRight size={12} weight="fill" />
@@ -226,7 +241,7 @@ export function ChatPanel() {
           <select
             value={activeConversationId ?? ""}
             onChange={(e) => switchConversation(e.target.value)}
-            disabled={isStreaming}
+            disabled={isStreaming || conversations.length <= 1}
             className="w-full appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
           >
             {conversations.map((c) => (
@@ -247,7 +262,7 @@ export function ChatPanel() {
             disabled={isStreaming}
             className="appearance-none rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
           >
-            {SUPPORTED_MODELS.map((m) => (
+            {availableModels.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.displayName}
               </option>
@@ -260,15 +275,16 @@ export function ChatPanel() {
         </div>
         <button
           onClick={newConversation}
-          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-          aria-label="New chat"
+          disabled={isStreaming}
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary disabled:opacity-50 disabled:pointer-events-none"
+          aria-label={t("chat.newChat")}
         >
           <Plus size={14} />
         </button>
         <button
           onClick={togglePanel}
-          className="rounded p-1 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-          aria-label="Close chat"
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          aria-label={t("chat.closeChat")}
         >
           <X size={14} />
         </button>
@@ -278,17 +294,15 @@ export function ChatPanel() {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4">
             <p className="text-[13px] text-tertiary">
-              {isConnected
-                ? "What do you want to build?"
-                : "Connect a provider in Settings to start."}
+              {isConnected ? t("chat.whatToBuild") : t("chat.connectInSettings")}
             </p>
             {isConnected && (
               <div className="flex flex-col items-center gap-2">
                 {[
-                  "Complete e-commerce schema with 10 tables",
-                  "Add a users table with auth fields",
-                  "Schema for a Spotify-like music app",
-                  "Explain my current schema and suggest improvements",
+                  t("chat.suggestion1"),
+                  t("chat.suggestion2"),
+                  t("chat.suggestion3"),
+                  t("chat.suggestion4"),
                 ].map((suggestion) => (
                   <button
                     key={suggestion}

@@ -151,3 +151,13 @@ export const McpRelationEndpointsZ = z.object({
 export const McpCreateRelationZ = McpRelationEndpointsZ.extend({
   type: RelationTypeZ.optional(),
 });
+
+export const ChatStatusResultZ = z.object({
+  loggedIn: z.boolean(),
+  email: z.string().nullable().default(null),
+  loginType: z.enum(["subscription", "api-key"]).nullable().default(null),
+});
+
+export const ChatErrorZ = z.object({
+  message: z.string(),
+});

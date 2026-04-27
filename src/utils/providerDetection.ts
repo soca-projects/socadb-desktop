@@ -1,5 +1,5 @@
 import { checkChatStatus } from "./chatCommands";
-import type { ChatStatusResult } from "../types/chat";
+import type { ChatStatusResult, ProviderId } from "../types/chat";
 
 export interface ProviderStatus {
   installed: boolean;
@@ -8,9 +8,15 @@ export interface ProviderStatus {
   loginType: string | null;
 }
 
-export async function detectClaudeCode(): Promise<ProviderStatus> {
+const skipDetection =
+  import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_DETECTION === "true";
+
+export async function detectProvider(id: ProviderId): Promise<ProviderStatus> {
+  if (skipDetection) {
+    return { installed: false, authenticated: false, email: null, loginType: null };
+  }
   try {
-    const status: ChatStatusResult = await checkChatStatus();
+    const status: ChatStatusResult = await checkChatStatus(id);
     return {
       installed: true,
       authenticated: status.loggedIn,

@@ -1,0 +1,248 @@
+{
+  "app": {
+    "name": "SocaDB"
+  },
+  "toolbar": {
+    "hidePanel": "Masquer le panneau",
+    "showPanel": "Afficher le panneau",
+    "unsavedChanges": "Modifications non enregistrées",
+    "focusMode": "Mode focus",
+    "settings": "Paramètres",
+    "untitled": "Sans titre",
+    "mysql": "MySQL",
+    "postgresql": "PostgreSQL"
+  },
+  "theme": {
+    "switchToDark": "Passer en mode sombre",
+    "switchToLight": "Passer en mode clair"
+  },
+  "emptyCanvas": {
+    "heading": "Votre schéma commence ici",
+    "description": "Ajoutez votre première table pour commencer. Les tables apparaîtront sur le canvas et vous pourrez glisser pour créer des relations entre les colonnes.",
+    "createFirst": "Créer une table",
+    "newSchema": "Nouveau schéma",
+    "openFile": "Ouvrir un fichier",
+    "openSidePanel": "Ouvrez le panneau latéral pour gérer les tables"
+  },
+  "error": {
+    "heading": "Une erreur est survenue",
+    "tryAgain": "Réessayer"
+  },
+  "canvas": {
+    "zoomOut": "Dézoomer",
+    "zoomIn": "Zoomer",
+    "fitView": "Ajuster la vue",
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "autoLayout": "Réorganiser",
+    "deleteRelation": "Supprimer la relation"
+  },
+  "contextMenu": {
+    "rename": "Renommer",
+    "duplicate": "Dupliquer",
+    "deleteTable": "Supprimer la table"
+  },
+  "sidePanel": {
+    "tables": "Tables",
+    "emptyState": "Aucune table. Créez-en une pour commencer votre schéma.",
+    "step1": "Ajoutez des tables et définissez les colonnes",
+    "step2": "Glissez entre les colonnes pour créer des relations",
+    "step3Save": "Enregistrez en",
+    "step3Export": "et exportez",
+    "newTable": "Nouvelle table",
+    "addColumn": "Ajouter une colonne",
+    "deleteColumn": "Supprimer la colonne",
+    "tableOptions": "Options de la table",
+    "rename": "Renommer",
+    "deleteTable": "Supprimer la table",
+    "color": "Couleur {{color}}"
+  },
+  "newSchema": {
+    "title": "Nouveau schéma",
+    "description": "Choisissez un nom et un type de base de données.",
+    "schemaName": "Nom du schéma",
+    "databaseType": "Type de base de données",
+    "untitled": "Sans titre",
+    "cancel": "Annuler",
+    "create": "Créer",
+    "mysqlDescription": "MySQL / MariaDB"
+  },
+  "export": {
+    "title": "Exporter le schéma",
+    "description": "Choisissez un format d'export.",
+    "close": "Fermer",
+    "exportButton": "Exporter",
+    "sqlDescription": "Exporter en SQL DDL",
+    "imageLabel": "Image",
+    "imageDescription": "Exporter le schéma en image",
+    "jsonLabel": "JSON",
+    "jsonDescription": "Exporter le schéma en JSON"
+  },
+  "import": {
+    "title": "Importer un schéma",
+    "description": "Importer des tables depuis un fichier.",
+    "close": "Fermer",
+    "importButton": "Importer",
+    "mode": "Mode",
+    "replace": "Remplacer",
+    "merge": "Fusionner",
+    "sqlLabel": "{{dbType}} DDL",
+    "sqlDescription": "Importer depuis un fichier {{dbType}} DDL",
+    "jsonLabel": "JSON",
+    "jsonDescription": "Importer depuis un fichier JSON",
+    "conflictTitle": "Conflit de type de base de données",
+    "conflictDescriptionStart": "Le fichier importé utilise",
+    "conflictDescriptionMiddle": "mais votre schéma actuel est en",
+    "replaceSchema": "Remplacer le schéma",
+    "replaceDescription": "Passer en {{dbType}} et remplacer toutes les tables",
+    "adaptImport": "Importer en {{dbType}}",
+    "adaptDescription": "Adapter les types de colonnes au schéma actuel",
+    "cancel": "Annuler"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "agents": "Agents",
+    "language": "Langue",
+    "languageDescription": "Choisissez la langue de l'application.",
+    "close": "Fermer"
+  },
+  "agent": {
+    "signInWith": "Se connecter avec...",
+    "subscriptionIncluded": "Inclus dans votre abonnement",
+    "ownApiKey": "Utiliser sa propre clé API",
+    "connectedVia": "Connecté via {{method}}",
+    "connectedViaEmail": "Connecté via {{method}} ({{email}})",
+    "checking": "Vérification...",
+    "notConnected": "Non connecté",
+    "disconnect": "Déconnecter",
+    "switchToApiKey": "Pour utiliser une clé API, lancez",
+    "switchToApiKeyEnd": "dans le terminal.",
+    "signInTitle": "Se connecter avec {{label}}",
+    "terminalSteps": "Suivez ces étapes dans le terminal.",
+    "openTerminal": "Ouvrir le terminal",
+    "stepInstall": "1. Installer {{name}} (si nécessaire)",
+    "stepSignIn": "2. Démarrer {{name}} et se connecter",
+    "stepLogin": "3. Ou se connecter manuellement",
+    "connectionDetected": "Connexion détectée !",
+    "detectingConnection": "SocaDB détectera votre connexion automatiquement...",
+    "apiKeyTitle": "Se connecter avec une clé API",
+    "apiKeyGetFrom": "Récupérez votre clé API sur la",
+    "connecting": "Connexion...",
+    "connect": "Connecter",
+    "keyringUnavailable": "Impossible de sauvegarder la clé API de manière sécurisée. Veuillez réessayer.",
+    "disconnectFailed": "Impossible de supprimer la clé API. Veuillez réessayer."
+  },
+  "chat": {
+    "newConversation": "Nouvelle conversation",
+    "newChat": "Nouveau chat",
+    "closeChat": "Fermer le chat",
+    "askAi": "Demander à l'IA de modifier le schéma...",
+    "connectProvider": "Configurez un provider pour commencer...",
+    "whatToBuild": "Que souhaitez-vous créer ?",
+    "connectInSettings": "Configurez un provider dans les paramètres.",
+    "stop": "Arrêter",
+    "sendMessage": "Envoyer le message",
+    "suggestion1": "Schéma e-commerce complet avec 10 tables",
+    "suggestion2": "Ajouter une table utilisateurs avec champs d'auth",
+    "suggestion3": "Schéma pour une app type Spotify",
+    "suggestion4": "Analyser mon schéma et suggérer des améliorations"
+  },
+  "provider": {
+    "claude": {
+      "consoleName": "Console Anthropic",
+      "subscriptionLabel": "Abonnement Claude (Pro, Max...)",
+      "signInHint": "Sélectionnez « Claude account with subscription » pour vous connecter."
+    },
+    "codex": {
+      "consoleName": "Dashboard OpenAI",
+      "subscriptionLabel": "Abonnement ChatGPT (Plus, Pro...)",
+      "signInHint": "Connectez-vous avec votre abonnement ChatGPT."
+    }
+  },
+  "unsavedChanges": {
+    "title": "Modifications non enregistrées",
+    "description": "Votre schéma actuel contient des modifications non enregistrées qui seront perdues.",
+    "cancel": "Annuler",
+    "dontSave": "Ne pas enregistrer",
+    "save": "Enregistrer"
+  },
+  "menu": {
+    "file": "Fichier",
+    "newSchema": "Nouveau schéma",
+    "open": "Ouvrir...",
+    "openRecent": "Ouvrir un fichier récent",
+    "clearRecent": "Effacer les récents",
+    "noRecent": "Aucun fichier récent",
+    "save": "Enregistrer",
+    "saveAs": "Enregistrer sous...",
+    "import": "Importer...",
+    "export": "Exporter...",
+    "edit": "Édition",
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "view": "Présentation",
+    "toggleSidebar": "Afficher/Masquer le panneau",
+    "focusMode": "Mode focus",
+    "toggleTheme": "Changer le thème",
+    "window": "Fenêtre",
+    "about": "À propos de SocaDB",
+    "hideSocaDB": "Masquer SocaDB",
+    "quitSocaDB": "Quitter SocaDB"
+  },
+  "chatError": {
+    "generic": "Erreur : {{message}}",
+    "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres.",
+    "statusTimeout": "Vérification du statut expirée"
+  },
+  "toast": {
+    "exportSqlFailed": "Échec de l'export SQL : {{error}}",
+    "exportPngFailed": "Échec de l'export PNG : {{error}}",
+    "exportPngGenFailed": "Impossible de générer l'image depuis le canvas.",
+    "exportSvgFailed": "Échec de l'export SVG : {{error}}",
+    "exportJsonFailed": "Échec de l'export JSON : {{error}}",
+    "importNoTables": "Aucune table trouvée dans le fichier.",
+    "importFailed": "Échec de l'import : {{error}}",
+    "importComplete_one": "{{count}} table importée",
+    "importComplete_other": "{{count}} tables importées",
+    "importRelations_one": " et {{count}} relation",
+    "importRelations_other": " et {{count}} relations",
+    "importSkipped_one": "{{count}} table n'a pas pu être analysée.",
+    "importSkipped_other": "{{count}} tables n'ont pas pu être analysées.",
+    "importAdapted_one": "{{count}} colonne avait un type incompatible et a été définie en varchar.",
+    "importAdapted_other": "{{count}} colonnes avaient des types incompatibles et ont été définies en varchar.",
+    "saveFailed": "Échec de l'enregistrement : {{error}}",
+    "openFailed": "Impossible d'ouvrir le fichier : {{error}}",
+    "autoLayoutFailed": "Échec de la disposition auto : {{error}}",
+    "invalidFile": "Ce fichier n'est pas un schéma valide."
+  },
+  "fileFilter": {
+    "sql": "Fichier SQL",
+    "png": "Image PNG",
+    "svg": "Image SVG",
+    "json": "Fichier JSON",
+    "soca": "Schéma SocaDB"
+  },
+  "updater": {
+    "title": "Mise à jour disponible",
+    "description": "Une nouvelle version de SocaDB est disponible ({{version}}). Voulez-vous l'installer maintenant ?",
+    "install": "Installer et redémarrer",
+    "later": "Plus tard"
+  },
+  "recent": {
+    "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé."
+  },
+  "toolCall": {
+    "create_table": "table créée",
+    "update_table": "table renommée",
+    "delete_table": "table supprimée",
+    "add_column": "colonne ajoutée",
+    "update_column": "colonne mise à jour",
+    "delete_column": "colonne supprimée",
+    "create_relation": "relation créée",
+    "delete_relation": "relation supprimée",
+    "auto_layout": "réorganisation appliquée",
+    "get_schema": "schéma lu",
+    "get_table": "table lue",
+    "get_editor_state": "état de l'éditeur lu"
+  }
+}

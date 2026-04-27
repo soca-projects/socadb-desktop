@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   CheckCircleIcon as CheckCircle,
   WarningCircleIcon as WarningCircle,
@@ -6,37 +7,24 @@ import {
 } from "@phosphor-icons/react";
 import type { ToolCallInfo } from "../../types/chat";
 
-const TOOL_LABELS: Record<string, string> = {
-  create_table: "created table",
-  update_table: "renamed table",
-  delete_table: "deleted table",
-  add_column: "added column",
-  update_column: "updated column",
-  delete_column: "deleted column",
-  create_relation: "created relation",
-  delete_relation: "deleted relation",
-  auto_layout: "auto layout applied",
-  get_schema: "read schema",
-  get_table: "read table",
-  get_editor_state: "read editor state",
-};
-
 function stripMcpPrefix(name: string): string {
   return name.replace(/^mcp__[^_]+__/, "");
-}
-
-function formatToolLabel(toolCall: ToolCallInfo): string {
-  const toolName = stripMcpPrefix(toolCall.name);
-  const label = TOOL_LABELS[toolName] ?? toolName;
-  const name = (toolCall.input.name as string) ?? (toolCall.input.table as string) ?? "";
-  return name ? `${label} "${name}"` : label;
 }
 
 interface ChatToolCallProps {
   toolCall: ToolCallInfo;
 }
 
+function formatToolLabel(toolCall: ToolCallInfo, t: (key: string) => string): string {
+  const toolName = stripMcpPrefix(toolCall.name);
+  const key = `toolCall.${toolName}`;
+  const label = t(key) !== key ? t(key) : toolName;
+  const name = (toolCall.input.name as string) ?? (toolCall.input.table as string) ?? "";
+  return name ? `${label} "${name}"` : label;
+}
+
 export function ChatToolCall({ toolCall }: ChatToolCallProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const isPending = toolCall.result === null;
 
@@ -49,11 +37,19 @@ export function ChatToolCall({ toolCall }: ChatToolCallProps) {
         {isPending ? (
           <span className="h-3.5 w-3.5 animate-spin rounded-full border border-[var(--color-fg-muted)] border-t-[var(--color-fg-tertiary)]" />
         ) : toolCall.isSuccess ? (
-          <CheckCircle size={14} weight="fill" className="text-emerald-500" />
+          <CheckCircle
+            size={14}
+            weight="fill"
+            className="text-emerald-600 dark:text-emerald-400"
+          />
         ) : (
-          <WarningCircle size={14} weight="fill" className="text-red-400" />
+          <WarningCircle
+            size={14}
+            weight="fill"
+            className="text-red-500 dark:text-red-400"
+          />
         )}
-        <span>{formatToolLabel(toolCall)}</span>
+        <span>{formatToolLabel(toolCall, t)}</span>
         <CaretRight
           size={10}
           className={`transition-transform ${expanded ? "rotate-90" : ""}`}

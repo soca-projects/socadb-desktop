@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   SidebarIcon as Sidebar,
   CornersOutIcon as CornersOut,
@@ -14,11 +15,11 @@ interface ToolbarProps {
   isSidePanelOpen: boolean;
   onToggleSidePanel: () => void;
   onToggleFocusMode: () => void;
-  onOpenAgentSetup: () => void;
+  onOpenSettings: () => void;
 }
 
-function getFileName(filePath: string | null): string {
-  if (!filePath) return "Untitled";
+function getFileName(filePath: string | null, fallback: string): string {
+  if (!filePath) return fallback;
   const name = filePath.split("/").pop() ?? filePath;
   return name.replace(/\.soca$/, "");
 }
@@ -27,7 +28,7 @@ export function Toolbar({
   isSidePanelOpen,
   onToggleSidePanel,
   onToggleFocusMode,
-  onOpenAgentSetup,
+  onOpenSettings,
 }: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -42,11 +43,14 @@ export function Toolbar({
     };
   }, []);
 
+  const { t } = useTranslation();
   const filePath = useSchemaStore((s) => s.filePath);
   const schemaName = useSchemaStore((s) => s.schema.name);
   const dbType = useSchemaStore((s) => s.schema.dbType);
   const isDirty = useSchemaStore((s) => s.savedAt !== s.schema.updatedAt);
-  const displayName = filePath ? getFileName(filePath) : schemaName;
+  const displayName = filePath
+    ? getFileName(filePath, t("toolbar.untitled"))
+    : schemaName;
 
   return (
     <div
@@ -62,8 +66,8 @@ export function Toolbar({
           className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-secondary ${
             isSidePanelOpen ? "text-secondary" : "text-tertiary"
           }`}
-          title={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
-          aria-label={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
+          title={isSidePanelOpen ? t("toolbar.hidePanel") : t("toolbar.showPanel")}
+          aria-label={isSidePanelOpen ? t("toolbar.hidePanel") : t("toolbar.showPanel")}
         >
           <Sidebar size={18} />
         </button>
@@ -75,13 +79,13 @@ export function Toolbar({
       >
         <span
           className="text-sm font-medium text-primary"
-          title={isDirty ? "Unsaved changes" : undefined}
+          title={isDirty ? t("toolbar.unsavedChanges") : undefined}
         >
           {isDirty && <span className="text-base text-tertiary">• </span>}
           {displayName}
         </span>
         <span className="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary">
-          {dbType === "mysql" ? "MySQL" : "PostgreSQL"}
+          {dbType === "mysql" ? t("toolbar.mysql") : t("toolbar.postgresql")}
         </span>
       </div>
 
@@ -89,17 +93,17 @@ export function Toolbar({
         <button
           onClick={onToggleFocusMode}
           className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-          title="Focus mode"
-          aria-label="Focus mode"
+          title={t("toolbar.focusMode")}
+          aria-label={t("toolbar.focusMode")}
         >
           <CornersOut size={16} />
         </button>
         <ThemeToggle />
         <button
-          onClick={onOpenAgentSetup}
+          onClick={onOpenSettings}
           className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
-          title="Agent settings"
-          aria-label="Agent settings"
+          title={t("toolbar.settings")}
+          aria-label={t("toolbar.settings")}
         >
           <GearSix size={16} />
         </button>
