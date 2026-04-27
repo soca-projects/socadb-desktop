@@ -65,6 +65,6 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'SocaDB ${{ github.ref_name }}'
           releaseBody: 'Download SocaDB for your platform below.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
