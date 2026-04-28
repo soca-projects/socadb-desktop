@@ -1,18 +1,13 @@
+use dirs::home_dir;
 use serde::Serialize;
-use std::path::PathBuf;
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct FastDetectResult {
     pub installed: bool,
     pub config_dir: Option<String>,
     pub auth_hint: Option<String>,
     pub email: Option<String>,
-}
-
-fn home_dir() -> Option<PathBuf> {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("USERPROFILE").map(PathBuf::from))
 }
 
 fn read_json(path: &std::path::Path) -> Option<serde_json::Value> {
@@ -22,22 +17,12 @@ fn read_json(path: &std::path::Path) -> Option<serde_json::Value> {
 
 pub fn detect_claude_fast() -> FastDetectResult {
     let Some(home) = home_dir() else {
-        return FastDetectResult {
-            installed: false,
-            config_dir: None,
-            auth_hint: None,
-            email: None,
-        };
+        return FastDetectResult::default();
     };
 
     let claude_dir = home.join(".claude");
     if !claude_dir.exists() {
-        return FastDetectResult {
-            installed: false,
-            config_dir: None,
-            auth_hint: None,
-            email: None,
-        };
+        return FastDetectResult::default();
     }
 
     let credentials = claude_dir.join(".credentials.json");
@@ -77,22 +62,12 @@ pub fn detect_claude_fast() -> FastDetectResult {
 
 pub fn detect_codex_fast() -> FastDetectResult {
     let Some(home) = home_dir() else {
-        return FastDetectResult {
-            installed: false,
-            config_dir: None,
-            auth_hint: None,
-            email: None,
-        };
+        return FastDetectResult::default();
     };
 
     let codex_dir = home.join(".codex");
     if !codex_dir.exists() {
-        return FastDetectResult {
-            installed: false,
-            config_dir: None,
-            auth_hint: None,
-            email: None,
-        };
+        return FastDetectResult::default();
     }
 
     let auth_file = codex_dir.join("auth.json");
@@ -121,11 +96,6 @@ pub fn fast_detect_provider(provider_id: String) -> FastDetectResult {
     match provider_id.as_str() {
         "claude" => detect_claude_fast(),
         "codex" => detect_codex_fast(),
-        _ => FastDetectResult {
-            installed: false,
-            config_dir: None,
-            auth_hint: None,
-            email: None,
-        },
+        _ => FastDetectResult::default(),
     }
 }

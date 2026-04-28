@@ -184,35 +184,42 @@ function ProviderRow({
   const [diagnoseOpen, setDiagnoseOpen] = useState(false);
   const [report, setReport] = useState<DiagnoseReport | null>(null);
   const [diagnosing, setDiagnosing] = useState(false);
+  const inFlight = useRef(false);
   const meta = PROVIDERS[providerId];
   const Icon = PROVIDER_ICONS[providerId];
 
   const runDetection = useCallback(async () => {
-    const wasConnected =
-      useChatStore.getState().providers[providerId]?.connected ?? false;
-    if (!wasConnected) setChecking(true);
-    const result = await detectProvider(providerId);
-    setFailureReason(result.failureReason);
-    if (result.authenticated) {
-      persistProvider(
-        providerId,
-        makeProvider(
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      const wasConnected =
+        useChatStore.getState().providers[providerId]?.connected ?? false;
+      if (!wasConnected) setChecking(true);
+      const result = await detectProvider(providerId);
+      setFailureReason(result.failureReason);
+      if (result.authenticated) {
+        persistProvider(
           providerId,
-          true,
-          result.loginType === "api-key" ? "api-key" : "subscription",
-          result.email,
-        ),
-      );
-    } else if (
-      wasConnected &&
-      useChatStore.getState().providers[providerId]?.connectionMethod === "subscription"
-    ) {
-      const confirm = await detectProvider(providerId);
-      if (!confirm.authenticated) {
-        persistProvider(providerId, makeProvider(providerId, false, null, null));
+          makeProvider(
+            providerId,
+            true,
+            result.loginType === "api-key" ? "api-key" : "subscription",
+            result.email,
+          ),
+        );
+      } else if (
+        wasConnected &&
+        useChatStore.getState().providers[providerId]?.connectionMethod === "subscription"
+      ) {
+        const confirm = await detectProvider(providerId);
+        if (!confirm.authenticated) {
+          persistProvider(providerId, makeProvider(providerId, false, null, null));
+        }
       }
+      setChecking(false);
+    } finally {
+      inFlight.current = false;
     }
-    setChecking(false);
   }, [providerId]);
 
   const runDiagnose = useCallback(async () => {
@@ -231,11 +238,14 @@ function ProviderRow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Pause polling while a diagnose run is in-flight: the diagnostic spawns its
+  // own subprocess and racing it against the ambient detection makes the
+  // captured stderr unreliable.
   useEffect(() => {
-    if (isConnected) return;
+    if (isConnected || diagnosing) return;
     const interval = setInterval(() => void runDetection(), 5000);
     return () => clearInterval(interval);
-  }, [isConnected, runDetection]);
+  }, [isConnected, diagnosing, runDetection]);
 
   return (
     <div className="rounded-lg border border-border px-5 py-4">

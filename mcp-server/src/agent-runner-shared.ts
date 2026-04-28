@@ -45,23 +45,21 @@ export function getMcpBinaryPath(moduleDir: string): string {
 }
 
 /**
- * Locations the Anthropic SDK needs to spawn its bundled Claude Code CLI without
- * relying on the system PATH. Without these, the SDK falls back to looking up
+ * Spreadable Anthropic SDK options that pin the bundled Claude Code CLI and
+ * the runtime executable. Without these, the SDK falls back to looking up
  * `bun`/`node` on PATH and hangs on machines where neither is installed
- * (e.g. on user machines that only have our bundled runtime).
+ * (e.g. user machines that only have our bundled runtime).
+ *
+ * `executable` isn't in the SDK's public `Options` type but is accepted at
+ * runtime — hence the `Record<string, unknown>` cast at the spread site.
  */
-export function getClaudeSdkLaunchConfig(moduleDir: string): {
-  pathToClaudeCodeExecutable?: string;
-  executable?: string;
-} {
+export function getClaudeSdkOptions(moduleDir: string): Record<string, unknown> {
   const candidates = [
     join(moduleDir, "node_modules/@anthropic-ai/claude-agent-sdk/cli.js"),
     join(moduleDir, "..", "node_modules/@anthropic-ai/claude-agent-sdk/cli.js"),
   ];
   const cliJs = candidates.find((c) => existsSync(c));
 
-  // process.execPath is the bun (or node) that's running this file.
-  // In bundled prod we ship our own bun, so this resolves to the bundled binary.
   return {
     pathToClaudeCodeExecutable: cliJs,
     executable: process.execPath,

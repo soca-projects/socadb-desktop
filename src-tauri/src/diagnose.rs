@@ -23,6 +23,7 @@ pub enum DiagnoseStep {
 }
 
 #[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct DiagnoseReport {
     pub provider_id: String,
     pub success: bool,
@@ -212,21 +213,29 @@ async fn try_spawn_status(
         }
     };
 
-    let result = tokio::time::timeout(Duration::from_secs(15), read_loop)
-        .await
-        .map_err(|_| "Timed out after 15s waiting for status".to_string())?;
+    // Cold-spawn (bun + Anthropic SDK init + accountInfo) can exceed 30s on a
+    // fresh VM where caches are empty. The diagnostic should outlive that or it
+    // false-fails the very check it's running.
+    let result = tokio::time::timeout(Duration::from_secs(45), read_loop).await;
 
+    // Kill BEFORE awaiting stderr so the stderr task EOFs; otherwise on the
+    // timeout path the task would dangle reading from a still-running child.
     let _ = child.kill().await;
     let stderr_text = stderr_capture.await.unwrap_or_default();
 
-    match result {
-        Ok(line) => Ok(line),
-        Err(e) => {
-            if stderr_text.is_empty() {
-                Err(e)
-            } else {
-                Err(format!("{e}\nstderr:\n{}", stderr_text.trim()))
-            }
+    let combine = |msg: String| {
+        if stderr_text.trim().is_empty() {
+            msg
+        } else {
+            format!("{msg}\nstderr:\n{}", stderr_text.trim())
         }
+    };
+
+    match result {
+        Ok(Ok(line)) => Ok(line),
+        Ok(Err(e)) => Err(combine(e)),
+        Err(_) => Err(combine(
+            "Timed out after 45s waiting for status".to_string(),
+        )),
     }
 }

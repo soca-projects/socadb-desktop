@@ -12,14 +12,14 @@ export interface ProviderStatus {
 
 interface FastDetectResult {
   installed: boolean;
-  config_dir: string | null;
-  auth_hint: string | null;
+  configDir: string | null;
+  authHint: string | null;
   email: string | null;
 }
 
 async function fastDetect(id: ProviderId): Promise<FastDetectResult | null> {
   try {
-    return (await invoke("fast_detect_provider", { providerId: id })) as FastDetectResult;
+    return await invoke<FastDetectResult>("fast_detect_provider", { providerId: id });
   } catch {
     return null;
   }
@@ -39,10 +39,17 @@ export async function detectProvider(id: ProviderId): Promise<ProviderStatus> {
     };
   }
 
-  const fast = await fastDetect(id);
+  // Both calls are independent state reads; run them in parallel so the slower
+  // chat_status spawn doesn't block on the cheap filesystem-only fast-path.
+  const [fastResult, statusResult] = await Promise.allSettled([
+    fastDetect(id),
+    checkChatStatus(id),
+  ]);
 
-  try {
-    const status: ChatStatusResult = await checkChatStatus(id);
+  const fast = fastResult.status === "fulfilled" ? fastResult.value : null;
+
+  if (statusResult.status === "fulfilled") {
+    const status: ChatStatusResult = statusResult.value;
     return {
       installed: true,
       authenticated: status.loggedIn,
@@ -50,16 +57,17 @@ export async function detectProvider(id: ProviderId): Promise<ProviderStatus> {
       loginType: status.loginType,
       failureReason: null,
     };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    return {
-      installed: fast?.installed ?? false,
-      authenticated: false,
-      email: fast?.email ?? null,
-      loginType: null,
-      failureReason: message,
-    };
   }
+
+  const reason = statusResult.reason;
+  const message = reason instanceof Error ? reason.message : String(reason);
+  return {
+    installed: fast?.installed ?? false,
+    authenticated: false,
+    email: fast?.email ?? null,
+    loginType: null,
+    failureReason: message,
+  };
 }
 
 export interface DiagnoseStep {
@@ -69,11 +77,11 @@ export interface DiagnoseStep {
 }
 
 export interface DiagnoseReport {
-  provider_id: ProviderId;
+  providerId: ProviderId;
   success: boolean;
   steps: DiagnoseStep[];
 }
 
 export async function diagnoseProvider(id: ProviderId): Promise<DiagnoseReport> {
-  return (await invoke("chat_diagnose", { providerId: id })) as DiagnoseReport;
+  return await invoke<DiagnoseReport>("chat_diagnose", { providerId: id });
 }

@@ -2,7 +2,7 @@
 import { query, listSessions, type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
 import {
   emit,
-  getClaudeSdkLaunchConfig,
+  getClaudeSdkOptions,
   getMcpBinaryPath,
   getModuleDir,
   startRunner,
@@ -10,7 +10,7 @@ import {
 } from "./agent-runner-shared.ts";
 
 const __dirname = getModuleDir(import.meta.url);
-const sdkLaunchConfig = getClaudeSdkLaunchConfig(__dirname);
+const sdkOptions = getClaudeSdkOptions(__dirname);
 
 let currentQuery: Query | undefined;
 let abortController: AbortController | undefined;
@@ -21,6 +21,7 @@ async function handleSend(cmd: ChatSendCommand) {
 
   try {
     const options: Options = {
+      ...sdkOptions,
       model: cmd.model,
       systemPrompt: {
         type: "preset",
@@ -32,9 +33,6 @@ async function handleSend(cmd: ChatSendCommand) {
       allowedTools: ["mcp__socadb", "WebSearch", "WebFetch"],
       permissionMode: "bypassPermissions" as const,
       includePartialMessages: true,
-      pathToClaudeCodeExecutable: sdkLaunchConfig.pathToClaudeCodeExecutable,
-      // `executable` is accepted at runtime but not in the public Options type.
-      ...({ executable: sdkLaunchConfig.executable } as Record<string, unknown>),
       mcpServers: {
         socadb: {
           command: getMcpBinaryPath(__dirname),
@@ -146,11 +144,10 @@ async function handleStatus() {
     const q = query({
       prompt: "what is 2+2?",
       options: {
+        ...sdkOptions,
         model: "claude-haiku-4-5-20251001",
         maxTurns: 0,
         maxBudgetUsd: 0.00001,
-        pathToClaudeCodeExecutable: sdkLaunchConfig.pathToClaudeCodeExecutable,
-        ...({ executable: sdkLaunchConfig.executable } as Record<string, unknown>),
       },
     });
 
