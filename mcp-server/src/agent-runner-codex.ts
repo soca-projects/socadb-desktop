@@ -145,8 +145,11 @@ async function handleStatus() {
     const codex = new Codex();
     const abortCtrl = new AbortController();
 
+    // Don't pin a model: some models (e.g. gpt-5.2-codex) only work on API-key
+    // accounts, not ChatGPT subscriptions, and the SDK reports an error event
+    // we'd misread as "not logged in". Letting the binary pick its default
+    // gives us a true auth check.
     const thread = codex.startThread({
-      model: "gpt-5.2-codex",
       skipGitRepoCheck: true,
       modelReasoningEffort: "low",
     });
@@ -157,6 +160,9 @@ async function handleStatus() {
 
     for await (const event of events) {
       if (event.type === "error") {
+        // Log the real error so it surfaces in stderr / chat_diagnose instead
+        // of silently being reported as "not logged in".
+        console.error("[codex-status] error event:", event.message);
         abortCtrl.abort();
         emit({
           type: "chat_status_result",
@@ -187,7 +193,9 @@ async function handleStatus() {
       email: null,
       loginType: null,
     });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[codex-status] caught:", message);
     emit({
       type: "chat_status_result",
       providerId: "codex",

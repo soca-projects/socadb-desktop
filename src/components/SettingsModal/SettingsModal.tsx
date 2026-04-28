@@ -17,7 +17,11 @@ import {
 import { useChatStore } from "../../stores/chatStore";
 import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
 import { CodexIcon } from "../../assets/icons/CodexIcon";
-import { detectProvider } from "../../utils/providerDetection";
+import {
+  detectProvider,
+  diagnoseProvider,
+  type DiagnoseReport,
+} from "../../utils/providerDetection";
 import { persistProvider, saveApiKey, clearApiKey } from "../../utils/chatPersistence";
 import { setApiKey as setApiKeyOnAgent } from "../../utils/chatCommands";
 import { useClickOutside } from "../../hooks/useClickOutside";
@@ -176,6 +180,10 @@ function ProviderRow({
   const { t } = useTranslation();
   const isConnected = provider?.connected ?? false;
   const [checking, setChecking] = useState(false);
+  const [failureReason, setFailureReason] = useState<string | null>(null);
+  const [diagnoseOpen, setDiagnoseOpen] = useState(false);
+  const [report, setReport] = useState<DiagnoseReport | null>(null);
+  const [diagnosing, setDiagnosing] = useState(false);
   const meta = PROVIDERS[providerId];
   const Icon = PROVIDER_ICONS[providerId];
 
@@ -184,6 +192,7 @@ function ProviderRow({
       useChatStore.getState().providers[providerId]?.connected ?? false;
     if (!wasConnected) setChecking(true);
     const result = await detectProvider(providerId);
+    setFailureReason(result.failureReason);
     if (result.authenticated) {
       persistProvider(
         providerId,
@@ -204,6 +213,17 @@ function ProviderRow({
       }
     }
     setChecking(false);
+  }, [providerId]);
+
+  const runDiagnose = useCallback(async () => {
+    setDiagnosing(true);
+    try {
+      const r = await diagnoseProvider(providerId);
+      setReport(r);
+      setDiagnoseOpen(true);
+    } finally {
+      setDiagnosing(false);
+    }
   }, [providerId]);
 
   useEffect(() => {
@@ -279,6 +299,48 @@ function ProviderRow({
           </code>{" "}
           {t("agent.switchToApiKeyEnd")}
         </p>
+      )}
+
+      {!isConnected && !checking && failureReason && (
+        <div className="mt-3 space-y-1.5">
+          <button
+            onClick={() => setDiagnoseOpen((o) => !o)}
+            className="text-[11px] text-tertiary underline-offset-2 hover:text-secondary hover:underline"
+          >
+            {diagnoseOpen ? t("agent.hideDetails") : t("agent.showDetails")}
+          </button>
+          {diagnoseOpen && (
+            <div className="rounded-md bg-surface-muted px-3 py-2 text-[11px]">
+              <p className="font-mono text-tertiary">{failureReason}</p>
+              <button
+                onClick={() => void runDiagnose()}
+                disabled={diagnosing}
+                className="mt-2 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 dark:bg-stone-200 dark:text-stone-900"
+              >
+                {diagnosing ? t("agent.diagnosing") : t("agent.runDiagnose")}
+              </button>
+              {report && (
+                <ul className="mt-2 space-y-1 font-mono text-[10px]">
+                  {report.steps.map((s, i) => (
+                    <li
+                      key={i}
+                      className={
+                        s.kind === "ok"
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : s.kind === "warn"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-rose-600 dark:text-rose-400"
+                      }
+                    >
+                      [{s.kind}] {s.label}
+                      {s.detail ? ` — ${s.detail}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

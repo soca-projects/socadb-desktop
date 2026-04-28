@@ -29,7 +29,8 @@
     "active": true,
     "targets": "all",
     "resources": {
-      "../mcp-server/dist/socadb-mcp-*": ""
+      "../mcp-server/dist/socadb-mcp-*": "",
+      "../mcp-server/dist/runtime/": "runtime/"
     },
     "icon": [
       "icons/32x32.png",
