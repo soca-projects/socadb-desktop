@@ -56,8 +56,11 @@ jobs:
         working-directory: src-tauri
         run: cargo fmt --check
 
-      - name: Create MCP binary placeholder for Tauri resource glob
-        run: mkdir -p mcp-server/dist && touch mcp-server/dist/socadb-mcp-linux-x64
+      - name: Create MCP placeholders for Tauri resource globs
+        run: |
+          mkdir -p mcp-server/dist mcp-server/dist/runtime
+          touch mcp-server/dist/socadb-mcp-linux-x64
+          touch mcp-server/dist/runtime/.placeholder
 
       - name: Clippy
         working-directory: src-tauri
