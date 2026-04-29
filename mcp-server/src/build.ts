@@ -302,8 +302,13 @@ async function downloadAndExtractBun(releaseTag: string, version: string, outBin
   const extractDir = join(cacheDir, `extract-${releaseTag}-v${version}`);
   rmSync(extractDir, { recursive: true, force: true });
   mkdirSync(extractDir, { recursive: true });
-  // bsdtar (built-in on macOS, Linux, Windows 10+) handles .zip natively.
-  execFileSync("tar", ["-xf", zipPath, "-C", extractDir], { stdio: "inherit" });
+  // Linux ships GNU tar (no zip support), so use `unzip` there. macOS and
+  // Windows 10+ ship bsdtar which handles .zip natively.
+  if (process.platform === "linux") {
+    execFileSync("unzip", ["-q", "-o", zipPath, "-d", extractDir], { stdio: "inherit" });
+  } else {
+    execFileSync("tar", ["-xf", zipPath, "-C", extractDir], { stdio: "inherit" });
+  }
 
   const innerName = releaseTag.startsWith("windows") ? "bun.exe" : "bun";
   const extracted = join(extractDir, `bun-${releaseTag}`, innerName);
