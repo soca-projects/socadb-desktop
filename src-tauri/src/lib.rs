@@ -44,6 +44,7 @@ fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
     };
     let arch = match std::env::consts::ARCH {
         "aarch64" => "arm64",
+        "x86_64" => "x64",
         other => other,
     };
     let ext = if os == "windows" { ".exe" } else { "" };

@@ -10,7 +10,7 @@ import {
 } from "./agent-runner-shared.ts";
 
 const __dirname = getModuleDir(import.meta.url);
-const sdkOptions = getClaudeSdkOptions(__dirname);
+const sdkOptions = getClaudeSdkOptions();
 
 let currentQuery: Query | undefined;
 let abortController: AbortController | undefined;
@@ -87,6 +87,7 @@ async function handleSend(cmd: ChatSendCommand) {
 
       if (message.type === "user" && message.message?.content) {
         for (const content of message.message.content) {
+          if (typeof content === "string") continue;
           if (content.type === "tool_result" && content.tool_use_id) {
             emit({
               type: "chat_event",
