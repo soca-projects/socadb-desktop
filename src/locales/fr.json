@@ -130,7 +130,11 @@
     "connecting": "Connexion...",
     "connect": "Connecter",
     "keyringUnavailable": "Impossible de sauvegarder la clé API de manière sécurisée. Veuillez réessayer.",
-    "disconnectFailed": "Impossible de supprimer la clé API. Veuillez réessayer."
+    "disconnectFailed": "Impossible de supprimer la clé API. Veuillez réessayer.",
+    "showDetails": "Pourquoi ce n'est pas détecté ?",
+    "hideDetails": "Masquer les détails",
+    "runDiagnose": "Lancer le diagnostic",
+    "diagnosing": "En cours..."
   },
   "chat": {
     "newConversation": "Nouvelle conversation",

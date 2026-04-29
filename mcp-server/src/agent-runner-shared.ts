@@ -31,9 +31,39 @@ export function getMcpBinaryPath(moduleDir: string): string {
   const cpu = arch() === "arm64" ? "arm64" : arch();
   const ext = os === "windows" ? ".exe" : "";
   const binaryName = `socadb-mcp-${os}-${cpu}${ext}`;
-  const distPath = join(moduleDir, "..", "dist", binaryName);
-  if (existsSync(distPath)) return distPath;
-  return join(moduleDir, "..", "dist", "socadb-mcp");
+
+  const candidates = [
+    join(moduleDir, binaryName),
+    join(moduleDir, `socadb-mcp${ext}`),
+    join(moduleDir, "..", "dist", binaryName),
+    join(moduleDir, "..", "dist", `socadb-mcp${ext}`),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return candidates[0];
+}
+
+/**
+ * Spreadable Anthropic SDK options that pin the bundled Claude Code CLI and
+ * the runtime executable. Without these, the SDK falls back to looking up
+ * `bun`/`node` on PATH and hangs on machines where neither is installed
+ * (e.g. user machines that only have our bundled runtime).
+ *
+ * `executable` isn't in the SDK's public `Options` type but is accepted at
+ * runtime — hence the `Record<string, unknown>` cast at the spread site.
+ */
+export function getClaudeSdkOptions(moduleDir: string): Record<string, unknown> {
+  const candidates = [
+    join(moduleDir, "node_modules/@anthropic-ai/claude-agent-sdk/cli.js"),
+    join(moduleDir, "..", "node_modules/@anthropic-ai/claude-agent-sdk/cli.js"),
+  ];
+  const cliJs = candidates.find((c) => existsSync(c));
+
+  return {
+    pathToClaudeCodeExecutable: cliJs,
+    executable: process.execPath,
+  };
 }
 
 export function emit(event: Record<string, unknown>) {

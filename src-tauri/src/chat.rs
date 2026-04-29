@@ -1,7 +1,8 @@
 use serde::Serialize;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -66,17 +67,53 @@ pub fn cleanup_agents() {
     }
 }
 
-fn agent_runner_path(provider_id: &str) -> String {
-    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let filename = format!("agent-runner-{provider_id}.ts");
-    manifest_dir
-        .parent()
-        .unwrap()
-        .join("mcp-server")
-        .join("src")
-        .join(filename)
-        .to_string_lossy()
-        .to_string()
+pub struct RuntimeLayout {
+    pub dir: PathBuf,
+    pub bun: PathBuf,
+}
+
+pub fn resolve_runtime_layout(app: &AppHandle) -> Result<RuntimeLayout, String> {
+    let dir = if cfg!(debug_assertions) {
+        // Dev: use mcp-server/dist/runtime if built, else fall back to mcp-server/src
+        // (which still works because agent-runner-shared.ts looks in ../dist for the MCP binary).
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let project_root = manifest_dir.parent().ok_or("Cannot resolve project root")?;
+        let runtime = project_root.join("mcp-server").join("dist").join("runtime");
+        if runtime.exists() {
+            runtime
+        } else {
+            project_root.join("mcp-server").join("src")
+        }
+    } else {
+        app.path()
+            .resource_dir()
+            .map_err(|e| format!("Failed to resolve resource_dir: {e}"))?
+            .join("runtime")
+    };
+
+    let bun_name = if cfg!(target_os = "windows") {
+        "bun.exe"
+    } else {
+        "bun"
+    };
+    let bundled_bun = dir.join(bun_name);
+    let bun = if bundled_bun.exists() {
+        bundled_bun
+    } else if cfg!(debug_assertions) {
+        // Dev fallback: rely on system-installed bun (developer machine).
+        PathBuf::from("bun")
+    } else {
+        return Err(format!(
+            "Bun runtime not found in resources: {}",
+            bundled_bun.display()
+        ));
+    };
+
+    Ok(RuntimeLayout { dir, bun })
+}
+
+pub fn agent_runner_path(layout: &RuntimeLayout, provider_id: &str) -> PathBuf {
+    layout.dir.join(format!("agent-runner-{provider_id}.ts"))
 }
 
 fn api_key_env_var(provider_id: &str) -> &'static str {
@@ -91,14 +128,20 @@ async fn spawn_agent(
     provider_id: &str,
     api_key: Option<&str>,
 ) -> Result<AgentProcess, String> {
-    let mut cmd = Command::new("bun");
-    cmd.args([&agent_runner_path(provider_id)])
-        .current_dir(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .unwrap()
-                .join("mcp-server"),
-        )
+    let layout = resolve_runtime_layout(app)?;
+    let runner = agent_runner_path(&layout, provider_id);
+
+    if !runner.exists() {
+        return Err(format!(
+            "Agent runner not found: {} (runtime dir: {})",
+            runner.display(),
+            layout.dir.display()
+        ));
+    }
+
+    let mut cmd = Command::new(&layout.bun);
+    cmd.arg(&runner)
+        .current_dir(&layout.dir)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
@@ -107,9 +150,13 @@ async fn spawn_agent(
         cmd.env(api_key_env_var(provider_id), key);
     }
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| format!("Failed to spawn agent-runner-{provider_id}: {e}"))?;
+    let mut child = cmd.spawn().map_err(|e| {
+        format!(
+            "Failed to spawn agent-runner-{provider_id}: {e} (bun: {}, runner: {})",
+            layout.bun.display(),
+            runner.display()
+        )
+    })?;
 
     let child_pid = child.id();
     let stdin = child.stdin.take().ok_or("Failed to capture stdin")?;
