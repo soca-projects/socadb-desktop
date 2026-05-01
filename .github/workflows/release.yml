@@ -22,7 +22,7 @@ jobs:
             args: --target x86_64-apple-darwin
             bunTarget: darwin-x64
           - platform: ubuntu-22.04
-            args: ''
+            args: '--verbose'
             bunTarget: linux-x64
           - platform: windows-latest
             args: ''
@@ -69,6 +69,12 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: '1'
           NO_STRIP: 'true'
           BUN_TARGET: ${{ matrix.bunTarget }}
+          # Bundler-level debug logging on Ubuntu only, so the underlying
+          # linuxdeploy/appimagetool stderr surfaces in CI when the AppImage
+          # step fails. Tauri propagates this through tracing; the env var
+          # alone wouldn't reach linuxdeploy because Tauri invokes it with a
+          # fixed argv.
+          RUST_LOG: ${{ matrix.platform == 'ubuntu-22.04' && 'tauri_bundler=debug,tauri_cli=debug' || '' }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'SocaDB ${{ github.ref_name }}'
@@ -78,3 +84,21 @@ jobs:
           releaseDraft: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
           args: ${{ matrix.args }}
+
+      - name: Upload AppImage debug artifacts on failure
+        if: failure() && matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundle-debug-${{ github.ref_name }}
+          # Restrict to the partial AppImage tree and any tool logs. Exclude
+          # signed updater outputs and the public release manifest so a
+          # rogue verbose log can't ride along.
+          path: |
+            src-tauri/target/release/bundle/appimage/
+            src-tauri/target/release/bundle/deb/
+            **/linuxdeploy*.log
+            **/appimagetool*.log
+            !**/*.sig
+            !**/latest.json
+          if-no-files-found: ignore
+          retention-days: 7

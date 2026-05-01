@@ -27,7 +27,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "dmg", "deb", "appimage", "nsis"],
     "resources": {
       "../mcp-server/dist/socadb-mcp-*": "",
       "../mcp-server/dist/runtime/": "runtime/"
