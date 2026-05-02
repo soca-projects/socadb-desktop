@@ -1,6 +1,6 @@
 [package]
 name = "socadb-desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "Database schema designer with AI CLI integration"
 authors = ["Cassidy"]
 edition = "2021"
