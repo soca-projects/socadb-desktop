@@ -17,12 +17,16 @@ jobs:
         include:
           - platform: macos-latest
             args: --target aarch64-apple-darwin
+            bunTarget: darwin-arm64
           - platform: macos-latest
             args: --target x86_64-apple-darwin
+            bunTarget: darwin-x64
           - platform: ubuntu-22.04
-            args: ''
+            args: '--verbose'
+            bunTarget: linux-x64
           - platform: windows-latest
             args: ''
+            bunTarget: windows-x64
 
     runs-on: ${{ matrix.platform }}
     permissions:
@@ -31,7 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Keep in sync with BUN_VERSION in mcp-server/src/build.ts so the bun
+      # that runs the build matches the bun we bundle into the release.
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -48,6 +56,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      # Override Tauri's pinned linuxdeploy-plugin-gtk with our patched version
+      # that tolerates Bun-compiled / static binaries inside the AppDir. Without
+      # this, AppImage bundling crashes because linuxdeploy runs `ldd` on the
+      # bundled @anthropic-ai/claude-agent-sdk-linux-x64/claude binary and
+      # aborts on exit code 1. See scripts/linux/linuxdeploy-plugin-gtk.sh
+      # for the full rationale.
+      - name: Install patched linuxdeploy-plugin-gtk
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          mkdir -p ~/.cache/tauri
+          cp scripts/linux/linuxdeploy-plugin-gtk.sh ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+          chmod +x ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+
       - run: bun install --frozen-lockfile
 
       - name: Install MCP server dependencies
@@ -60,10 +81,37 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           APPIMAGE_EXTRACT_AND_RUN: '1'
           NO_STRIP: 'true'
+          BUN_TARGET: ${{ matrix.bunTarget }}
+          # Bundler-level debug logging on Ubuntu only, so the underlying
+          # linuxdeploy/appimagetool stderr surfaces in CI when the AppImage
+          # step fails. Tauri propagates this through tracing; the env var
+          # alone wouldn't reach linuxdeploy because Tauri invokes it with a
+          # fixed argv.
+          RUST_LOG: ${{ matrix.platform == 'ubuntu-22.04' && 'tauri_bundler=debug,tauri_cli=debug' || '' }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'SocaDB ${{ github.ref_name }}'
           releaseBody: 'Download SocaDB for your platform below.'
-          releaseDraft: false
-          prerelease: false
+          # Tags like v1.2.3-rc.1 / v1.2.3-beta.2 ship as drafts/prereleases so
+          # the auto-update channel keeps pointing at the last stable tag.
+          releaseDraft: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
           args: ${{ matrix.args }}
+
+      - name: Upload AppImage debug artifacts on failure
+        if: failure() && matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundle-debug-${{ github.ref_name }}
+          # Restrict to the partial AppImage tree and any tool logs. Exclude
+          # signed updater outputs and the public release manifest so a
+          # rogue verbose log can't ride along.
+          path: |
+            src-tauri/target/release/bundle/appimage/
+            src-tauri/target/release/bundle/deb/
+            **/linuxdeploy*.log
+            **/appimagetool*.log
+            !**/*.sig
+            !**/latest.json
+          if-no-files-found: ignore
+          retention-days: 7
