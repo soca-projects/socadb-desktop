@@ -19,11 +19,6 @@ on:
         description: 'Mark the release as a pre-release'
         type: boolean
         default: false
-    secrets:
-      TAURI_SIGNING_PRIVATE_KEY:
-        required: false
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD:
-        required: false
 
 jobs:
   build:
