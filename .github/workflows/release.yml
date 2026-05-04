@@ -69,6 +69,50 @@ jobs:
           cp scripts/linux/linuxdeploy-plugin-gtk.sh ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
           chmod +x ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
 
+      # Build the GitHub release body from CHANGELOG.md so each release ships
+      # with hand-curated notes plus a permanent install section. RC and beta
+      # tags fall back to a generic body since they are not expected to have
+      # a CHANGELOG entry of their own — they document the next stable
+      # version's section.
+      - name: Build release body
+        id: release_body
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          # For pre-release tags like v0.1.1-rc.5, target the parent stable
+          # version's CHANGELOG section.
+          base_version="${version%-rc.*}"
+          base_version="${base_version%-beta.*}"
+          notes=$(awk -v v="$base_version" '
+            BEGIN { found = 0 }
+            /^## \[/ {
+              if (found) exit
+              if ($0 ~ "^## \\[" v "\\]") { found = 1; next }
+              next
+            }
+            /^\[.+\]:[[:space:]]/ { if (found) exit }
+            found { print }
+          ' CHANGELOG.md)
+          {
+            echo "body<<RELEASEBODY_EOF"
+            if [ -n "$(printf %s "$notes" | tr -d '[:space:]')" ]; then
+              printf %s "$notes"
+              echo ""
+            else
+              echo "Pre-release build of v${base_version} for testing."
+              echo ""
+            fi
+            echo "## Install"
+            echo ""
+            echo "- **macOS Apple Silicon**: \`SocaDB_${version}_aarch64.dmg\`"
+            echo "- **macOS Intel**: \`SocaDB_${version}_x64.dmg\`"
+            echo "- **Linux Debian/Ubuntu**: \`SocaDB_${version}_amd64.deb\`"
+            echo "- **Linux universal**: \`SocaDB_${version}_amd64.AppImage\` (\`chmod +x\` then run)"
+            echo "- **Windows**: \`SocaDB_${version}_x64-setup.exe\`"
+            echo "RELEASEBODY_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - run: bun install --frozen-lockfile
 
       - name: Install MCP server dependencies
@@ -91,7 +135,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'SocaDB ${{ github.ref_name }}'
-          releaseBody: 'Download SocaDB for your platform below.'
+          releaseBody: ${{ steps.release_body.outputs.body }}
           # Tags like v1.2.3-rc.1 / v1.2.3-beta.2 ship as drafts/prereleases so
           # the auto-update channel keeps pointing at the last stable tag.
           releaseDraft: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
