@@ -1,0 +1,36 @@
+name: Build check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src-tauri/**'
+      - 'mcp-server/**'
+      - 'scripts/linux/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/build.yml'
+      - '.github/workflows/build-check.yml'
+      - '.github/workflows/release.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src-tauri/**'
+      - 'mcp-server/**'
+      - 'scripts/linux/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/build.yml'
+      - '.github/workflows/build-check.yml'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: build-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      publish: false
