@@ -1,4 +1,6 @@
 mod chat;
+mod detect;
+mod diagnose;
 mod ws;
 
 use std::process::Command;
@@ -42,6 +44,7 @@ fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
     };
     let arch = match std::env::consts::ARCH {
         "aarch64" => "arm64",
+        "x86_64" => "x64",
         other => other,
     };
     let ext = if os == "windows" { ".exe" } else { "" };
@@ -162,6 +165,8 @@ pub fn run() {
             chat::chat_status,
             chat::chat_set_api_key,
             chat::chat_reset,
+            diagnose::chat_diagnose,
+            detect::fast_detect_provider,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

@@ -130,7 +130,11 @@
     "connecting": "Connecting...",
     "connect": "Connect",
     "keyringUnavailable": "Failed to save API key securely. Please try again.",
-    "disconnectFailed": "Failed to remove API key. Please try again."
+    "disconnectFailed": "Failed to remove API key. Please try again.",
+    "showDetails": "Why isn't it detected?",
+    "hideDetails": "Hide details",
+    "runDiagnose": "Run diagnostic",
+    "diagnosing": "Running..."
   },
   "chat": {
     "newConversation": "New conversation",

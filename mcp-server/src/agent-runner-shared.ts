@@ -28,12 +28,28 @@ export function getModuleDir(importMetaUrl: string): string {
 
 export function getMcpBinaryPath(moduleDir: string): string {
   const os = platform() === "darwin" ? "darwin" : platform() === "win32" ? "windows" : "linux";
-  const cpu = arch() === "arm64" ? "arm64" : arch();
+  const cpu = arch() === "arm64" ? "arm64" : "x64";
   const ext = os === "windows" ? ".exe" : "";
   const binaryName = `socadb-mcp-${os}-${cpu}${ext}`;
-  const distPath = join(moduleDir, "..", "dist", binaryName);
-  if (existsSync(distPath)) return distPath;
-  return join(moduleDir, "..", "dist", "socadb-mcp");
+
+  const candidates = [
+    join(moduleDir, binaryName),
+    join(moduleDir, `socadb-mcp${ext}`),
+    join(moduleDir, "..", "dist", binaryName),
+    join(moduleDir, "..", "dist", `socadb-mcp${ext}`),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return candidates[0];
+}
+
+// Tells the SDK we run under bun (matches `process.execPath` at runtime, since
+// agent-runners are spawned with the bundled bun). Otherwise the SDK defaults
+// to "node" and tries to spawn it from PATH on machines that only have our
+// bundled runtime.
+export function getClaudeSdkOptions(): Record<string, unknown> {
+  return { executable: "bun" };
 }
 
 export function emit(event: Record<string, unknown>) {
