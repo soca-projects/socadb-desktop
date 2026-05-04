@@ -87,6 +87,9 @@ jobs:
       - name: Install MCP server dependencies
         run: cd mcp-server && bun install --frozen-lockfile
 
+      # Override createUpdaterArtifacts so tauri-build doesn't require
+      # TAURI_SIGNING_PRIVATE_KEY in PR runs. Bundling is still validated;
+      # only the signed updater manifest is skipped.
       - name: Build (no publish)
         if: ${{ !inputs.publish }}
         uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
@@ -96,7 +99,7 @@ jobs:
           BUN_TARGET: ${{ matrix.bunTarget }}
           RUST_LOG: ${{ matrix.platform == 'ubuntu-22.04' && 'tauri_bundler=debug,tauri_cli=debug' || '' }}
         with:
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
       - name: Upload build artifacts (no publish)
         if: ${{ !inputs.publish }}
