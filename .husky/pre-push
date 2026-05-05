@@ -1,0 +1,23 @@
+echo "→ pre-push: running CI checks locally..."
+
+set -e
+
+bun run lint
+bun run format:check
+bun run typecheck
+bun run build
+bun run test
+
+cd mcp-server
+bunx tsc --noEmit
+cd ..
+
+cd src-tauri
+cargo fmt --check
+cargo clippy -- -D warnings
+
+if command -v cargo-audit >/dev/null 2>&1; then
+  cargo audit
+else
+  echo "  ⏭  cargo-audit not installed, skipping (CI will run it). Install: brew install cargo-audit"
+fi

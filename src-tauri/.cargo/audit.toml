@@ -1,0 +1,36 @@
+[advisories]
+ignore = [
+  # rand 0.8.5 unsoundness — transitive build-dep via phf_generator →
+  # cssparser → tauri-utils. Runs only at build time to generate static
+  # tables, not in the runtime binary, no custom logger involved. Drop
+  # when Tauri bumps phf_generator.
+  "RUSTSEC-2026-0097",
+
+  # gtk-rs GTK3 bindings — the entire gtk-rs ecosystem dropped GTK3 in
+  # favor of GTK4 in 2024. Tauri 2 still pulls these on Linux because
+  # webkit2gtk is GTK3-only. Tracked upstream at tauri-apps/tauri; will
+  # clear when Tauri migrates to webkitgtk-6.0 / GTK4.
+  "RUSTSEC-2024-0411",  # gdkwayland-sys
+  "RUSTSEC-2024-0412",  # gdk
+  "RUSTSEC-2024-0413",  # atk
+  "RUSTSEC-2024-0414",  # gdkx11-sys
+  "RUSTSEC-2024-0415",  # gtk
+  "RUSTSEC-2024-0416",  # atk-sys
+  "RUSTSEC-2024-0417",  # gdkx11
+  "RUSTSEC-2024-0418",  # gdk-sys
+  "RUSTSEC-2024-0419",  # gtk3-macros (or similar)
+  "RUSTSEC-2024-0420",  # gtk-sys
+  "RUSTSEC-2024-0429",  # glib VariantStrIter unsoundness — same upstream
+
+  # unic-* unmaintained — transitive via idna-style crates pulled by
+  # reqwest/hyper. No replacement migration path until upstream chooses.
+  "RUSTSEC-2025-0075",  # unic-char-range
+  "RUSTSEC-2025-0080",  # unic-common
+  "RUSTSEC-2025-0081",  # unic-char-property
+  "RUSTSEC-2025-0098",  # unic-ucd-version
+  "RUSTSEC-2025-0100",  # unic-ucd-ident
+
+  # Other unmaintained transitives.
+  "RUSTSEC-2024-0370",  # proc-macro-error
+  "RUSTSEC-2025-0057",  # fxhash
+]
