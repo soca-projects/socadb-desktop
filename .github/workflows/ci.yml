@@ -70,7 +70,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      issues: write   # rustsec/audit-check creates issues for advisories
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -101,8 +100,14 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy -- -D warnings
 
-      - name: Audit Rust dependencies
-        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+      # Run cargo-audit directly so it picks up src-tauri/.cargo/audit.toml.
+      # The rustsec/audit-check action ignores that config file, which is
+      # why Tauri/Cloudflare/Firecracker bypass it.
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@94cf54928bb4181ff5cb48ff27304503c9db4050 # cargo-audit
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: src-tauri
+          tool: cargo-audit
+
+      - name: Audit Rust dependencies
+        working-directory: src-tauri
+        run: cargo audit
