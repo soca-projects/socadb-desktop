@@ -1,0 +1,8 @@
+[advisories]
+ignore = [
+  # rand 0.8.5 unsoundness with custom logger + thread_rng. Transitive
+  # build-dep via phf_generator → cssparser → tauri-utils, runs only at
+  # build time to generate static tables. Not in the runtime binary, no
+  # custom logger involved. Drop when Tauri bumps phf_generator.
+  "RUSTSEC-2026-0097",
+]
