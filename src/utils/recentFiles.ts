@@ -1,7 +1,8 @@
 import { readTextFile, writeTextFile, mkdir, exists } from "@tauri-apps/plugin-fs";
-import { homeDir } from "@tauri-apps/api/path";
+import { join } from "@tauri-apps/api/path";
 import { emit } from "@tauri-apps/api/event";
 import { z } from "zod";
+import { getSocadbDir } from "./socadbDir";
 
 export const MAX_RECENT = 10;
 
@@ -48,16 +49,12 @@ export function clearRecentFiles() {
   void emit("refresh-menu");
 }
 
-let cachedHome: string | null = null;
-
 async function recentFilePath(): Promise<string> {
-  if (!cachedHome) cachedHome = await homeDir();
-  return `${cachedHome}.socadb/recent.json`;
+  return await join(await getSocadbDir(), "recent.json");
 }
 
 async function ensureSocadbDir() {
-  if (!cachedHome) cachedHome = await homeDir();
-  const dir = `${cachedHome}.socadb`;
+  const dir = await getSocadbDir();
   if (!(await exists(dir))) {
     await mkdir(dir, { recursive: true });
   }
@@ -68,8 +65,8 @@ async function persistRecent() {
     await ensureSocadbDir();
     const data = JSON.stringify({ files: recentList });
     await writeTextFile(await recentFilePath(), data);
-  } catch {
-    // Write failed — silently ignore
+  } catch (err) {
+    console.warn("[recentFiles] failed to persist:", err);
   }
 }
 
@@ -83,6 +80,7 @@ export async function loadRecentFiles() {
       recentList = [];
     }
   } catch {
+    // No recent.json yet (first launch or never persisted) — start with empty list.
     recentList = [];
   }
 }

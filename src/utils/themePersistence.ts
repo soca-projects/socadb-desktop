@@ -1,53 +1,38 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { homeDir } from "@tauri-apps/api/path";
+import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
 import { useThemeStore } from "../stores/themeStore";
-
-let socadbDir: string | null = null;
-
-async function getSocadbDir(): Promise<string> {
-  if (!socadbDir) {
-    const home = await homeDir();
-    socadbDir = `${home}.socadb/`;
-  }
-  return socadbDir;
-}
-
-async function configPath(): Promise<string> {
-  const dir = await getSocadbDir();
-  return `${dir}config.json`;
-}
 
 async function loadTheme() {
   try {
-    const content = await readTextFile(await configPath());
+    const content = await readTextFile(await socadbConfigPath());
     const data = JSON.parse(content) as Record<string, unknown>;
     if (data.theme === "light" || data.theme === "dark") {
       useThemeStore.getState().setTheme(data.theme);
-      return;
     }
   } catch {
-    // config.json doesn't exist yet
+    // No config.json yet — keep whatever localStorage/system gave us via
+    // getInitialTheme(). Do NOT call setTheme here, otherwise the system
+    // preference would overwrite the user's last choice from localStorage.
   }
-
-  const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
-  useThemeStore.getState().setTheme(prefersLight ? "light" : "dark");
 }
 
 async function saveTheme() {
   try {
-    const path = await configPath();
-    let data: Record<string, unknown> = {};
-    try {
-      const content = await readTextFile(path);
-      data = JSON.parse(content) as Record<string, unknown>;
-    } catch {
-      // file doesn't exist yet
-    }
-    data.theme = useThemeStore.getState().theme;
-    await invoke("atomic_write", { path, content: JSON.stringify(data) });
-  } catch {
-    // write failed
+    await queueConfigWrite(async () => {
+      const path = await socadbConfigPath();
+      let data: Record<string, unknown> = {};
+      try {
+        const content = await readTextFile(path);
+        data = JSON.parse(content) as Record<string, unknown>;
+      } catch {
+        // First save: file doesn't exist yet, start from empty object.
+      }
+      data.theme = useThemeStore.getState().theme;
+      await invoke("atomic_write", { path, content: JSON.stringify(data) });
+    });
+  } catch (err) {
+    console.warn("[themePersistence] failed to persist theme:", err);
   }
 }
 

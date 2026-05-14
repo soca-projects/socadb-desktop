@@ -1,27 +1,12 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { homeDir } from "@tauri-apps/api/path";
+import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
 import i18next from "../i18n";
 import { isLanguage } from "../i18n";
 
-let socadbDir: string | null = null;
-
-async function getSocadbDir(): Promise<string> {
-  if (!socadbDir) {
-    const home = await homeDir();
-    socadbDir = `${home}.socadb/`;
-  }
-  return socadbDir;
-}
-
-async function configPath(): Promise<string> {
-  const dir = await getSocadbDir();
-  return `${dir}config.json`;
-}
-
 async function loadLanguage() {
   try {
-    const content = await readTextFile(await configPath());
+    const content = await readTextFile(await socadbConfigPath());
     const data = JSON.parse(content) as Record<string, unknown>;
     if (isLanguage(data.language) && data.language !== i18next.resolvedLanguage) {
       void i18next.changeLanguage(data.language);
@@ -34,18 +19,20 @@ async function loadLanguage() {
 async function saveLanguage(lng: string) {
   localStorage.setItem("socadb_language", lng);
   try {
-    const path = await configPath();
-    let data: Record<string, unknown> = {};
-    try {
-      const content = await readTextFile(path);
-      data = JSON.parse(content) as Record<string, unknown>;
-    } catch {
-      // file doesn't exist yet
-    }
-    data.language = lng;
-    await invoke("atomic_write", { path, content: JSON.stringify(data) });
-  } catch {
-    // write failed
+    await queueConfigWrite(async () => {
+      const path = await socadbConfigPath();
+      let data: Record<string, unknown> = {};
+      try {
+        const content = await readTextFile(path);
+        data = JSON.parse(content) as Record<string, unknown>;
+      } catch {
+        // First save: file doesn't exist yet, start from empty object.
+      }
+      data.language = lng;
+      await invoke("atomic_write", { path, content: JSON.stringify(data) });
+    });
+  } catch (err) {
+    console.warn("[languagePersistence] failed to persist language:", err);
   }
 }
 
