@@ -32,7 +32,7 @@ async function handleSend(cmd: ChatSendCommand) {
     });
 
     const threadOptions = {
-      model: cmd.model ?? "gpt-5.3-codex",
+      model: cmd.model ?? "gpt-5.5",
       skipGitRepoCheck: true,
       webSearchEnabled: true,
       sandboxMode: "danger-full-access" as const,
@@ -145,10 +145,10 @@ async function handleStatus() {
     const codex = new Codex();
     const abortCtrl = new AbortController();
 
-    // Don't pin a model: some models (e.g. gpt-5.2-codex) only work on API-key
-    // accounts, not ChatGPT subscriptions, and the SDK reports an error event
-    // we'd misread as "not logged in". Letting the binary pick its default
-    // gives us a true auth check.
+    // Don't pin a model: some models only work on API-key accounts, not
+    // ChatGPT subscriptions, and the SDK reports an error event we'd misread
+    // as "not logged in". Letting the binary pick its default gives us a
+    // true auth check.
     const thread = codex.startThread({
       skipGitRepoCheck: true,
       modelReasoningEffort: "low",
