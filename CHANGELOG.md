@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.2](https://github.com/soca-projects/socadb-desktop/compare/v0.1.1...v0.1.2) (2026-05-15)
+
+
+### Features
+
+* **chat:** refresh model list to current generation ([90b263a](https://github.com/soca-projects/socadb-desktop/commit/90b263a1043e1a70cd519834cd7afe940bfec323))
+
+
+### Bug Fixes
+
+* **ci:** make release-please target the main branch explicitly ([8c23891](https://github.com/soca-projects/socadb-desktop/commit/8c23891347de2a0028a7b9f4f9df541c7e409e30))
+* **ci:** release-please target=main explicitly ([36bec9a](https://github.com/soca-projects/socadb-desktop/commit/36bec9a2f848ae0f4712d08b1a4413af85e383f8))
+* **deps:** bump @openai/codex-sdk to 0.130.0 + refresh model list ([c7a7785](https://github.com/soca-projects/socadb-desktop/commit/c7a778506d1e890bd85a491d661969183f4d09bf))
+* **deps:** bump @openai/codex-sdk to 0.130.0 to restore Codex on macOS ([3fcd77f](https://github.com/soca-projects/socadb-desktop/commit/3fcd77f642ea13121b1654b7f8fdac8ed1a0bb66))
+* persist user config files reliably across platforms ([6628302](https://github.com/soca-projects/socadb-desktop/commit/662830249fcb467be15ac4ae41519d2f2fad47bd))
+* persist user config files reliably across platforms ([f4c77fa](https://github.com/soca-projects/socadb-desktop/commit/f4c77faa07892b6ebfd35d8379d7e4e05e772a7f))
+* **windows:** runtime blockers — terminals, shortcuts, toolbar path ([2f688f3](https://github.com/soca-projects/socadb-desktop/commit/2f688f3ee6847f5281eaeefcdaa0eab940d836cb))
+* **windows:** split filename on both / and \\ separators in toolbar ([90f6168](https://github.com/soca-projects/socadb-desktop/commit/90f616897641c452837f89fa857c8fa50fba59ae))
+* **windows:** suppress console flash from bun.exe and taskkill subprocesses ([ea6bea1](https://github.com/soca-projects/socadb-desktop/commit/ea6bea11f7d51da2d0283a164ddb50305336dff2))
+* **windows:** wire menu accelerators via setAsWindowMenu and native conventions ([6564bfc](https://github.com/soca-projects/socadb-desktop/commit/6564bfc4bfc5420fb4149b7ef3d66ac1ddd83568))
+
 ## [0.1.1] - 2026-05-04
 
 The first release that actually works on every advertised platform. v0.1.0
