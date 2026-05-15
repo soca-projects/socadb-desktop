@@ -10,64 +10,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  release:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            args: --target aarch64-apple-darwin
-            bunTarget: darwin-arm64
-          - platform: macos-latest
-            args: --target x86_64-apple-darwin
-            bunTarget: darwin-x64
-          - platform: ubuntu-22.04
-            args: '--verbose'
-            bunTarget: linux-x64
-          - platform: windows-latest
-            args: ''
-            bunTarget: windows-x64
-
-    runs-on: ${{ matrix.platform }}
+  prepare:
+    name: Prepare release notes
+    runs-on: ubuntu-22.04
     permissions:
-      contents: write
-
+      contents: read
+    outputs:
+      body: ${{ steps.release_body.outputs.body }}
+      prerelease: ${{ steps.flags.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      # Keep in sync with BUN_VERSION in mcp-server/src/build.ts so the bun
-      # that runs the build matches the bun we bundle into the release.
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.3
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+      # Fail loudly if package.json / mcp-server/package.json / Cargo.toml /
+      # tauri.conf.json drift from the tag. The Tauri bundle names embed the
+      # tauri.conf.json version, so a mismatch produces artifacts whose
+      # filenames don't match the install links we render below.
+      - name: Verify version consistency
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          tag="${GITHUB_REF_NAME}"
+          expected="${tag#v}"
+          base="${expected%-rc.*}"
+          base="${base%-beta.*}"
 
-      # Override Tauri's pinned linuxdeploy-plugin-gtk with our patched version
-      # that tolerates Bun-compiled / static binaries inside the AppDir. Without
-      # this, AppImage bundling crashes because linuxdeploy runs `ldd` on the
-      # bundled @anthropic-ai/claude-agent-sdk-linux-x64/claude binary and
-      # aborts on exit code 1. See scripts/linux/linuxdeploy-plugin-gtk.sh
-      # for the full rationale.
-      - name: Install patched linuxdeploy-plugin-gtk
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          mkdir -p ~/.cache/tauri
-          cp scripts/linux/linuxdeploy-plugin-gtk.sh ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
-          chmod +x ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+          extract_json() {
+            grep -m1 '"version"' "$1" | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
+          }
+          extract_cargo() {
+            grep -m1 '^version[[:space:]]*=' "$1" | sed 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/'
+          }
+
+          check() {
+            file="$1"
+            actual="$2"
+            if [ "$actual" != "$base" ]; then
+              echo "::error file=$file::version is '$actual', expected '$base' (from tag $tag)"
+              return 1
+            fi
+          }
+
+          mismatch=0
+          check package.json "$(extract_json package.json)" || mismatch=1
+          check mcp-server/package.json "$(extract_json mcp-server/package.json)" || mismatch=1
+          check src-tauri/Cargo.toml "$(extract_cargo src-tauri/Cargo.toml)" || mismatch=1
+          check src-tauri/tauri.conf.json "$(extract_json src-tauri/tauri.conf.json)" || mismatch=1
+
+          if [ $mismatch -eq 1 ]; then
+            echo "Version files are out of sync with tag $tag." >&2
+            exit 1
+          fi
+          echo "All 4 version files match $base."
 
       # Build the GitHub release body from CHANGELOG.md so each release ships
       # with hand-curated notes plus a permanent install section. RC and beta
@@ -94,6 +86,17 @@ jobs:
             /^\[.+\]:[[:space:]]/ { if (found) exit }
             found { print }
           ' CHANGELOG.md)
+
+          # Stable tags MUST have a CHANGELOG section — otherwise users get
+          # the generic "Pre-release build of v..." body. RC/beta fall back
+          # silently since they document the parent stable section.
+          if [ -z "$(printf %s "$notes" | tr -d '[:space:]')" ]; then
+            if [[ "$tag" != *-rc* && "$tag" != *-beta* ]]; then
+              echo "::error file=CHANGELOG.md::missing or empty section [$base_version] for stable tag $tag"
+              exit 1
+            fi
+          fi
+
           {
             echo "body<<RELEASEBODY_EOF"
             if [ -n "$(printf %s "$notes" | tr -d '[:space:]')" ]; then
@@ -113,49 +116,74 @@ jobs:
             echo "RELEASEBODY_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - run: bun install --frozen-lockfile
-
-      - name: Install MCP server dependencies
-        run: cd mcp-server && bun install --frozen-lockfile
-
-      - uses: tauri-apps/tauri-action@v0
+      # RC/beta are marked as prereleases so the auto-update channel keeps
+      # pointing at the last stable tag.
+      - name: Compute prerelease flag
+        id: flags
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPIMAGE_EXTRACT_AND_RUN: '1'
-          NO_STRIP: 'true'
-          BUN_TARGET: ${{ matrix.bunTarget }}
-          # Bundler-level debug logging on Ubuntu only, so the underlying
-          # linuxdeploy/appimagetool stderr surfaces in CI when the AppImage
-          # step fails. Tauri propagates this through tracing; the env var
-          # alone wouldn't reach linuxdeploy because Tauri invokes it with a
-          # fixed argv.
-          RUST_LOG: ${{ matrix.platform == 'ubuntu-22.04' && 'tauri_bundler=debug,tauri_cli=debug' || '' }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'SocaDB ${{ github.ref_name }}'
-          releaseBody: ${{ steps.release_body.outputs.body }}
-          # Tags like v1.2.3-rc.1 / v1.2.3-beta.2 ship as drafts/prereleases so
-          # the auto-update channel keeps pointing at the last stable tag.
-          releaseDraft: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
-          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
-          args: ${{ matrix.args }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF_NAME" == *-rc* || "$REF_NAME" == *-beta* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Upload AppImage debug artifacts on failure
-        if: failure() && matrix.platform == 'ubuntu-22.04'
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-bundle-debug-${{ github.ref_name }}
-          # Restrict to the partial AppImage tree and any tool logs. Exclude
-          # signed updater outputs and the public release manifest so a
-          # rogue verbose log can't ride along.
-          path: |
-            src-tauri/target/release/bundle/appimage/
-            src-tauri/target/release/bundle/deb/
-            **/linuxdeploy*.log
-            **/appimagetool*.log
-            !**/*.sig
-            !**/latest.json
-          if-no-files-found: ignore
-          retention-days: 7
+  # Purges the leftover draft if the previous run on this tag was retried,
+  # so tauri-action doesn't mix new assets with stale ones.
+  cleanup-stale-draft:
+    needs: prepare
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Delete stale draft, refuse to overwrite published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          state=$(gh release view "$REF_NAME" --json isDraft --jq '.isDraft' --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo MISSING)
+          case "$state" in
+            MISSING)
+              echo "No existing release for $REF_NAME, proceeding."
+              ;;
+            true)
+              echo "Deleting stale draft for $REF_NAME"
+              gh release delete "$REF_NAME" --yes --cleanup-tag=false --repo "$GITHUB_REPOSITORY"
+              ;;
+            false)
+              echo "::error::Release $REF_NAME already exists and is published. Refusing to re-release."
+              echo "Delete the existing release manually if this is intentional, then re-push the tag."
+              exit 1
+              ;;
+            *)
+              echo "::error::Unexpected gh release view output: '$state'"
+              exit 1
+              ;;
+          esac
+
+  release:
+    needs: [prepare, cleanup-stale-draft]
+    uses: ./.github/workflows/build.yml
+    with:
+      publish: true
+      tag-name: ${{ github.ref_name }}
+      release-body: ${{ needs.prepare.outputs.body }}
+      prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
+    secrets: inherit
+
+  # All matrix legs publish to draft; this job flips the release to public
+  # only after every leg has succeeded. RC/beta stay as draft permanently.
+  promote:
+    needs: release
+    if: ${{ !contains(github.ref_name, '-rc') && !contains(github.ref_name, '-beta') }}
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Promote draft to public release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: gh release edit "$REF_NAME" --draft=false --repo "$GITHUB_REPOSITORY"

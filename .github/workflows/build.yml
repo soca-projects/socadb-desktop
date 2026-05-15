@@ -1,0 +1,160 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        description: 'Publish artifacts to a GitHub release'
+        type: boolean
+        default: false
+      tag-name:
+        description: 'Tag name to publish under (only used when publish=true)'
+        type: string
+        default: ''
+      release-body:
+        description: 'GitHub release body (only used when publish=true)'
+        type: string
+        default: ''
+      prerelease:
+        description: 'Mark the release as a pre-release'
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            bunTarget: darwin-arm64
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            bunTarget: darwin-x64
+          - platform: ubuntu-22.04
+            args: '--verbose'
+            bunTarget: linux-x64
+          - platform: windows-latest
+            args: ''
+            bunTarget: windows-x64
+
+    runs-on: ${{ matrix.platform }}
+    permissions:
+      contents: write
+
+    steps:
+      # Actions are pinned by SHA because this workflow runs with
+      # TAURI_SIGNING_PRIVATE_KEY in scope when called from release.yml.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # Keep in sync with BUN_VERSION in mcp-server/src/build.ts so the bun
+      # that runs the build matches the bun we bundle into the release.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.3
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      # Override Tauri's pinned linuxdeploy-plugin-gtk with our patched version
+      # that tolerates Bun-compiled / static binaries inside the AppDir. Without
+      # this, AppImage bundling crashes because linuxdeploy runs `ldd` on the
+      # bundled @anthropic-ai/claude-agent-sdk-linux-x64/claude binary and
+      # aborts on exit code 1. See scripts/linux/linuxdeploy-plugin-gtk.sh
+      # for the full rationale.
+      - name: Install patched linuxdeploy-plugin-gtk
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          mkdir -p ~/.cache/tauri
+          cp scripts/linux/linuxdeploy-plugin-gtk.sh ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+          chmod +x ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install MCP server dependencies
+        run: cd mcp-server && bun install --frozen-lockfile
+
+      # Override createUpdaterArtifacts so tauri-build doesn't require
+      # TAURI_SIGNING_PRIVATE_KEY in PR runs. Bundling is still validated;
+      # only the signed updater manifest is skipped.
+      - name: Build (no publish)
+        if: ${{ !inputs.publish }}
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          NO_STRIP: 'true'
+          BUN_TARGET: ${{ matrix.bunTarget }}
+          RUST_LOG: ${{ matrix.platform == 'ubuntu-22.04' && 'tauri_bundler=debug,tauri_cli=debug' || '' }}
+        with:
+          args: ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: Upload build artifacts (no publish)
+        if: ${{ !inputs.publish }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bundle-${{ matrix.bunTarget }}
+          path: |
+            src-tauri/target/**/release/bundle/**/*.dmg
+            src-tauri/target/**/release/bundle/**/*.deb
+            src-tauri/target/**/release/bundle/**/*.AppImage
+            src-tauri/target/**/release/bundle/**/*.msi
+            src-tauri/target/**/release/bundle/**/*-setup.exe
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Build and publish
+        if: ${{ inputs.publish }}
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          NO_STRIP: 'true'
+          BUN_TARGET: ${{ matrix.bunTarget }}
+          # Bundler-level debug logging on Ubuntu only, so the underlying
+          # linuxdeploy/appimagetool stderr surfaces in CI when the AppImage
+          # step fails. Tauri propagates this through tracing; the env var
+          # alone wouldn't reach linuxdeploy because Tauri invokes it with a
+          # fixed argv.
+          RUST_LOG: ${{ matrix.platform == 'ubuntu-22.04' && 'tauri_bundler=debug,tauri_cli=debug' || '' }}
+        with:
+          tagName: ${{ inputs.tag-name }}
+          releaseName: 'SocaDB ${{ inputs.tag-name }}'
+          releaseBody: ${{ inputs.release-body }}
+          # Promoted to non-draft by release.yml's promote job after all legs
+          # succeed, so users never see a partial release.
+          releaseDraft: true
+          prerelease: ${{ inputs.prerelease }}
+          args: ${{ matrix.args }}
+
+      - name: Upload AppImage debug artifacts on failure
+        if: failure() && matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-bundle-debug-${{ inputs.tag-name || github.run_id }}
+          # Restrict to the partial AppImage tree and any tool logs. Exclude
+          # signed updater outputs and the public release manifest so a
+          # rogue verbose log can't ride along.
+          path: |
+            src-tauri/target/release/bundle/appimage/
+            src-tauri/target/release/bundle/deb/
+            **/linuxdeploy*.log
+            **/appimagetool*.log
+            !**/*.sig
+            !**/latest.json
+          if-no-files-found: ignore
+          retention-days: 7

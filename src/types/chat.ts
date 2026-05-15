@@ -36,8 +36,8 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     name: "Anthropic",
     models: [
       {
-        id: "claude-opus-4-6",
-        displayName: "Claude Opus 4.6",
+        id: "claude-opus-4-7",
+        displayName: "Claude Opus 4.7",
         description: "Most capable",
       },
       {
@@ -60,9 +60,9 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     id: "codex",
     name: "OpenAI",
     models: [
-      { id: "gpt-5.3-codex", displayName: "GPT 5.3 Codex", description: "Best" },
-      { id: "gpt-5.4", displayName: "GPT 5.4", description: "Latest" },
-      { id: "gpt-5.2-codex", displayName: "GPT 5.2 Codex", description: "Fast" },
+      { id: "gpt-5.5", displayName: "GPT 5.5", description: "Most capable" },
+      { id: "gpt-5.4", displayName: "GPT 5.4", description: "Fast, balanced" },
+      { id: "gpt-5.4-mini", displayName: "GPT 5.4 Mini", description: "Fastest" },
     ],
     apiKeyPlaceholder: "sk-proj-...",
     apiKeyMinLength: 20,

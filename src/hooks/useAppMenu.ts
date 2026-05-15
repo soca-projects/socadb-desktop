@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { emit, listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSchemaStore } from "../stores/schemaStore";
 import {
   saveCurrentSchema,
@@ -67,6 +68,16 @@ function handleOpenRecent(filePath: string) {
   void openRecentFile(filePath);
 }
 
+function handleQuit() {
+  // Closing the window triggers WindowEvent::Destroyed which runs the agent +
+  // port-file cleanup on the Rust side. exit() from plugin-process would skip
+  // that cleanup and orphan bun.exe subprocesses on Windows. In-memory schema
+  // edits are preserved by sessionPersistence (localStorage), so there is no
+  // need to gate this behind an unsaved-changes prompt — same behavior as
+  // clicking the window's close button.
+  void getCurrentWindow().close();
+}
+
 async function buildRecentSubmenu(): Promise<Submenu> {
   const t = i18next.t.bind(i18next);
   const recentFiles = getRecentFiles();
@@ -114,14 +125,20 @@ async function buildRecentSubmenu(): Promise<Submenu> {
 
 let recentLoaded = false;
 
-async function setupMenu() {
-  if (!recentLoaded) {
-    await loadRecentFiles();
-    recentLoaded = true;
-  }
-  const t = i18next.t.bind(i18next);
+// macOS has a global app menu bar; Windows/Linux only have per-window menus.
+// We use IS_MAC both to skip the macOS-only "SocaDB" submenu (Hide/HideOthers/
+// ShowAll/Quit are PredefinedMenuItem variants that only render on macOS) and
+// to pick the right attach method (setAsAppMenu vs setAsWindowMenu) — on
+// non-macOS, setAsAppMenu is a no-op so accelerators silently never register.
+// IS_LINUX is used to skip predefined items muda flags as "Linux: Unsupported"
+// (CloseWindow, Hide) — they would render as dead entries otherwise.
+const PLATFORM = navigator.platform.toLowerCase();
+const IS_MAC = PLATFORM.includes("mac");
+const IS_LINUX = PLATFORM.includes("linux");
 
-  const appSubmenu = await Submenu.new({
+async function buildAppSubmenu(): Promise<Submenu> {
+  const t = i18next.t.bind(i18next);
+  return Submenu.new({
     text: "SocaDB",
     items: [
       await MenuItem.new({
@@ -139,6 +156,16 @@ async function setupMenu() {
       await PredefinedMenuItem.new({ item: "Quit", text: t("menu.quitSocaDB") }),
     ],
   });
+}
+
+async function setupMenu() {
+  if (!recentLoaded) {
+    await loadRecentFiles();
+    recentLoaded = true;
+  }
+  const t = i18next.t.bind(i18next);
+
+  const appSubmenu = IS_MAC ? await buildAppSubmenu() : null;
 
   const fileSubmenu = await Submenu.new({
     text: t("menu.file"),
@@ -185,6 +212,23 @@ async function setupMenu() {
         accelerator: "CmdOrCtrl+E",
         action: () => void emit("open-export"),
       }),
+      // On macOS, Quit lives in the dedicated app submenu and the system
+      // wires Cmd+Q automatically. On Windows/Linux the convention is to put
+      // it at the bottom of File, and muda's PredefinedMenuItem.Quit doesn't
+      // bind a standard accelerator outside macOS — so we build a regular
+      // MenuItem with an explicit accelerator. The action routes through
+      // handleQuit so unsaved changes prompt the same modal as open/new.
+      ...(IS_MAC
+        ? []
+        : [
+            await PredefinedMenuItem.new({ item: "Separator" }),
+            await MenuItem.new({
+              id: "exit",
+              text: t("menu.exit"),
+              accelerator: "CmdOrCtrl+Q",
+              action: () => handleQuit(),
+            }),
+          ]),
     ],
   });
 
@@ -232,8 +276,14 @@ async function setupMenu() {
         accelerator: "CmdOrCtrl+Shift+T",
         action: () => useThemeStore.getState().toggleTheme(),
       }),
-      await PredefinedMenuItem.new({ item: "Separator" }),
-      await PredefinedMenuItem.new({ item: "Fullscreen" }),
+      // Fullscreen predefined item is macOS-only per muda — on Windows/Linux
+      // it would render a dead menu entry.
+      ...(IS_MAC
+        ? [
+            await PredefinedMenuItem.new({ item: "Separator" }),
+            await PredefinedMenuItem.new({ item: "Fullscreen" }),
+          ]
+        : []),
     ],
   });
 
@@ -241,15 +291,22 @@ async function setupMenu() {
     text: t("menu.window"),
     items: [
       await PredefinedMenuItem.new({ item: "Minimize" }),
-      await PredefinedMenuItem.new({ item: "CloseWindow" }),
+      // CloseWindow is "Linux: Unsupported" per muda — skip on Linux to
+      // avoid a dead menu entry.
+      ...(IS_LINUX ? [] : [await PredefinedMenuItem.new({ item: "CloseWindow" })]),
     ],
   });
 
-  const menu = await Menu.new({
-    items: [appSubmenu, fileSubmenu, editSubmenu, viewSubmenu, windowSubmenu],
-  });
+  const items = appSubmenu
+    ? [appSubmenu, fileSubmenu, editSubmenu, viewSubmenu, windowSubmenu]
+    : [fileSubmenu, editSubmenu, viewSubmenu, windowSubmenu];
+  const menu = await Menu.new({ items });
 
-  await menu.setAsAppMenu();
+  if (IS_MAC) {
+    await menu.setAsAppMenu();
+  } else {
+    await menu.setAsWindowMenu();
+  }
 }
 
 export function useAppMenu() {

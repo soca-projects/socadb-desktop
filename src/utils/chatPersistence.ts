@@ -1,6 +1,7 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { homeDir } from "@tauri-apps/api/path";
+import { join } from "@tauri-apps/api/path";
+import { getSocadbDir, queueConfigWrite, socadbConfigPath } from "./socadbDir";
 import { useChatStore } from "../stores/chatStore";
 import { detectProvider } from "./providerDetection";
 import { setApiKey as setApiKeyOnAgent } from "./chatCommands";
@@ -18,24 +19,8 @@ interface ConfigFile {
   apiKey?: string;
 }
 
-let socadbDir: string | null = null;
-
-async function getSocadbDir(): Promise<string> {
-  if (!socadbDir) {
-    const home = await homeDir();
-    socadbDir = `${home}.socadb/`;
-  }
-  return socadbDir;
-}
-
 async function conversationsPath(): Promise<string> {
-  const dir = await getSocadbDir();
-  return `${dir}conversations.json`;
-}
-
-async function configPath(): Promise<string> {
-  const dir = await getSocadbDir();
-  return `${dir}config.json`;
+  return await join(await getSocadbDir(), "conversations.json");
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -48,8 +33,8 @@ async function writeConversationsToDisk() {
       path: await conversationsPath(),
       content: JSON.stringify(data),
     });
-  } catch {
-    // Write failed — silently ignore
+  } catch (err) {
+    console.warn("[chatPersistence] failed to persist conversations:", err);
   }
 }
 
@@ -91,7 +76,7 @@ async function loadConversations() {
 
 async function loadConfigFile(): Promise<ConfigFile | null> {
   try {
-    const content = await readTextFile(await configPath());
+    const content = await readTextFile(await socadbConfigPath());
     return JSON.parse(content) as ConfigFile;
   } catch {
     return null;
@@ -118,19 +103,36 @@ function migrateConfig(config: ConfigFile): ConfigFile {
   return config;
 }
 
-async function saveConfig(config: ConfigFile) {
+// Internal: writes config.json with the provided providers/apiKeys, preserving
+// any sibling keys (theme, language) that other modules persist to the same
+// file. MUST be called inside queueConfigWrite() — it is unsafe to invoke from
+// outside the serialized chain because the read-modify-write window would
+// otherwise race with theme/language saves.
+async function writeConfigToDisk(config: ConfigFile) {
+  const path = await socadbConfigPath();
+  let existing: Record<string, unknown> = {};
   try {
-    const clean: ConfigFile = {
-      providers: config.providers,
-      ...(config.apiKeys ? { apiKeys: config.apiKeys } : {}),
-    };
-    await invoke("atomic_write", {
-      path: await configPath(),
-      content: JSON.stringify(clean),
-    });
+    const content = await readTextFile(path);
+    existing = JSON.parse(content) as Record<string, unknown>;
   } catch {
-    // Write failed — silently ignore
+    // No config.json yet — start from empty object.
   }
+
+  if (config.providers) {
+    existing.providers = config.providers;
+  } else {
+    delete existing.providers;
+  }
+  if (config.apiKeys) {
+    existing.apiKeys = config.apiKeys;
+  } else {
+    delete existing.apiKeys;
+  }
+  // Drop legacy v0 singular fields so old configs are cleaned up on next write.
+  delete existing.provider;
+  delete existing.apiKey;
+
+  await invoke("atomic_write", { path, content: JSON.stringify(existing) });
 }
 
 async function migrateApiKeysToKeyring(config: ConfigFile) {
@@ -143,18 +145,29 @@ async function migrateApiKeysToKeyring(config: ConfigFile) {
       remaining[id] = key;
     }
   }
-  config.apiKeys = Object.keys(remaining).length > 0 ? remaining : undefined;
-  await saveConfig(config);
+  try {
+    await queueConfigWrite(async () => {
+      // Re-read inside the lock so concurrent writes can't be silently lost.
+      const current = await loadConfigFile();
+      const next = current ? migrateConfig(current) : {};
+      next.apiKeys = Object.keys(remaining).length > 0 ? remaining : undefined;
+      await writeConfigToDisk(next);
+    });
+  } catch (err) {
+    console.warn("[chatPersistence] failed to finish apiKey migration:", err);
+  }
 }
 
 export async function saveProviderConfig(id: ProviderId, provider: Provider) {
   try {
-    const existing = await loadConfigFile();
-    const config = existing ? migrateConfig(existing) : {};
-    const providers = { ...(config.providers ?? {}), [id]: provider };
-    await saveConfig({ ...config, providers });
-  } catch {
-    // Write failed — silently ignore
+    await queueConfigWrite(async () => {
+      const existing = await loadConfigFile();
+      const config = existing ? migrateConfig(existing) : {};
+      const providers = { ...(config.providers ?? {}), [id]: provider };
+      await writeConfigToDisk({ ...config, providers });
+    });
+  } catch (err) {
+    console.warn("[chatPersistence] failed to persist provider config:", err);
   }
 }
 
@@ -169,10 +182,12 @@ export async function saveApiKey(id: ProviderId, apiKey: string): Promise<boolea
     return true;
   } catch {
     try {
-      const existing = await loadConfigFile();
-      const config = existing ? migrateConfig(existing) : {};
-      config.apiKeys = { ...(config.apiKeys ?? {}), [id]: apiKey };
-      await saveConfig(config);
+      await queueConfigWrite(async () => {
+        const existing = await loadConfigFile();
+        const config = existing ? migrateConfig(existing) : {};
+        config.apiKeys = { ...(config.apiKeys ?? {}), [id]: apiKey };
+        await writeConfigToDisk(config);
+      });
       return true;
     } catch {
       return false;
@@ -189,15 +204,16 @@ export async function clearApiKey(id: ProviderId): Promise<boolean> {
   }
   let configOk = true;
   try {
-    const existing = await loadConfigFile();
-    if (existing?.apiKeys?.[id]) {
+    await queueConfigWrite(async () => {
+      const existing = await loadConfigFile();
+      if (!existing?.apiKeys?.[id]) return;
       const config = migrateConfig(existing);
       const apiKeys = Object.fromEntries(
         Object.entries(config.apiKeys ?? {}).filter(([k]) => k !== id),
       );
       config.apiKeys = Object.keys(apiKeys).length > 0 ? apiKeys : undefined;
-      await saveConfig(config);
-    }
+      await writeConfigToDisk(config);
+    });
   } catch {
     configOk = false;
   }
