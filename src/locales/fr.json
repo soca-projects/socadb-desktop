@@ -191,7 +191,8 @@
     "window": "Fenêtre",
     "about": "À propos de SocaDB",
     "hideSocaDB": "Masquer SocaDB",
-    "quitSocaDB": "Quitter SocaDB"
+    "quitSocaDB": "Quitter SocaDB",
+    "exit": "Quitter"
   },
   "chatError": {
     "generic": "Erreur : {{message}}",

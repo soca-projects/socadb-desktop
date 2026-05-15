@@ -191,7 +191,8 @@
     "window": "Window",
     "about": "About SocaDB",
     "hideSocaDB": "Hide SocaDB",
-    "quitSocaDB": "Quit SocaDB"
+    "quitSocaDB": "Quit SocaDB",
+    "exit": "Exit"
   },
   "chatError": {
     "generic": "Error: {{message}}",

@@ -20,7 +20,10 @@ interface ToolbarProps {
 
 function getFileName(filePath: string | null, fallback: string): string {
   if (!filePath) return fallback;
-  const name = filePath.split("/").pop() ?? filePath;
+  // Split on both separators so Windows paths (C:\Users\…) work as well as
+  // POSIX paths. Some callers also build mixed-separator paths via string
+  // concatenation, so the regex covers both forms in any combination.
+  const name = filePath.split(/[/\\]/).pop() ?? filePath;
   return name.replace(/\.soca$/, "");
 }
 

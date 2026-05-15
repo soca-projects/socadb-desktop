@@ -7,6 +7,16 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
 
+// CREATE_NO_WINDOW flag for Windows CreateProcess. Without this, every
+// bun.exe / taskkill.exe subprocess flashes a console window because they
+// are console applications and Tauri's main process is a GUI app — Windows
+// allocates a fresh console whenever a console subprocess is spawned from
+// a GUI parent. The flag suppresses the allocation entirely.
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 struct AgentProcess {
     stdin: tokio::process::ChildStdin,
     pid: Option<u32>,
@@ -39,6 +49,7 @@ fn kill_process(pid: u32) {
     {
         let _ = std::process::Command::new("taskkill")
             .args(["/PID", &pid.to_string(), "/F"])
+            .creation_flags(CREATE_NO_WINDOW)
             .output();
     }
 }
@@ -145,6 +156,9 @@ async fn spawn_agent(
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
+
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
 
     if let Some(key) = api_key {
         cmd.env(api_key_env_var(provider_id), key);
