@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.3](https://github.com/soca-projects/socadb-desktop/compare/v0.1.2...v0.1.3) (2026-05-15)
+
+
+### Bug Fixes
+
+* **ci:** grant contents:write on release job so it can call build.yml ([368f941](https://github.com/soca-projects/socadb-desktop/commit/368f941f7a7dd57d6e3a8a2df8a0769adc890d09))
+* **ci:** grant contents:write on release job so it can call build.yml ([22d74c2](https://github.com/soca-projects/socadb-desktop/commit/22d74c2a9c1be0310fae842daa4b43530b4b8488))
+
 ## [0.1.2](https://github.com/soca-projects/socadb-desktop/compare/v0.1.1...v0.1.2) (2026-05-15)
 
 
