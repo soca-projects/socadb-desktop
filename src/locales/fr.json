@@ -228,10 +228,14 @@
     "soca": "Schéma SocaDB"
   },
   "updater": {
-    "title": "Mise à jour disponible",
-    "description": "Une nouvelle version de SocaDB est disponible ({{version}}). Voulez-vous l'installer maintenant ?",
-    "install": "Installer et redémarrer",
-    "later": "Plus tard"
+    "title": "SocaDB {{version}} est prêt",
+    "restartNow": "Redémarrer et installer",
+    "installOnQuit": "Installer à la fermeture",
+    "installing": "Installation...",
+    "installingTitle": "Installation en cours",
+    "installingHint": "Ne fermez pas SocaDB. Cela peut prendre jusqu'à 30 secondes.",
+    "releaseNotes": "notes de version",
+    "failed": "Échec de l'installation : {{error}}"
   },
   "recent": {
     "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé."

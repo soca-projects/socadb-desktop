@@ -20,6 +20,9 @@ function getInitialState(): { modal: ModalState; restored: boolean } {
     const { setSchema, setFilePath } = useSchemaStore.getState();
     setSchema(parsed.data);
     setFilePath(session.filePath ?? null);
+    if (typeof session.savedAt === "string" || session.savedAt === null) {
+      useSchemaStore.setState({ savedAt: session.savedAt });
+    }
     return { modal: null, restored: true };
   } catch {
     localStorage.removeItem(LAST_SESSION_KEY);
