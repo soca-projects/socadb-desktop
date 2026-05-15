@@ -10,15 +10,15 @@ import type { Provider } from "./chat";
 
 describe("getProviderFromModel", () => {
   it("returns claude for claude models", () => {
-    expect(getProviderFromModel("claude-opus-4-6")).toBe("claude");
+    expect(getProviderFromModel("claude-opus-4-7")).toBe("claude");
     expect(getProviderFromModel("claude-sonnet-4-6")).toBe("claude");
     expect(getProviderFromModel("claude-haiku-4-5")).toBe("claude");
   });
 
   it("returns codex for gpt models", () => {
-    expect(getProviderFromModel("gpt-5.3-codex")).toBe("codex");
+    expect(getProviderFromModel("gpt-5.5")).toBe("codex");
     expect(getProviderFromModel("gpt-5.4")).toBe("codex");
-    expect(getProviderFromModel("gpt-5.2-codex")).toBe("codex");
+    expect(getProviderFromModel("gpt-5.4-mini")).toBe("codex");
   });
 
   it("defaults to claude for unknown models", () => {
@@ -95,8 +95,8 @@ describe("getAvailableModels", () => {
     expect(models.length).toBe(
       PROVIDERS.claude.models.length + PROVIDERS.codex.models.length,
     );
-    expect(models[0].id).toBe("claude-opus-4-6");
-    expect(models[models.length - 1].id).toBe("gpt-5.2-codex");
+    expect(models[0].id).toBe("claude-opus-4-7");
+    expect(models[models.length - 1].id).toBe("gpt-5.4-mini");
   });
 
   it("excludes disconnected providers", () => {
