@@ -165,6 +165,11 @@ jobs:
 
   release:
     needs: [prepare, cleanup-stale-draft]
+    # Required because the called build.yml job requests contents: write
+    # (tauri-action needs it in publish mode). Reusable workflows can't
+    # elevate beyond the caller's permissions, so we have to grant it here.
+    permissions:
+      contents: write
     uses: ./.github/workflows/build.yml
     with:
       publish: true

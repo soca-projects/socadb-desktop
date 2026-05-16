@@ -6,6 +6,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.2] - 2026-05-15
+
+Windows actually works now. v0.1.1 published Windows binaries, but several
+runtime bugs made the app unusable in practice — every spawned subprocess
+flashed a console window, the menu shortcuts were dead, and the title bar
+showed a broken file path. This release fixes those, ships a redesigned
+app icon and installer, refreshes the AI model list to the current
+generation, and restores Codex on macOS after Apple rotated their
+developer certificates.
+
+### Fixed
+
+- **Windows runtime blockers**. Three issues that prevented Windows from
+  being usable. Spawning the bundled Bun runtime or running `taskkill`
+  flashed a console window for a frame on every call; the menu bar
+  accelerators (`Ctrl+S`, `Ctrl+O`, undo / redo, etc.) were silently
+  ignored because the native menu wasn't bound as the window's menu; and
+  the toolbar's "current file" indicator only split paths on `/`, so on
+  Windows you saw the full `C:\\Users\\...\\schema.soca` instead of just
+  `schema.soca`.
+- **Cross-platform config persistence**. Earlier builds wrote user config
+  files to a malformed path (`${home}.socadb/` instead of `~/.socadb/`),
+  so theme, language, API keys, and chat conversations didn't survive
+  app restarts on certain setups. Persistence is now reliable on macOS,
+  Windows, and Linux, and config writes are serialized to avoid races
+  when multiple subsystems save at once.
+- **Codex restored on macOS**. OpenAI rotated the developer certificates
+  signing their Codex CLI on May 9, 2026 following a supply-chain
+  incident in the npm ecosystem. v0.1.1's bundled SDK was still signed
+  with the old certificate, which macOS XProtect started quarantining
+  on launch. Bumping `@openai/codex-sdk` to 0.130.0 picks up the
+  re-signed binary and Codex works again.
+
+### Changed
+
+- **AI models refreshed**. The chat picker now lists three current-
+  generation models per provider: Claude Opus 4.7, Sonnet 4.6, Haiku
+  4.5 from Anthropic; GPT 5.5, GPT 5.4, GPT 5.4 Mini from OpenAI. The
+  old Claude 3 / GPT 4 family names are gone — they no longer match
+  what the underlying CLI tools default to.
+- **New app icon and Windows installer branding**. Replaced the
+  placeholder icons with the redesigned SocaDB mark (rose + warm black
+  on a soft beige rounded square). The Windows NSIS installer now uses
+  the new icon for the `.exe`, the installer header, and the Start Menu
+  shortcut, instead of the generic Tauri orange rainbow.
+
 ## [0.1.1] - 2026-05-04
 
 The first release that actually works on every advertised platform. v0.1.0
@@ -89,6 +135,6 @@ replaced by 0.1.1.
   with shortcuts, undo / redo with 50-step history, light / dark theme,
   and English / French interface.
 
-[Unreleased]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.1...HEAD
+[0.1.2]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/soca-projects/socadb-desktop/releases/tag/v0.1.0
