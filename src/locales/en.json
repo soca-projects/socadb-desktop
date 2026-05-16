@@ -227,6 +227,14 @@
     "json": "JSON File",
     "soca": "SocaDB Schema"
   },
+  "effort": {
+    "label": "Reasoning effort",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "xhigh": "Very high",
+    "max": "Max"
+  },
   "updater": {
     "title": "SocaDB {{version}} is ready",
     "restartNow": "Restart & install",

@@ -1,22 +1,26 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ChatStatusResult, ProviderId } from "../types/chat";
+import type { ChatStatusResult, EffortLevel, ProviderId } from "../types/chat";
 import { DEFAULT_MODEL } from "../types/chat";
 import { registerStatusResolver, removeStatusResolver } from "./chatEventHandler";
 import i18next from "../i18n";
 
-export function sendChatMessage(
-  message: string,
-  systemPrompt: string,
-  providerId: ProviderId,
-  sessionId?: string,
-  model?: string,
-): Promise<void> {
+export interface SendChatMessageInput {
+  message: string;
+  systemPrompt: string;
+  providerId: ProviderId;
+  sessionId?: string;
+  model?: string;
+  effort?: EffortLevel;
+}
+
+export function sendChatMessage(input: SendChatMessageInput): Promise<void> {
   return invoke("chat_send", {
-    providerId,
-    message,
-    systemPrompt,
-    sessionId: sessionId ?? null,
-    model: model ?? DEFAULT_MODEL,
+    providerId: input.providerId,
+    message: input.message,
+    systemPrompt: input.systemPrompt,
+    sessionId: input.sessionId ?? null,
+    model: input.model ?? DEFAULT_MODEL,
+    effort: input.effort ?? null,
   }) as Promise<void>;
 }
 

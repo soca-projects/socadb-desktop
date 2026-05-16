@@ -4,12 +4,36 @@ import { fileURLToPath } from "url";
 import { existsSync } from "fs";
 import { platform, arch } from "os";
 
+// Mirror of EffortLevel in src/types/chat.ts. Kept in sync manually because
+// mcp-server cannot import from the frontend tree. A test in
+// src/types/chat.test.ts enforces parity at build time.
+export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
+
+export type ClaudeEffort = "low" | "medium" | "high" | "xhigh" | "max";
+export type CodexEffort = "low" | "medium" | "high" | "xhigh";
+
+export const CLAUDE_EFFORTS: readonly ClaudeEffort[] = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+];
+
+export const CODEX_EFFORTS: readonly CodexEffort[] = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+];
+
 export interface ChatSendCommand {
   type: "chat_send";
   message: string;
   systemPrompt: string;
   sessionId?: string;
   model?: string;
+  effort?: EffortLevel;
 }
 
 export interface ChatStopCommand {

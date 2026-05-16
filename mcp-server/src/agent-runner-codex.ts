@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import {
+  CODEX_EFFORTS,
   emit,
   getMcpBinaryPath,
   getModuleDir,
   startRunner,
   type ChatSendCommand,
+  type CodexEffort,
 } from "./agent-runner-shared.ts";
 
 const __dirname = getModuleDir(import.meta.url);
@@ -17,6 +19,10 @@ async function handleSend(cmd: ChatSendCommand) {
 
   try {
     const { Codex } = await import("@openai/codex-sdk");
+    const effort: CodexEffort =
+      cmd.effort && CODEX_EFFORTS.includes(cmd.effort as CodexEffort)
+        ? (cmd.effort as CodexEffort)
+        : "medium";
 
     const codex = new Codex({
       config: {
@@ -37,7 +43,7 @@ async function handleSend(cmd: ChatSendCommand) {
       webSearchEnabled: true,
       sandboxMode: "danger-full-access" as const,
       approvalPolicy: "never" as const,
-      modelReasoningEffort: "low" as const,
+      modelReasoningEffort: effort,
     };
 
     const thread = cmd.sessionId
