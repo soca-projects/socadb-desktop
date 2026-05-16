@@ -100,6 +100,57 @@ export function getAvailableModels(
 
 export const DEFAULT_MODEL = "claude-sonnet-4-6";
 
+export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
+
+// Per-model effort support, sourced from official docs:
+//   https://platform.claude.com/docs/en/docs/build-with-claude/effort
+//   https://developers.openai.com/api/docs/guides/reasoning
+// Empty list = the model does not accept the effort parameter at all.
+export const EFFORT_LEVELS_BY_MODEL: Record<string, readonly EffortLevel[]> = {
+  "claude-opus-4-7": ["low", "medium", "high", "xhigh", "max"],
+  "claude-sonnet-4-6": ["low", "medium", "high", "max"],
+  "claude-haiku-4-5": [],
+  "gpt-5.5": ["low", "medium", "high", "xhigh"],
+  "gpt-5.4": ["low", "medium", "high", "xhigh"],
+  "gpt-5.4-mini": ["low", "medium", "high"],
+};
+
+export const EFFORT_LEVELS_BY_PROVIDER: Record<ProviderId, EffortLevel[]> = {
+  claude: ["low", "medium", "high", "xhigh", "max"],
+  codex: ["low", "medium", "high", "xhigh"],
+};
+
+export const DEFAULT_EFFORT_BY_PROVIDER: Record<ProviderId, EffortLevel> = {
+  claude: "medium",
+  codex: "medium",
+};
+
+export function getEffortLevelsForModel(modelId: string): readonly EffortLevel[] {
+  return EFFORT_LEVELS_BY_MODEL[modelId] ?? [];
+}
+
+export function modelSupportsEffort(modelId: string): boolean {
+  return getEffortLevelsForModel(modelId).length > 0;
+}
+
+export interface ResolvedEffort {
+  displayed: EffortLevel;
+  toSend: EffortLevel | undefined;
+}
+
+export function resolveEffort(
+  modelId: string,
+  storedEffort: EffortLevel,
+  providerId: ProviderId,
+): ResolvedEffort {
+  const supported = getEffortLevelsForModel(modelId);
+  const displayed = supported.includes(storedEffort)
+    ? storedEffort
+    : DEFAULT_EFFORT_BY_PROVIDER[providerId];
+  const toSend = supported.length > 0 ? displayed : undefined;
+  return { displayed, toSend };
+}
+
 export interface ToolCallInfo {
   id: string;
   name: string;
