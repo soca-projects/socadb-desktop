@@ -46,7 +46,7 @@ jobs:
     steps:
       # Actions are pinned by SHA because this workflow runs with
       # TAURI_SIGNING_PRIVATE_KEY in scope when called from release.yml.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       # Keep in sync with BUN_VERSION in mcp-server/src/build.ts so the bun
       # that runs the build matches the bun we bundle into the release.
