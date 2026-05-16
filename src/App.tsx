@@ -8,6 +8,8 @@ import { NewSchemaModal } from "./components/NewSchemaModal/NewSchemaModal";
 import { UnsavedChangesModal } from "./components/UnsavedChangesModal/UnsavedChangesModal";
 import { useAppMenu } from "./hooks/useAppMenu";
 import { useAutoUpdate } from "./hooks/useAutoUpdate";
+import { useInstallOnQuit } from "./hooks/useInstallOnQuit";
+import { useUpdateReadyToast } from "./hooks/useUpdateReadyToast";
 import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useChatStream } from "./hooks/useChatStream";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
@@ -17,15 +19,19 @@ import { initSessionPersistence } from "./utils/sessionPersistence";
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
+import { initUpdaterPersistence } from "./utils/updaterPersistence";
 
 initSessionPersistence();
 initChatPersistence();
 initThemePersistence();
 initLanguagePersistence();
+initUpdaterPersistence();
 
 function App() {
   useAppMenu();
   useAutoUpdate();
+  useInstallOnQuit();
+  useUpdateReadyToast();
   useMcpBridge();
   useChatStream();
 

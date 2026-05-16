@@ -1,48 +1,57 @@
 import { useEffect, useRef } from "react";
 import { check } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
-import { ask } from "@tauri-apps/plugin-dialog";
-import i18next from "../i18n";
-import { useSchemaStore } from "../stores/schemaStore";
-import { saveCurrentSchema } from "../utils/fileOperations";
+import { useUpdateStore } from "../stores/updateStore";
+import { toMessage } from "../utils/errorMessage";
 
-async function showUpdateDialog(version: string): Promise<boolean> {
-  const t = i18next.t;
-  return ask(t("updater.description", { version }), {
-    title: t("updater.title"),
-    okLabel: t("updater.install"),
-    cancelLabel: t("updater.later"),
-    kind: "info",
-  });
+const POLL_INTERVAL_MS = 30 * 60 * 1000;
+
+async function runCheckAndDownload() {
+  const store = useUpdateStore.getState();
+  if (store.status !== "idle" && store.status !== "error") return;
+
+  store.setStatus("checking");
+  try {
+    const update = await check();
+    if (!update) {
+      store.setStatus("idle");
+      return;
+    }
+
+    store.setUpdateAvailable(update);
+
+    let downloaded = 0;
+    let total: number | null = null;
+    await update.download((event) => {
+      if (event.event === "Started") {
+        total = event.data.contentLength ?? null;
+        useUpdateStore.getState().setProgress(0, total);
+      } else if (event.event === "Progress") {
+        downloaded += event.data.chunkLength;
+        useUpdateStore.getState().setProgress(downloaded, total);
+      }
+    });
+
+    useUpdateStore.getState().setStatus("ready");
+  } catch (error) {
+    const message = toMessage(error);
+    console.error("[updater] check/download failed:", message);
+    useUpdateStore.getState().setError(message);
+  }
 }
 
 export function useAutoUpdate() {
-  const didCheck = useRef(false);
+  const didStart = useRef(false);
 
   useEffect(() => {
-    if (didCheck.current) return;
-    didCheck.current = true;
+    if (didStart.current) return;
+    didStart.current = true;
 
-    async function checkForUpdate() {
-      try {
-        const update = await check();
-        if (!update) return;
+    void runCheckAndDownload();
 
-        const yes = await showUpdateDialog(update.version);
-        if (!yes) return;
+    const interval = setInterval(() => {
+      void runCheckAndDownload();
+    }, POLL_INTERVAL_MS);
 
-        const { schema, savedAt } = useSchemaStore.getState();
-        if (savedAt !== schema.updatedAt) {
-          await saveCurrentSchema();
-        }
-
-        await update.downloadAndInstall();
-        await relaunch();
-      } catch {
-        // Silent fail — updater not configured or no network
-      }
-    }
-
-    void checkForUpdate();
+    return () => clearInterval(interval);
   }, []);
 }
