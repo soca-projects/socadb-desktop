@@ -1,3 +1,5 @@
+import { IS_WINDOWS } from "../utils/platform";
+
 export type ProviderId = "claude" | "codex";
 
 export type ConnectionMethod = "subscription" | "api-key";
@@ -51,7 +53,13 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     apiKeyMinLength: 20,
     consoleUrl: "https://console.anthropic.com/settings/keys",
     cliName: "Claude Code",
-    installCommand: "curl -fsSL https://claude.ai/install.sh | bash",
+    // PowerShell on native Windows (most common shell on Win11), bash on
+    // macOS/Linux/WSL. The CMD variant from the docs is omitted to avoid
+    // overloading the modal; PowerShell users dominate and CMD users can
+    // copy from claude.ai/install if needed.
+    installCommand: IS_WINDOWS
+      ? "irm https://claude.ai/install.ps1 | iex"
+      : "curl -fsSL https://claude.ai/install.sh | bash",
     startCommand: "claude",
     loginCommand: "claude /login",
     logoutCommand: "claude /logout",
