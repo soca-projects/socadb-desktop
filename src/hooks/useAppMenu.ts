@@ -1,82 +1,11 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/menu";
-import { emit, listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useSchemaStore } from "../stores/schemaStore";
-import {
-  saveCurrentSchema,
-  saveSchemaFileAs,
-  openAndApplySchema,
-  openRecentFile,
-} from "../utils/fileOperations";
-import { handleUndo, handleRedo } from "../utils/schemaActions";
-import {
-  addRecentFile,
-  getRecentFiles,
-  clearRecentFiles,
-  loadRecentFiles,
-} from "../utils/recentFiles";
-import { useThemeStore } from "../stores/themeStore";
-import { toast } from "sonner";
+import { listen } from "@tauri-apps/api/event";
+import { getRecentFiles, clearRecentFiles, loadRecentFiles } from "../utils/recentFiles";
+import { handleOpenRecent, MENU_SHORTCUTS } from "../utils/menuActions";
+import { IS_MAC, IS_LINUX } from "../utils/platform";
 import i18next from "../i18n";
-
-function handleSave() {
-  void saveCurrentSchema();
-}
-
-async function handleSaveAs() {
-  try {
-    const { schema, setFilePath, markSaved } = useSchemaStore.getState();
-    const path = await saveSchemaFileAs(schema);
-    if (path) {
-      setFilePath(path);
-      markSaved();
-      addRecentFile(path);
-    }
-  } catch (e) {
-    toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
-  }
-}
-
-function isDirty() {
-  const { schema, savedAt } = useSchemaStore.getState();
-  return savedAt !== schema.updatedAt;
-}
-
-function handleOpen() {
-  if (isDirty()) {
-    void emit("unsaved-guard-open");
-    return;
-  }
-  void openAndApplySchema();
-}
-
-function handleNew() {
-  if (isDirty()) {
-    void emit("unsaved-guard-new");
-    return;
-  }
-  void emit("new-schema-requested");
-}
-
-function handleOpenRecent(filePath: string) {
-  if (isDirty()) {
-    void emit("unsaved-guard-open-recent", filePath);
-    return;
-  }
-  void openRecentFile(filePath);
-}
-
-function handleQuit() {
-  // Closing the window triggers WindowEvent::Destroyed which runs the agent +
-  // port-file cleanup on the Rust side. exit() from plugin-process would skip
-  // that cleanup and orphan bun.exe subprocesses on Windows. In-memory schema
-  // edits are preserved by sessionPersistence (localStorage), so there is no
-  // need to gate this behind an unsaved-changes prompt — same behavior as
-  // clicking the window's close button.
-  void getCurrentWindow().close();
-}
 
 async function buildRecentSubmenu(): Promise<Submenu> {
   const t = i18next.t.bind(i18next);
@@ -125,16 +54,10 @@ async function buildRecentSubmenu(): Promise<Submenu> {
 
 let recentLoaded = false;
 
-// macOS has a global app menu bar; Windows/Linux only have per-window menus.
-// We use IS_MAC both to skip the macOS-only "SocaDB" submenu (Hide/HideOthers/
-// ShowAll/Quit are PredefinedMenuItem variants that only render on macOS) and
-// to pick the right attach method (setAsAppMenu vs setAsWindowMenu) — on
-// non-macOS, setAsAppMenu is a no-op so accelerators silently never register.
-// IS_LINUX is used to skip predefined items muda flags as "Linux: Unsupported"
-// (CloseWindow, Hide) — they would render as dead entries otherwise.
-const PLATFORM = navigator.platform.toLowerCase();
-const IS_MAC = PLATFORM.includes("mac");
-const IS_LINUX = PLATFORM.includes("linux");
+// IS_MAC drives both the macOS-only "SocaDB" submenu (Hide/HideOthers/ShowAll/
+// Quit are PredefinedMenuItem variants that only render on macOS) and the
+// attach method (setAsAppMenu vs setAsWindowMenu). IS_LINUX skips predefined
+// items muda flags as "Linux: Unsupported" (CloseWindow, Hide).
 
 async function buildAppSubmenu(): Promise<Submenu> {
   const t = i18next.t.bind(i18next);
@@ -173,15 +96,15 @@ async function setupMenu() {
       await MenuItem.new({
         id: "new",
         text: t("menu.newSchema"),
-        accelerator: "CmdOrCtrl+N",
-        action: () => handleNew(),
+        accelerator: MENU_SHORTCUTS.newSchema.accelerator,
+        action: () => void MENU_SHORTCUTS.newSchema.run(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "open",
         text: t("menu.open"),
-        accelerator: "CmdOrCtrl+O",
-        action: () => void handleOpen(),
+        accelerator: MENU_SHORTCUTS.open.accelerator,
+        action: () => void MENU_SHORTCUTS.open.run(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await buildRecentSubmenu(),
@@ -189,28 +112,28 @@ async function setupMenu() {
       await MenuItem.new({
         id: "save",
         text: t("menu.save"),
-        accelerator: "CmdOrCtrl+S",
-        action: () => void handleSave(),
+        accelerator: MENU_SHORTCUTS.save.accelerator,
+        action: () => void MENU_SHORTCUTS.save.run(),
       }),
       await MenuItem.new({
         id: "save_as",
         text: t("menu.saveAs"),
-        accelerator: "CmdOrCtrl+Shift+S",
-        action: () => void handleSaveAs(),
+        accelerator: MENU_SHORTCUTS.saveAs.accelerator,
+        action: () => void MENU_SHORTCUTS.saveAs.run(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "import",
         text: t("menu.import"),
-        accelerator: "CmdOrCtrl+I",
-        action: () => void emit("open-import"),
+        accelerator: MENU_SHORTCUTS.import.accelerator,
+        action: () => void MENU_SHORTCUTS.import.run(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "export",
         text: t("menu.export"),
-        accelerator: "CmdOrCtrl+E",
-        action: () => void emit("open-export"),
+        accelerator: MENU_SHORTCUTS.export.accelerator,
+        action: () => void MENU_SHORTCUTS.export.run(),
       }),
       // On macOS, Quit lives in the dedicated app submenu and the system
       // wires Cmd+Q automatically. On Windows/Linux the convention is to put
@@ -225,8 +148,8 @@ async function setupMenu() {
             await MenuItem.new({
               id: "exit",
               text: t("menu.exit"),
-              accelerator: "CmdOrCtrl+Q",
-              action: () => handleQuit(),
+              accelerator: MENU_SHORTCUTS.quit.accelerator,
+              action: () => void MENU_SHORTCUTS.quit.run(),
             }),
           ]),
     ],
@@ -238,14 +161,14 @@ async function setupMenu() {
       await MenuItem.new({
         id: "undo",
         text: t("menu.undo"),
-        accelerator: "CmdOrCtrl+Z",
-        action: () => handleUndo(),
+        accelerator: MENU_SHORTCUTS.undo.accelerator,
+        action: () => void MENU_SHORTCUTS.undo.run(),
       }),
       await MenuItem.new({
         id: "redo",
         text: t("menu.redo"),
-        accelerator: "CmdOrCtrl+Shift+Z",
-        action: () => handleRedo(),
+        accelerator: MENU_SHORTCUTS.redo.accelerator,
+        action: () => void MENU_SHORTCUTS.redo.run(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Cut" }),
@@ -261,20 +184,20 @@ async function setupMenu() {
       await MenuItem.new({
         id: "toggle_sidebar",
         text: t("menu.toggleSidebar"),
-        accelerator: "CmdOrCtrl+B",
-        action: () => void emit("toggle-sidebar"),
+        accelerator: MENU_SHORTCUTS.toggleSidebar.accelerator,
+        action: () => void MENU_SHORTCUTS.toggleSidebar.run(),
       }),
       await MenuItem.new({
         id: "toggle_focus",
         text: t("menu.focusMode"),
-        accelerator: "CmdOrCtrl+Shift+F",
-        action: () => void emit("toggle-focus-mode"),
+        accelerator: MENU_SHORTCUTS.toggleFocus.accelerator,
+        action: () => void MENU_SHORTCUTS.toggleFocus.run(),
       }),
       await MenuItem.new({
         id: "toggle_theme",
         text: t("menu.toggleTheme"),
-        accelerator: "CmdOrCtrl+Shift+T",
-        action: () => useThemeStore.getState().toggleTheme(),
+        accelerator: MENU_SHORTCUTS.toggleTheme.accelerator,
+        action: () => void MENU_SHORTCUTS.toggleTheme.run(),
       }),
       // Fullscreen predefined item is macOS-only per muda — on Windows/Linux
       // it would render a dead menu entry.

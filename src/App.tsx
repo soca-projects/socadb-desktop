@@ -7,6 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
 import { NewSchemaModal } from "./components/NewSchemaModal/NewSchemaModal";
 import { UnsavedChangesModal } from "./components/UnsavedChangesModal/UnsavedChangesModal";
 import { useAppMenu } from "./hooks/useAppMenu";
+import { useWindowsKeyboardShortcuts } from "./hooks/useWindowsKeyboardShortcuts";
 import { useAutoUpdate } from "./hooks/useAutoUpdate";
 import { useInstallOnQuit } from "./hooks/useInstallOnQuit";
 import { useUpdateReadyToast } from "./hooks/useUpdateReadyToast";
@@ -29,6 +30,7 @@ initUpdaterPersistence();
 
 function App() {
   useAppMenu();
+  useWindowsKeyboardShortcuts();
   useAutoUpdate();
   useInstallOnQuit();
   useUpdateReadyToast();
