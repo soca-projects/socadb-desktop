@@ -3,20 +3,34 @@ import { invoke } from "@tauri-apps/api/core";
 import { join } from "@tauri-apps/api/path";
 import { getSocadbDir, queueConfigWrite, socadbConfigPath } from "./socadbDir";
 import { useChatStore } from "../stores/chatStore";
-import { detectProvider } from "./providerDetection";
-import { setApiKey as setApiKeyOnAgent } from "./chatCommands";
-import type { Conversation, Provider, ProviderId } from "../types/chat";
+import type { Conversation, LoginType, Provider, ProviderId } from "../types/chat";
 import { makeProvider, PROVIDER_IDS } from "../types/chat";
 
-interface ConversationsFile {
-  conversations: Conversation[];
+// On-disk shape stores user preference only. `apiKeyStored` is derived at
+// runtime from a keyring probe — the keyring is the single source of truth
+// for "does this provider have a saved key?".
+interface PersistedProvider {
+  loginType: LoginType;
+}
+
+interface LegacyProvider {
+  id?: string;
+  connected?: boolean;
+  connectionMethod?: string | null;
+  email?: string | null;
+  loginType?: string;
+  apiKeyStored?: boolean;
 }
 
 interface ConfigFile {
-  providers?: Record<string, Provider>;
+  providers?: Record<string, unknown>;
   apiKeys?: Record<string, string>;
-  provider?: Provider | null;
+  provider?: LegacyProvider;
   apiKey?: string;
+}
+
+interface ConversationsFile {
+  conversations: Conversation[];
 }
 
 async function conversationsPath(): Promise<string> {
@@ -83,32 +97,58 @@ async function loadConfigFile(): Promise<ConfigFile | null> {
   }
 }
 
-function migrateConfig(config: ConfigFile): ConfigFile {
-  if (config.provider && !config.providers) {
-    const oldProvider = config.provider;
-    const id =
-      oldProvider.id === ("claude-code" as string) ? "claude" : String(oldProvider.id);
-    const migrated: Provider = {
-      ...oldProvider,
-      id: id as ProviderId,
-    };
-    const result: ConfigFile = {
-      providers: { [id]: migrated },
-    };
-    if (config.apiKey) {
-      result.apiKeys = { [id]: config.apiKey };
-    }
-    return result;
-  }
-  return config;
+function isProviderId(value: string): value is ProviderId {
+  return PROVIDER_IDS.includes(value as ProviderId);
 }
 
-// Internal: writes config.json with the provided providers/apiKeys, preserving
-// any sibling keys (theme, language) that other modules persist to the same
-// file. MUST be called inside queueConfigWrite() — it is unsafe to invoke from
-// outside the serialized chain because the read-modify-write window would
-// otherwise race with theme/language saves.
-async function writeConfigToDisk(config: ConfigFile) {
+function loginTypeFromLegacy(method: string | null | undefined): LoginType {
+  return method === "api-key" ? "api-key" : "subscription";
+}
+
+interface MigratedConfig {
+  providers: Partial<Record<ProviderId, PersistedProvider>>;
+  apiKeys: Record<string, string>;
+}
+
+const emptyMigrated = (): MigratedConfig => ({ providers: {}, apiKeys: {} });
+
+// Folds older formats (v0 singular `provider`, v1 with connected/connectionMethod,
+// v2 with persisted apiKeyStored) into the current shape. apiKeyStored is no
+// longer persisted — we derive it from the keyring on load.
+function migrateConfig(config: ConfigFile): MigratedConfig {
+  const providers: Partial<Record<ProviderId, PersistedProvider>> = {};
+  const apiKeys: Record<string, string> = { ...(config.apiKeys ?? {}) };
+
+  if (config.provider) {
+    const legacyId = (config.provider.id ?? "claude").toString();
+    const id = legacyId === "claude-code" ? "claude" : legacyId;
+    if (isProviderId(id)) {
+      providers[id] = {
+        loginType: loginTypeFromLegacy(config.provider.connectionMethod),
+      };
+      if (config.apiKey) apiKeys[id] = config.apiKey;
+    }
+  }
+
+  for (const [rawId, entry] of Object.entries(config.providers ?? {})) {
+    if (!isProviderId(rawId)) continue;
+    const candidate = entry as LegacyProvider;
+    const loginType: LoginType =
+      candidate.loginType === "api-key" || candidate.loginType === "subscription"
+        ? candidate.loginType
+        : loginTypeFromLegacy(candidate.connectionMethod);
+    providers[rawId] = { loginType };
+  }
+
+  return { providers, apiKeys };
+}
+
+// MUST be called inside queueConfigWrite(). The read-modify-write window would
+// otherwise race with theme/language saves that share this file.
+async function writeConfigToDisk(state: {
+  providers?: Record<string, PersistedProvider>;
+  apiKeys?: Record<string, string>;
+}) {
   const path = await socadbConfigPath();
   let existing: Record<string, unknown> = {};
   try {
@@ -118,13 +158,13 @@ async function writeConfigToDisk(config: ConfigFile) {
     // No config.json yet — start from empty object.
   }
 
-  if (config.providers) {
-    existing.providers = config.providers;
+  if (state.providers) {
+    existing.providers = state.providers;
   } else {
     delete existing.providers;
   }
-  if (config.apiKeys) {
-    existing.apiKeys = config.apiKeys;
+  if (state.apiKeys && Object.keys(state.apiKeys).length > 0) {
+    existing.apiKeys = state.apiKeys;
   } else {
     delete existing.apiKeys;
   }
@@ -135,10 +175,9 @@ async function writeConfigToDisk(config: ConfigFile) {
   await invoke("atomic_write", { path, content: JSON.stringify(existing) });
 }
 
-async function migrateApiKeysToKeyring(config: ConfigFile) {
-  if (!config.apiKeys) return;
+async function migrateApiKeysToKeyring(apiKeys: Record<string, string>) {
   const remaining: Record<string, string> = {};
-  for (const [id, key] of Object.entries(config.apiKeys)) {
+  for (const [id, key] of Object.entries(apiKeys)) {
     try {
       await invoke("keyring_set", { account: id, password: key });
     } catch {
@@ -147,24 +186,27 @@ async function migrateApiKeysToKeyring(config: ConfigFile) {
   }
   try {
     await queueConfigWrite(async () => {
-      // Re-read inside the lock so concurrent writes can't be silently lost.
       const current = await loadConfigFile();
-      const next = current ? migrateConfig(current) : {};
-      next.apiKeys = Object.keys(remaining).length > 0 ? remaining : undefined;
-      await writeConfigToDisk(next);
+      const migrated = current ? migrateConfig(current) : emptyMigrated();
+      migrated.apiKeys = remaining;
+      await writeConfigToDisk(migrated);
     });
   } catch (err) {
     console.warn("[chatPersistence] failed to finish apiKey migration:", err);
   }
 }
 
+function toPersisted(provider: Provider): PersistedProvider {
+  return { loginType: provider.loginType };
+}
+
 export async function saveProviderConfig(id: ProviderId, provider: Provider) {
   try {
     await queueConfigWrite(async () => {
       const existing = await loadConfigFile();
-      const config = existing ? migrateConfig(existing) : {};
-      const providers = { ...(config.providers ?? {}), [id]: provider };
-      await writeConfigToDisk({ ...config, providers });
+      const migrated = existing ? migrateConfig(existing) : emptyMigrated();
+      migrated.providers[id] = toPersisted(provider);
+      await writeConfigToDisk(migrated);
     });
   } catch (err) {
     console.warn("[chatPersistence] failed to persist provider config:", err);
@@ -176,22 +218,57 @@ export function persistProvider(id: ProviderId, provider: Provider) {
   void saveProviderConfig(id, provider);
 }
 
+// Best-effort scrub of any plaintext copy of `id`'s key from config.json.
+// Used after a successful keyring write to drop the fallback once the secure
+// store is available again, and during clearApiKey to fully revoke.
+async function clearPlaintextApiKey(id: ProviderId): Promise<void> {
+  try {
+    await queueConfigWrite(async () => {
+      const existing = await loadConfigFile();
+      if (!existing?.apiKeys?.[id]) return;
+      const migrated = migrateConfig(existing);
+      if (!migrated.apiKeys[id]) return;
+      migrated.apiKeys = Object.fromEntries(
+        Object.entries(migrated.apiKeys).filter(([k]) => k !== id),
+      );
+      await writeConfigToDisk(migrated);
+    });
+  } catch (err) {
+    console.warn("[chatPersistence] failed to clear plaintext apiKey:", err);
+  }
+}
+
+async function writePlaintextApiKey(id: ProviderId, apiKey: string): Promise<boolean> {
+  try {
+    await queueConfigWrite(async () => {
+      const existing = await loadConfigFile();
+      const migrated = existing ? migrateConfig(existing) : emptyMigrated();
+      migrated.apiKeys[id] = apiKey;
+      await writeConfigToDisk(migrated);
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readPlaintextApiKey(id: ProviderId): Promise<string | null> {
+  const existing = await loadConfigFile();
+  return existing?.apiKeys?.[id] ?? null;
+}
+
+// Tries the OS keyring first. On platforms without a working secret service
+// (uncommon Linux setups, locked or disabled backend), falls back to the
+// plaintext `apiKeys` map in ~/.socadb/config.json. The keyring is always
+// preferred — successful keyring writes scrub any plaintext leftover so the
+// two sources can't drift.
 export async function saveApiKey(id: ProviderId, apiKey: string): Promise<boolean> {
   try {
     await invoke("keyring_set", { account: id, password: apiKey });
+    void clearPlaintextApiKey(id);
     return true;
   } catch {
-    try {
-      await queueConfigWrite(async () => {
-        const existing = await loadConfigFile();
-        const config = existing ? migrateConfig(existing) : {};
-        config.apiKeys = { ...(config.apiKeys ?? {}), [id]: apiKey };
-        await writeConfigToDisk(config);
-      });
-      return true;
-    } catch {
-      return false;
-    }
+    return await writePlaintextApiKey(id, apiKey);
   }
 }
 
@@ -202,30 +279,20 @@ export async function clearApiKey(id: ProviderId): Promise<boolean> {
   } catch {
     keyringOk = false;
   }
-  let configOk = true;
-  try {
-    await queueConfigWrite(async () => {
-      const existing = await loadConfigFile();
-      if (!existing?.apiKeys?.[id]) return;
-      const config = migrateConfig(existing);
-      const apiKeys = Object.fromEntries(
-        Object.entries(config.apiKeys ?? {}).filter(([k]) => k !== id),
-      );
-      config.apiKeys = Object.keys(apiKeys).length > 0 ? apiKeys : undefined;
-      await writeConfigToDisk(config);
-    });
-  } catch {
-    configOk = false;
-  }
-  return keyringOk || configOk;
+  await clearPlaintextApiKey(id);
+  // If the keyring delete failed but no plaintext copy existed, treat it as
+  // "nothing to remove" rather than surfacing a confusing error.
+  return keyringOk || (await readPlaintextApiKey(id)) === null;
 }
 
-async function loadApiKeyFromKeyring(id: string): Promise<string | null> {
+export async function isApiKeyStored(id: ProviderId): Promise<boolean> {
   try {
-    return await invoke<string | null>("keyring_get", { account: id });
+    const key = await invoke<string | null>("keyring_get", { account: id });
+    if (key !== null && key.length > 0) return true;
   } catch {
-    return null;
+    // Keyring unavailable — fall through to the plaintext check.
   }
+  return (await readPlaintextApiKey(id)) !== null;
 }
 
 let chatPersistenceInitialized = false;
@@ -235,47 +302,18 @@ export function initChatPersistence() {
   chatPersistenceInitialized = true;
   void loadConversations();
   void loadConfigFile().then(async (raw) => {
-    const config = raw ? migrateConfig(raw) : {};
+    const migrated = raw ? migrateConfig(raw) : emptyMigrated();
 
-    if (config.apiKeys && Object.keys(config.apiKeys).length > 0) {
-      await migrateApiKeysToKeyring(config);
+    // One-time migration: lift any legacy plaintext keys into the keyring.
+    if (Object.keys(migrated.apiKeys).length > 0) {
+      await migrateApiKeysToKeyring(migrated.apiKeys);
     }
 
     for (const id of PROVIDER_IDS) {
-      const key = (await loadApiKeyFromKeyring(id)) ?? config.apiKeys?.[id] ?? null;
-      if (key) {
-        setApiKeyOnAgent(id, key);
-      }
-    }
-
-    if (config.providers) {
-      for (const [id, provider] of Object.entries(config.providers)) {
-        if (provider.connected) {
-          useChatStore.getState().setProvider(id as ProviderId, provider);
-        }
-      }
-    }
-
-    for (const id of PROVIDER_IDS) {
-      const existing = config.providers?.[id];
-      if (!existing?.connected) {
-        try {
-          const result = await detectProvider(id);
-          if (result.authenticated) {
-            persistProvider(
-              id,
-              makeProvider(
-                id,
-                true,
-                result.loginType === "api-key" ? "api-key" : "subscription",
-                result.email,
-              ),
-            );
-          }
-        } catch {
-          // Detection failed — skip
-        }
-      }
+      const persisted = migrated.providers[id];
+      const loginType: LoginType = persisted?.loginType ?? "subscription";
+      const apiKeyStored = await isApiKeyStored(id);
+      useChatStore.getState().setProvider(id, makeProvider(id, loginType, apiKeyStored));
     }
   });
 

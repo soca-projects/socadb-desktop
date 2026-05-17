@@ -1,12 +1,10 @@
 mod chat;
-mod detect;
-mod diagnose;
 mod ws;
 
 use std::process::Command;
 use tauri::Manager;
 
-const KEYRING_SERVICE: &str = "socadb-desktop";
+pub const KEYRING_SERVICE: &str = "socadb-desktop";
 
 #[tauri::command]
 fn keyring_get(account: String) -> Result<Option<String>, String> {
@@ -162,11 +160,7 @@ pub fn run() {
             chat::chat_init,
             chat::chat_send,
             chat::chat_stop,
-            chat::chat_status,
-            chat::chat_set_api_key,
             chat::chat_reset,
-            diagnose::chat_diagnose,
-            detect::fast_detect_provider,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

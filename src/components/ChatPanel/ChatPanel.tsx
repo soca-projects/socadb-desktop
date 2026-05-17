@@ -118,7 +118,6 @@ export function ChatPanel() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const sessionId = useChatStore((s) => s.sessionId);
-  const providers = useChatStore((s) => s.providers);
   const conversations = useChatStore((s) => s.conversations);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const togglePanel = useChatStore((s) => s.togglePanel);
@@ -141,10 +140,12 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const availableModels = getAvailableModels(providers);
-  const isConnected = availableModels.length > 0;
+  const availableModels = getAvailableModels();
   const activeProviderId = getProviderFromModel(selectedModel);
   const storedEffort = useChatStore((s) => s.effortByProvider[activeProviderId]);
+  const activeLoginType = useChatStore(
+    (s) => s.providers[activeProviderId]?.loginType ?? "subscription",
+  );
   const { displayed: displayedEffort, toSend: effortToSend } = resolveEffort(
     selectedModel,
     storedEffort,
@@ -152,10 +153,11 @@ export function ChatPanel() {
   );
 
   useEffect(() => {
-    if (isPanelOpen) {
-      void initChat(activeProviderId);
-    }
-  }, [isPanelOpen, activeProviderId]);
+    // Skip the preheat while a stream is in flight so a loginType change in
+    // Settings doesn't respawn the agent mid-response. The current stream's
+    // env is immutable; the next message picks up the new auth via chat_send.
+    if (isPanelOpen && !isStreaming) initChat(activeProviderId, activeLoginType);
+  }, [isPanelOpen, activeProviderId, activeLoginType, isStreaming]);
 
   const handleSend = useCallback(
     async (content: string) => {
@@ -170,6 +172,7 @@ export function ChatPanel() {
           message: content,
           systemPrompt,
           providerId: activeProviderId,
+          loginType: activeLoginType,
           sessionId: sessionId ?? undefined,
           model: selectedModel,
           effort: effortToSend,
@@ -190,6 +193,7 @@ export function ChatPanel() {
       isStreaming,
       selectedModel,
       activeProviderId,
+      activeLoginType,
       effortToSend,
     ],
   );
@@ -217,9 +221,7 @@ export function ChatPanel() {
           </span>
         </div>
         <div className="flex items-center gap-2 px-3 py-2">
-          <span className="flex-1 text-[13px] text-tertiary">
-            {isConnected ? t("chat.askAi") : t("chat.connectProvider")}
-          </span>
+          <span className="flex-1 text-[13px] text-tertiary">{t("chat.askAi")}</span>
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white opacity-40">
             <PaperPlaneRight size={12} weight="fill" />
           </div>
@@ -310,27 +312,23 @@ export function ChatPanel() {
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            <p className="text-[13px] text-tertiary">
-              {isConnected ? t("chat.whatToBuild") : t("chat.connectInSettings")}
-            </p>
-            {isConnected && (
-              <div className="flex flex-col items-center gap-2">
-                {[
-                  t("chat.suggestion1"),
-                  t("chat.suggestion2"),
-                  t("chat.suggestion3"),
-                  t("chat.suggestion4"),
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => handleSend(suggestion)}
-                    className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
+            <p className="text-[13px] text-tertiary">{t("chat.whatToBuild")}</p>
+            <div className="flex flex-col items-center gap-2">
+              {[
+                t("chat.suggestion1"),
+                t("chat.suggestion2"),
+                t("chat.suggestion3"),
+                t("chat.suggestion4"),
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => handleSend(suggestion)}
+                  className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -345,7 +343,7 @@ export function ChatPanel() {
       <ChatInput
         onSend={handleSend}
         onStop={handleStop}
-        disabled={!isConnected}
+        disabled={false}
         isStreaming={isStreaming}
       />
     </div>

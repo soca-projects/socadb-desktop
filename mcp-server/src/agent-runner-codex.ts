@@ -145,75 +145,7 @@ function handleStop() {
   }
 }
 
-async function handleStatus() {
-  try {
-    const { Codex } = await import("@openai/codex-sdk");
-    const codex = new Codex();
-    const abortCtrl = new AbortController();
-
-    // Don't pin a model: some models only work on API-key accounts, not
-    // ChatGPT subscriptions, and the SDK reports an error event we'd misread
-    // as "not logged in". Letting the binary pick its default gives us a
-    // true auth check.
-    const thread = codex.startThread({
-      skipGitRepoCheck: true,
-      modelReasoningEffort: "low",
-    });
-
-    const { events } = await thread.runStreamed("what is 2+2?", {
-      signal: abortCtrl.signal,
-    });
-
-    for await (const event of events) {
-      if (event.type === "error") {
-        // Log the real error so it surfaces in stderr / chat_diagnose instead
-        // of silently being reported as "not logged in".
-        console.error("[codex-status] error event:", event.message);
-        abortCtrl.abort();
-        emit({
-          type: "chat_status_result",
-          providerId: "codex",
-          loggedIn: false,
-          email: null,
-          loginType: null,
-        });
-        return;
-      }
-      if (event.type === "item.completed") {
-        abortCtrl.abort();
-        emit({
-          type: "chat_status_result",
-          providerId: "codex",
-          loggedIn: true,
-          email: null,
-          loginType: "subscription",
-        });
-        return;
-      }
-    }
-
-    emit({
-      type: "chat_status_result",
-      providerId: "codex",
-      loggedIn: false,
-      email: null,
-      loginType: null,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[codex-status] caught:", message);
-    emit({
-      type: "chat_status_result",
-      providerId: "codex",
-      loggedIn: false,
-      email: null,
-      loginType: null,
-    });
-  }
-}
-
 startRunner({
   handleSend,
   handleStop,
-  handleStatus,
 });

@@ -11,8 +11,13 @@ import {
   DEFAULT_EFFORT_BY_PROVIDER,
   EFFORT_LEVELS_BY_PROVIDER,
   PROVIDER_IDS,
+  makeProvider,
 } from "../types/chat";
 import { genId } from "../utils/id";
+
+function defaultProviders(): Record<string, Provider> {
+  return Object.fromEntries(PROVIDER_IDS.map((id) => [id, makeProvider(id)]));
+}
 
 const EFFORT_STORAGE_PREFIX = "socadb-effort-";
 
@@ -106,7 +111,7 @@ export const useChatStore = create<ChatState>()((set) => ({
   sessionId: null,
   isStreaming: false,
   isPanelOpen: false,
-  providers: {},
+  providers: defaultProviders(),
   effortByProvider: loadEffortByProvider(),
 
   newConversation: () =>
