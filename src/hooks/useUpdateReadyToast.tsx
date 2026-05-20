@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { useUpdateStore } from "../stores/updateStore";
 import { UpdateReadyToast } from "../components/UpdateReadyToast/UpdateReadyToast";
+import { IS_MAC } from "../utils/platform";
 
 const TOAST_ID = "update-ready";
 
@@ -11,6 +12,11 @@ export function useUpdateReadyToast() {
   const pendingUpdateVersion = useUpdateStore((s) => s.pendingUpdateVersion);
 
   useEffect(() => {
+    // macOS routes updates through Sparkle, which shows its own native
+    // "Ready to install" dialog. Suppress our toast there to avoid a double
+    // prompt.
+    if (IS_MAC) return;
+
     const alreadyConsented = update !== null && pendingUpdateVersion === update.version;
     const installInFlight = status === "installing";
     const promptForConsent = status === "ready" && !alreadyConsented;
@@ -20,7 +26,7 @@ export function useUpdateReadyToast() {
         id: TOAST_ID,
         duration: Infinity,
         dismissible: false,
-        position: "bottom-right",
+        position: "bottom-center",
         unstyled: true,
       });
     } else {

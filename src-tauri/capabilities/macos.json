@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/macOS-schema.json",
+  "identifier": "macos-sparkle",
+  "description": "macOS-only permissions for Sparkle updater plugin",
+  "platforms": ["macOS"],
+  "windows": ["main"],
+  "permissions": ["sparkle-updater:default"]
+}

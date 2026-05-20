@@ -8,5 +8,7 @@
     <string>JFF5bCjXSk4cwk7i3tHOHwaCp1yMercU7osKZ9x8LEc=</string>
     <key>SUEnableAutomaticChecks</key>
     <true/>
+    <key>SUAutomaticallyUpdate</key>
+    <true/>
 </dict>
 </plist>
