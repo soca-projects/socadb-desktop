@@ -24,7 +24,15 @@ export function useInstallOnNextLaunch() {
     if (IS_MAC) return;
 
     const window = getCurrentWindow();
+    // pendingUpdateVersion stays set until install() settles, so a second close
+    // click would otherwise start a concurrent install. Bounded by the timeout.
+    let installing = false;
     const unlistenPromise = window.onCloseRequested(async (event) => {
+      if (installing) {
+        event.preventDefault();
+        return;
+      }
+
       const {
         update,
         pendingUpdateVersion,
@@ -36,6 +44,7 @@ export function useInstallOnNextLaunch() {
       if (!update || pendingUpdateVersion !== update.version) return;
 
       event.preventDefault();
+      installing = true;
       setStatus("installing");
       try {
         await Promise.race([
@@ -67,6 +76,8 @@ export function useInstallOnNextLaunch() {
         // The error path leaves status="error", so the next close click is
         // not preventDefaulted and the user gets out — no need to call
         // window.destroy() ourselves.
+      } finally {
+        installing = false;
       }
     });
 
