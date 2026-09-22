@@ -77,8 +77,9 @@ PUB_DATE="$(date -u '+%a, %d %b %Y %H:%M:%S +0000')"
 
 # Enclosure URLs follow tauri-action's per-arch naming convention observed
 # on past releases (SocaDB_aarch64.app.tar.gz / SocaDB_x64.app.tar.gz). If
-# this convention ever drifts, the appcast points at 404s and Sparkle goes
-# silent — the bash assertion below at least surfaces it in CI logs.
+# this convention ever drifts, the appcast job's `gh release download` finds
+# no matching asset and fails the release before an appcast pointing at 404s
+# can be published.
 ARM64_URL="https://github.com/soca-projects/socadb-desktop/releases/download/${TAG}/SocaDB_aarch64.app.tar.gz"
 X64_URL="https://github.com/soca-projects/socadb-desktop/releases/download/${TAG}/SocaDB_x64.app.tar.gz"
 
