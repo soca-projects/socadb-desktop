@@ -178,16 +178,8 @@ jobs:
       prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
     secrets: inherit
 
-  # Generates the Sparkle appcast.xml from the two macOS .app.tar.gz files
-  # produced by the release job, signs them with the EdDSA private key, and
-  # uploads the result to the draft release. Without this asset, Sparkle on
-  # users' machines hits a 404 at releases/latest/download/appcast.xml and
-  # no macOS update is ever offered.
-  #
-  # RC/beta run it too, so the signing and upload steps are exercised on a
-  # draft before a stable release depends on them. Their appcast is never
-  # served: the SUFeedURL uses /releases/latest/, which skips drafts and
-  # prereleases.
+  # Sparkle's feed. RC/beta run it too so signing is exercised on a draft;
+  # their appcast is never served, /releases/latest/ skips prereleases.
   appcast:
     needs: release
     runs-on: macos-latest
@@ -196,11 +188,8 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      # Fail fast before touching the release. The secret is the 32-byte seed
-      # exported by generate_keys -x, which always base64-encodes to 44 chars.
-      # sign_update rejects anything else with a confusing message, and a
-      # missing secret would otherwise surface as a bare "failed to parse
-      # sign_update output" halfway through the job.
+      # The seed exported by `generate_keys -x` is always 44 base64 chars;
+      # sign_update rejects anything else with a misleading message.
       - name: Check SPARKLE_PRIVATE_EDDSA_KEY
         env:
           SPARKLE_PRIVATE_EDDSA_KEY: ${{ secrets.SPARKLE_PRIVATE_EDDSA_KEY }}

@@ -69,10 +69,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      # Sparkle.framework is bundled into the .app via bundle.macOS.frameworks
-      # in tauri.conf.json. Without it, cargo build fails because the
-      # tauri-plugin-sparkle-updater build.rs links against the framework.
-      # Needed for both publish and PR check builds.
+      # The Sparkle plugin's build.rs links against it, so cargo fails without it.
       - name: Download Sparkle.framework
         if: matrix.platform == 'macos-latest'
         run: ./scripts/macos/download-sparkle.sh

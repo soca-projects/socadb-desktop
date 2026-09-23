@@ -15,10 +15,6 @@ interface UpdateState {
   total: number | null;
   error: string | null;
   update: Update | null;
-  // In-memory only. Set when the user opts in to "Install on Next Launch" from
-  // the UpdateReadyToast. Read by useInstallOnNextLaunch (Win/Linux only) to
-  // trigger update.install() on window close. Lost on app crash — that's fine,
-  // re-check on next launch finds the same update again.
   pendingUpdateVersion: string | null;
   setStatus: (status: UpdateStatus) => void;
   setUpdateAvailable: (update: Update) => void;

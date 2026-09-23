@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Generate Sparkle appcast.xml for a SocaDB release. Signs each macOS
-# .app.tar.gz with the EdDSA private key piped on stdin (no on-disk key
-# material) and emits a 2-item appcast — one per arch — tagged with
-# <sparkle:channel> so each running binary only picks up its own update.
+# Signs both macOS .app.tar.gz with the EdDSA key read from stdin and prints
+# an appcast with one item per architecture, tagged with <sparkle:channel>.
 #
 # usage:
 #   echo "$EDDSA_PRIVATE_KEY" | generate-appcast.sh \
@@ -39,17 +37,14 @@ for f in "${ARM64_ARTIFACT}" "${X64_ARTIFACT}"; do
   fi
 done
 
-# Buffer the key from stdin once — sign_update is called twice (one per
-# artifact) and we don't want to ask the caller to pipe it twice.
+# stdin can only be read once, and sign_update runs once per artifact.
 KEY="$(cat)"
 if [ -z "${KEY}" ]; then
   echo "ERROR: EdDSA private key not supplied on stdin" >&2
   exit 1
 fi
 
-# sign_update prints something like:
-#   sparkle:edSignature="abc..." length="1234567"
-# Parse both attributes back out so we can interpolate them into our XML.
+# sign_update prints: sparkle:edSignature="abc..." length="1234567"
 sign_artifact() {
   local artifact="$1"
   local output
@@ -72,14 +67,10 @@ ARM64_LEN="${arm64_meta#*|}"
 X64_SIG="${x64_meta%|*}"
 X64_LEN="${x64_meta#*|}"
 
-# RFC 822 date (Sparkle is permissive but expects something parseable).
 PUB_DATE="$(date -u '+%a, %d %b %Y %H:%M:%S +0000')"
 
-# Enclosure URLs follow tauri-action's per-arch naming convention observed
-# on past releases (SocaDB_aarch64.app.tar.gz / SocaDB_x64.app.tar.gz). If
-# this convention ever drifts, the appcast job's `gh release download` finds
-# no matching asset and fails the release before an appcast pointing at 404s
-# can be published.
+# tauri-action's asset names. If they drift, the appcast job's
+# `gh release download` fails before a broken appcast is published.
 ARM64_URL="https://github.com/soca-projects/socadb-desktop/releases/download/${TAG}/SocaDB_aarch64.app.tar.gz"
 X64_URL="https://github.com/soca-projects/socadb-desktop/releases/download/${TAG}/SocaDB_x64.app.tar.gz"
 

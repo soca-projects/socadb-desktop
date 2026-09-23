@@ -7,19 +7,13 @@ import { IS_MAC } from "../utils/platform";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 
-// macOS delegates the full update lifecycle (check, download, install, relaunch)
-// to Sparkle via the sparkle-updater plugin. Sparkle runs its install in a
-// detached XPC sidecar so the app can close cleanly mid-install — which
-// tauri-plugin-updater cannot do without rewriting its macOS install path.
 async function sparkleBackgroundCheck() {
   try {
     await checkForUpdatesInBackground();
   } catch (error) {
     const message = toMessage(error);
-    // Plugin returns UpdaterNotReady during `tauri dev` because Sparkle
-    // requires a real .app bundle. Only that specific case is expected to
-    // fail silently — anything else (bad SUFeedURL, bad SUPublicEDKey,
-    // network, plugin bug) should surface so we don't fly blind in prod.
+    // Only `tauri dev` may fail silently (no .app bundle); anything else is a
+    // real misconfiguration and must surface.
     if (import.meta.env.DEV && message.includes("UpdaterNotReady")) return;
     console.error("[updater] sparkle background check failed:", message);
   }
@@ -67,9 +61,7 @@ export function useAutoUpdate() {
     didStart.current = true;
 
     if (IS_MAC) {
-      // Sparkle schedules its own checks via SUEnableAutomaticChecks in Info.plist.
-      // One kick at startup makes a check happen immediately rather than waiting
-      // for the next scheduled interval.
+      // Sparkle schedules later checks itself.
       void sparkleBackgroundCheck();
       return;
     }

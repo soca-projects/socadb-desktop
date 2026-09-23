@@ -12,9 +12,7 @@ export function useUpdateReadyToast() {
   const pendingUpdateVersion = useUpdateStore((s) => s.pendingUpdateVersion);
 
   useEffect(() => {
-    // macOS routes updates through Sparkle, which shows its own native
-    // "Ready to install" dialog. Suppress our toast there to avoid a double
-    // prompt.
+    // Sparkle shows its own update UI on macOS.
     if (IS_MAC) return;
 
     const alreadyConsented = update !== null && pendingUpdateVersion === update.version;

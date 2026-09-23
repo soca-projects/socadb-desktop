@@ -143,11 +143,9 @@ fn open_terminal() {
     }
 }
 
-// The appcast ships one item per architecture, tagged with <sparkle:channel>.
-// Sparkle only learns which channels to accept from its delegate (there is no
-// Info.plist key for it), and with none set it drops every tagged item, so no
-// update would ever be offered. This must run in setup: Sparkle defers its
-// first scheduled check by one runloop cycle, so it cannot fire before this.
+// Every appcast item is tagged with a channel, and Sparkle only reads allowed
+// channels from its delegate (no Info.plist key). Must run in setup, before
+// Sparkle's first check.
 #[cfg(target_os = "macos")]
 fn set_sparkle_channel(app: &tauri::App) {
     use tauri_plugin_sparkle_updater::SparkleUpdaterExt;
@@ -157,7 +155,6 @@ fn set_sparkle_channel(app: &tauri::App) {
     } else {
         "x64"
     };
-    // No updater outside a real .app bundle (tauri dev).
     if let Some(updater) = app.sparkle_updater() {
         if let Err(e) = updater.set_allowed_channels(Some(vec![channel.to_string()])) {
             eprintln!("Failed to set Sparkle update channel: {e}");
@@ -173,8 +170,6 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init());
 
-    // macOS uses Sparkle for updates (sidecar-based install, no close blocking).
-    // Other platforms stay on tauri-plugin-updater registered above.
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_plugin_sparkle_updater::init());
 
