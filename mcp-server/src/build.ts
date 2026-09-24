@@ -233,6 +233,14 @@ async function fetchBunSha256(releaseTag: string, version: string): Promise<stri
   throw new Error(`SHA-256 for ${filename} not found in SHASUMS256.txt`);
 }
 
+function installedVersion(pkgDir: string): string | undefined {
+  try {
+    return JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf-8")).version;
+  } catch {
+    return undefined;
+  }
+}
+
 async function ensurePlatformPackage(opts: {
   destPath: string;
   npmName: string;
@@ -241,8 +249,14 @@ async function ensurePlatformPackage(opts: {
 }) {
   const dst = join(srcModules, opts.destPath);
   // Stricter reuse check: validate the actual payload, not just package.json
-  // (a Ctrl+C mid-extraction could leave a half-extracted tree on disk).
-  if (existsSync(join(dst, opts.expectedFile))) return;
+  // (a Ctrl+C mid-extraction could leave a half-extracted tree on disk). The
+  // version check matters too: bumping the SDK must not keep a stale variant.
+  if (
+    existsSync(join(dst, opts.expectedFile)) &&
+    installedVersion(dst) === opts.npmVersion
+  ) {
+    return;
+  }
 
   console.log(`  fetch (cross-arch): ${opts.npmName}@${opts.npmVersion} → ${opts.destPath}`);
   const cacheDir = join(tmpdir(), "socadb-pkg-cache");
