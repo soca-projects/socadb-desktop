@@ -9,7 +9,7 @@ import { UnsavedChangesModal } from "./components/UnsavedChangesModal/UnsavedCha
 import { useAppMenu } from "./hooks/useAppMenu";
 import { useWindowsKeyboardShortcuts } from "./hooks/useWindowsKeyboardShortcuts";
 import { useAutoUpdate } from "./hooks/useAutoUpdate";
-import { useInstallOnQuit } from "./hooks/useInstallOnQuit";
+import { useInstallOnNextLaunch } from "./hooks/useInstallOnNextLaunch";
 import { useUpdateReadyToast } from "./hooks/useUpdateReadyToast";
 import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useChatStream } from "./hooks/useChatStream";
@@ -20,19 +20,17 @@ import { initSessionPersistence } from "./utils/sessionPersistence";
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
-import { initUpdaterPersistence } from "./utils/updaterPersistence";
 
 initSessionPersistence();
 initChatPersistence();
 initThemePersistence();
 initLanguagePersistence();
-initUpdaterPersistence();
 
 function App() {
   useAppMenu();
   useWindowsKeyboardShortcuts();
   useAutoUpdate();
-  useInstallOnQuit();
+  useInstallOnNextLaunch();
   useUpdateReadyToast();
   useMcpBridge();
   useChatStream();

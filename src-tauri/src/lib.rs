@@ -143,13 +143,37 @@ fn open_terminal() {
     }
 }
 
+// Every appcast item is tagged with a channel, and Sparkle only reads allowed
+// channels from its delegate (no Info.plist key). Must run in setup, before
+// Sparkle's first check.
+#[cfg(target_os = "macos")]
+fn set_sparkle_channel(app: &tauri::App) {
+    use tauri_plugin_sparkle_updater::SparkleUpdaterExt;
+
+    let channel = if cfg!(target_arch = "aarch64") {
+        "arm64"
+    } else {
+        "x64"
+    };
+    if let Some(updater) = app.sparkle_updater() {
+        if let Err(e) = updater.set_allowed_channels(Some(vec![channel.to_string()])) {
+            eprintln!("Failed to set Sparkle update channel: {e}");
+        }
+    }
+}
+
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_process::init());
+
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_plugin_sparkle_updater::init());
+
+    builder
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             read_schema_file,
@@ -169,6 +193,9 @@ pub fn run() {
             detect::fast_detect_provider,
         ])
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            set_sparkle_channel(app);
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 match ws::start_ws_server(handle).await {

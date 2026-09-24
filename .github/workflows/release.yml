@@ -178,10 +178,74 @@ jobs:
       prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
     secrets: inherit
 
-  # All matrix legs publish to draft; this job flips the release to public
-  # only after every leg has succeeded. RC/beta stay as draft permanently.
-  promote:
+  # Sparkle's feed. RC/beta run it too so signing is exercised on a draft;
+  # their appcast is never served, /releases/latest/ skips prereleases.
+  appcast:
     needs: release
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # The seed exported by `generate_keys -x` is always 44 base64 chars;
+      # sign_update rejects anything else with a misleading message.
+      - name: Check SPARKLE_PRIVATE_EDDSA_KEY
+        env:
+          SPARKLE_PRIVATE_EDDSA_KEY: ${{ secrets.SPARKLE_PRIVATE_EDDSA_KEY }}
+        run: |
+          len="$(printf '%s' "$SPARKLE_PRIVATE_EDDSA_KEY" | tr -d '\n' | wc -c | tr -d ' ')"
+          if [ "$len" -ne 44 ]; then
+            echo "SPARKLE_PRIVATE_EDDSA_KEY must be the 44-char base64 seed from 'generate_keys -x' (got $len chars)" >&2
+            exit 1
+          fi
+
+      - name: Download Sparkle (for sign_update)
+        run: ./scripts/macos/download-sparkle.sh
+
+      - name: Download macOS update artifacts from draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          mkdir -p ./appcast-build
+          gh release download "$REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "SocaDB_aarch64.app.tar.gz" \
+            --pattern "SocaDB_x64.app.tar.gz" \
+            --dir ./appcast-build
+
+      - name: Generate appcast.xml
+        env:
+          SPARKLE_PRIVATE_EDDSA_KEY: ${{ secrets.SPARKLE_PRIVATE_EDDSA_KEY }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="${REF_NAME#v}"
+          printf '%s' "$SPARKLE_PRIVATE_EDDSA_KEY" | \
+            ./scripts/macos/generate-appcast.sh \
+              "$version" \
+              "$REF_NAME" \
+              ./appcast-build/SocaDB_aarch64.app.tar.gz \
+              ./appcast-build/SocaDB_x64.app.tar.gz \
+              > ./appcast-build/appcast.xml
+          echo "--- generated appcast.xml ---"
+          cat ./appcast-build/appcast.xml
+
+      - name: Upload appcast.xml to draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          gh release upload "$REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            ./appcast-build/appcast.xml
+
+  # All matrix legs publish to draft; this job flips the release to public
+  # only after every leg has succeeded AND appcast.xml is in place. RC/beta
+  # stay as draft permanently.
+  promote:
+    needs: [release, appcast]
     if: ${{ !contains(github.ref_name, '-rc') && !contains(github.ref_name, '-beta') }}
     runs-on: ubuntu-22.04
     permissions:

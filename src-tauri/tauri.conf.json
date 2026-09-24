@@ -50,6 +50,11 @@
       "nsis": {
         "installerIcon": "icons/icon.ico"
       }
+    },
+    "macOS": {
+      "frameworks": ["./Sparkle.framework"],
+      "signingIdentity": "-",
+      "hardenedRuntime": false
     }
   },
   "plugins": {
