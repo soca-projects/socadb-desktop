@@ -2,10 +2,15 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
+  openSync,
+  readdirSync,
   readFileSync,
+  readSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -166,10 +171,48 @@ await downloadAndExtractBun(bunReleaseTag, BUN_VERSION, bunDest);
 chmodSync(bunDest, 0o755);
 console.log(`  ok: ${bunDest}`);
 
+// Vendor signatures would tie the sealed app to certificates we don't control:
+// Apple revoking one (it happened to codex twice) gets the whole app blocked
+// as malware at launch.
+if (os === "darwin") {
+  if (process.platform !== "darwin") {
+    throw new Error("A macOS runtime can only be built on macOS (it must be re-signed)");
+  }
+  console.log(`Ad-hoc signing bundled binaries`);
+  console.log(`  ok: ${adHocSignMachOs("dist")} binaries`);
+}
+
 console.log(`Done.`);
 console.log(`  Target:     ${targetTag}`);
 console.log(`  MCP binary: ${mcpOutfile}`);
 console.log(`  Runtime:    ${runtimeDir}`);
+
+function isMachO(path: string): boolean {
+  const fd = openSync(path, "r");
+  try {
+    const head = Buffer.alloc(8);
+    if (readSync(fd, head, 0, 8, 0) < 8) return false;
+    const magic = head.readUInt32BE(0);
+    if ([0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe].includes(magic)) return true;
+    // Fat binaries share 0xcafebabe with Java class files; a fat header's
+    // second word is a small architecture count, a class file's is a version.
+    return magic === 0xcafebabe && head.readUInt32BE(4) < 32;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function adHocSignMachOs(dir: string): number {
+  let count = 0;
+  for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
+    const path = join(dir, rel);
+    if (!lstatSync(path).isFile() || !isMachO(path)) continue;
+    execFileSync("codesign", ["--force", "--sign", "-", path], { stdio: "pipe" });
+    execFileSync("codesign", ["--verify", "--strict", path], { stdio: "pipe" });
+    count++;
+  }
+  return count;
+}
 
 // Write to a tmp file then rename so a killed download doesn't poison the cache.
 async function writeAtomic(target: string, data: Buffer) {
