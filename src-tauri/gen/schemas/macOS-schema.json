@@ -5985,10 +5985,10 @@
           "markdownDescription": "Denies the restart command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the Sparkle updater plugin\n#### This default permission set includes:\n\n- `allow-check-for-updates`\n- `allow-check-for-updates-in-background`\n- `allow-can-check-for-updates`\n- `allow-current-version`\n- `allow-feed-url`\n- `allow-set-feed-url`\n- `allow-automatically-checks-for-updates`\n- `allow-set-automatically-checks-for-updates`\n- `allow-automatically-downloads-updates`\n- `allow-set-automatically-downloads-updates`\n- `allow-last-update-check-date`\n- `allow-reset-update-cycle`\n- `allow-update-check-interval`\n- `allow-set-update-check-interval`\n- `allow-check-for-update-information`\n- `allow-session-in-progress`\n- `allow-http-headers`\n- `allow-set-http-headers`\n- `allow-user-agent-string`\n- `allow-set-user-agent-string`\n- `allow-sends-system-profile`\n- `allow-set-sends-system-profile`\n- `allow-clear-feed-url-from-user-defaults`\n- `allow-reset-update-cycle-after-short-delay`\n- `allow-allowed-channels`\n- `allow-set-allowed-channels`\n- `allow-feed-url-override`\n- `allow-set-feed-url-override`\n- `allow-feed-parameters`\n- `allow-set-feed-parameters`\n- `allow-should-download-release-notes`\n- `allow-set-should-download-release-notes`\n- `allow-should-relaunch-application`\n- `allow-set-should-relaunch-application`\n- `allow-may-check-for-updates-config`\n- `allow-set-may-check-for-updates-config`\n- `allow-should-proceed-with-update`\n- `allow-set-should-proceed-with-update`\n- `allow-decryption-password`\n- `allow-set-decryption-password`\n- `allow-last-found-update`",
+          "description": "Default permissions for the Sparkle updater plugin\n#### This default permission set includes:\n\n- `allow-check-for-updates`\n- `allow-check-for-updates-in-background`\n- `allow-can-check-for-updates`\n- `allow-current-version`\n- `allow-feed-url`\n- `allow-set-feed-url`\n- `allow-automatically-checks-for-updates`\n- `allow-set-automatically-checks-for-updates`\n- `allow-automatically-downloads-updates`\n- `allow-set-automatically-downloads-updates`\n- `allow-last-update-check-date`\n- `allow-reset-update-cycle`\n- `allow-update-check-interval`\n- `allow-set-update-check-interval`\n- `allow-check-for-update-information`\n- `allow-session-in-progress`\n- `allow-http-headers`\n- `allow-set-http-headers`\n- `allow-user-agent-string`\n- `allow-set-user-agent-string`\n- `allow-sends-system-profile`\n- `allow-set-sends-system-profile`\n- `allow-clear-feed-url-from-user-defaults`\n- `allow-reset-update-cycle-after-short-delay`\n- `allow-allowed-channels`\n- `allow-set-allowed-channels`\n- `allow-feed-url-override`\n- `allow-set-feed-url-override`\n- `allow-feed-parameters`\n- `allow-set-feed-parameters`\n- `allow-should-download-release-notes`\n- `allow-set-should-download-release-notes`\n- `allow-should-relaunch-application`\n- `allow-set-should-relaunch-application`\n- `allow-may-check-for-updates-config`\n- `allow-set-may-check-for-updates-config`\n- `allow-should-proceed-with-update`\n- `allow-set-should-proceed-with-update`\n- `allow-decryption-password`\n- `allow-set-decryption-password`\n- `allow-download-request-headers`\n- `allow-set-download-request-headers`\n- `allow-last-found-update`\n- `allow-handles-install-on-quit`\n- `allow-set-handles-install-on-quit`\n- `allow-pending-update`\n- `allow-install-pending-update`",
           "type": "string",
           "const": "sparkle-updater:default",
-          "markdownDescription": "Default permissions for the Sparkle updater plugin\n#### This default permission set includes:\n\n- `allow-check-for-updates`\n- `allow-check-for-updates-in-background`\n- `allow-can-check-for-updates`\n- `allow-current-version`\n- `allow-feed-url`\n- `allow-set-feed-url`\n- `allow-automatically-checks-for-updates`\n- `allow-set-automatically-checks-for-updates`\n- `allow-automatically-downloads-updates`\n- `allow-set-automatically-downloads-updates`\n- `allow-last-update-check-date`\n- `allow-reset-update-cycle`\n- `allow-update-check-interval`\n- `allow-set-update-check-interval`\n- `allow-check-for-update-information`\n- `allow-session-in-progress`\n- `allow-http-headers`\n- `allow-set-http-headers`\n- `allow-user-agent-string`\n- `allow-set-user-agent-string`\n- `allow-sends-system-profile`\n- `allow-set-sends-system-profile`\n- `allow-clear-feed-url-from-user-defaults`\n- `allow-reset-update-cycle-after-short-delay`\n- `allow-allowed-channels`\n- `allow-set-allowed-channels`\n- `allow-feed-url-override`\n- `allow-set-feed-url-override`\n- `allow-feed-parameters`\n- `allow-set-feed-parameters`\n- `allow-should-download-release-notes`\n- `allow-set-should-download-release-notes`\n- `allow-should-relaunch-application`\n- `allow-set-should-relaunch-application`\n- `allow-may-check-for-updates-config`\n- `allow-set-may-check-for-updates-config`\n- `allow-should-proceed-with-update`\n- `allow-set-should-proceed-with-update`\n- `allow-decryption-password`\n- `allow-set-decryption-password`\n- `allow-last-found-update`"
+          "markdownDescription": "Default permissions for the Sparkle updater plugin\n#### This default permission set includes:\n\n- `allow-check-for-updates`\n- `allow-check-for-updates-in-background`\n- `allow-can-check-for-updates`\n- `allow-current-version`\n- `allow-feed-url`\n- `allow-set-feed-url`\n- `allow-automatically-checks-for-updates`\n- `allow-set-automatically-checks-for-updates`\n- `allow-automatically-downloads-updates`\n- `allow-set-automatically-downloads-updates`\n- `allow-last-update-check-date`\n- `allow-reset-update-cycle`\n- `allow-update-check-interval`\n- `allow-set-update-check-interval`\n- `allow-check-for-update-information`\n- `allow-session-in-progress`\n- `allow-http-headers`\n- `allow-set-http-headers`\n- `allow-user-agent-string`\n- `allow-set-user-agent-string`\n- `allow-sends-system-profile`\n- `allow-set-sends-system-profile`\n- `allow-clear-feed-url-from-user-defaults`\n- `allow-reset-update-cycle-after-short-delay`\n- `allow-allowed-channels`\n- `allow-set-allowed-channels`\n- `allow-feed-url-override`\n- `allow-set-feed-url-override`\n- `allow-feed-parameters`\n- `allow-set-feed-parameters`\n- `allow-should-download-release-notes`\n- `allow-set-should-download-release-notes`\n- `allow-should-relaunch-application`\n- `allow-set-should-relaunch-application`\n- `allow-may-check-for-updates-config`\n- `allow-set-may-check-for-updates-config`\n- `allow-should-proceed-with-update`\n- `allow-set-should-proceed-with-update`\n- `allow-decryption-password`\n- `allow-set-decryption-password`\n- `allow-download-request-headers`\n- `allow-set-download-request-headers`\n- `allow-last-found-update`\n- `allow-handles-install-on-quit`\n- `allow-set-handles-install-on-quit`\n- `allow-pending-update`\n- `allow-install-pending-update`"
         },
         {
           "description": "Enables the allowed_channels command without any pre-configured scope.",
@@ -6051,6 +6051,12 @@
           "markdownDescription": "Enables the decryption_password command without any pre-configured scope."
         },
         {
+          "description": "Enables the download_request_headers command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:allow-download-request-headers",
+          "markdownDescription": "Enables the download_request_headers command without any pre-configured scope."
+        },
+        {
           "description": "Enables the feed_parameters command without any pre-configured scope.",
           "type": "string",
           "const": "sparkle-updater:allow-feed-parameters",
@@ -6069,10 +6075,22 @@
           "markdownDescription": "Enables the feed_url_override command without any pre-configured scope."
         },
         {
+          "description": "Enables the handles_install_on_quit command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:allow-handles-install-on-quit",
+          "markdownDescription": "Enables the handles_install_on_quit command without any pre-configured scope."
+        },
+        {
           "description": "Enables the http_headers command without any pre-configured scope.",
           "type": "string",
           "const": "sparkle-updater:allow-http-headers",
           "markdownDescription": "Enables the http_headers command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the install_pending_update command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:allow-install-pending-update",
+          "markdownDescription": "Enables the install_pending_update command without any pre-configured scope."
         },
         {
           "description": "Enables the last_found_update command without any pre-configured scope.",
@@ -6091,6 +6109,12 @@
           "type": "string",
           "const": "sparkle-updater:allow-may-check-for-updates-config",
           "markdownDescription": "Enables the may_check_for_updates_config command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the pending_update command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:allow-pending-update",
+          "markdownDescription": "Enables the pending_update command without any pre-configured scope."
         },
         {
           "description": "Enables the ping command without any pre-configured scope.",
@@ -6147,6 +6171,12 @@
           "markdownDescription": "Enables the set_decryption_password command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_download_request_headers command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:allow-set-download-request-headers",
+          "markdownDescription": "Enables the set_download_request_headers command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_feed_parameters command without any pre-configured scope.",
           "type": "string",
           "const": "sparkle-updater:allow-set-feed-parameters",
@@ -6163,6 +6193,12 @@
           "type": "string",
           "const": "sparkle-updater:allow-set-feed-url-override",
           "markdownDescription": "Enables the set_feed_url_override command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_handles_install_on_quit command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:allow-set-handles-install-on-quit",
+          "markdownDescription": "Enables the set_handles_install_on_quit command without any pre-configured scope."
         },
         {
           "description": "Enables the set_http_headers command without any pre-configured scope.",
@@ -6303,6 +6339,12 @@
           "markdownDescription": "Denies the decryption_password command without any pre-configured scope."
         },
         {
+          "description": "Denies the download_request_headers command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:deny-download-request-headers",
+          "markdownDescription": "Denies the download_request_headers command without any pre-configured scope."
+        },
+        {
           "description": "Denies the feed_parameters command without any pre-configured scope.",
           "type": "string",
           "const": "sparkle-updater:deny-feed-parameters",
@@ -6321,10 +6363,22 @@
           "markdownDescription": "Denies the feed_url_override command without any pre-configured scope."
         },
         {
+          "description": "Denies the handles_install_on_quit command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:deny-handles-install-on-quit",
+          "markdownDescription": "Denies the handles_install_on_quit command without any pre-configured scope."
+        },
+        {
           "description": "Denies the http_headers command without any pre-configured scope.",
           "type": "string",
           "const": "sparkle-updater:deny-http-headers",
           "markdownDescription": "Denies the http_headers command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the install_pending_update command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:deny-install-pending-update",
+          "markdownDescription": "Denies the install_pending_update command without any pre-configured scope."
         },
         {
           "description": "Denies the last_found_update command without any pre-configured scope.",
@@ -6343,6 +6397,12 @@
           "type": "string",
           "const": "sparkle-updater:deny-may-check-for-updates-config",
           "markdownDescription": "Denies the may_check_for_updates_config command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the pending_update command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:deny-pending-update",
+          "markdownDescription": "Denies the pending_update command without any pre-configured scope."
         },
         {
           "description": "Denies the ping command without any pre-configured scope.",
@@ -6399,6 +6459,12 @@
           "markdownDescription": "Denies the set_decryption_password command without any pre-configured scope."
         },
         {
+          "description": "Denies the set_download_request_headers command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:deny-set-download-request-headers",
+          "markdownDescription": "Denies the set_download_request_headers command without any pre-configured scope."
+        },
+        {
           "description": "Denies the set_feed_parameters command without any pre-configured scope.",
           "type": "string",
           "const": "sparkle-updater:deny-set-feed-parameters",
@@ -6415,6 +6481,12 @@
           "type": "string",
           "const": "sparkle-updater:deny-set-feed-url-override",
           "markdownDescription": "Denies the set_feed_url_override command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_handles_install_on_quit command without any pre-configured scope.",
+          "type": "string",
+          "const": "sparkle-updater:deny-set-handles-install-on-quit",
+          "markdownDescription": "Denies the set_handles_install_on_quit command without any pre-configured scope."
         },
         {
           "description": "Denies the set_http_headers command without any pre-configured scope.",

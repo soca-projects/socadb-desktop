@@ -4,6 +4,8 @@ import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/men
 import { listen } from "@tauri-apps/api/event";
 import { getRecentFiles, clearRecentFiles, loadRecentFiles } from "../utils/recentFiles";
 import { handleOpenRecent, MENU_SHORTCUTS } from "../utils/menuActions";
+import { handleUpdateMenuAction, updateMenuItemState } from "../utils/updater";
+import { useUpdateStore } from "../stores/updateStore";
 import { IS_MAC, IS_LINUX } from "../utils/platform";
 import i18next from "../i18n";
 
@@ -53,13 +55,30 @@ async function buildRecentSubmenu(): Promise<Submenu> {
 }
 
 let recentLoaded = false;
+let updateMenuItem: MenuItem | null = null;
+
+async function buildUpdateMenuItem(): Promise<MenuItem> {
+  updateMenuItem = await MenuItem.new({
+    id: "check_for_updates",
+    ...updateMenuItemState(useUpdateStore.getState().status),
+    action: () => handleUpdateMenuAction(),
+  });
+  return updateMenuItem;
+}
+
+async function syncUpdateMenuItem() {
+  if (!updateMenuItem) return;
+  const { text, enabled } = updateMenuItemState(useUpdateStore.getState().status);
+  await updateMenuItem.setText(text);
+  await updateMenuItem.setEnabled(enabled);
+}
 
 // IS_MAC drives both the macOS-only "SocaDB" submenu (Hide/HideOthers/ShowAll/
 // Quit are PredefinedMenuItem variants that only render on macOS) and the
 // attach method (setAsAppMenu vs setAsWindowMenu). IS_LINUX skips predefined
 // items muda flags as "Linux: Unsupported" (CloseWindow, Hide).
 
-async function buildAppSubmenu(): Promise<Submenu> {
+async function buildAppSubmenu(updateItem: MenuItem): Promise<Submenu> {
   const t = i18next.t.bind(i18next);
   return Submenu.new({
     text: "SocaDB",
@@ -69,6 +88,7 @@ async function buildAppSubmenu(): Promise<Submenu> {
         text: t("menu.about"),
         enabled: false,
       }),
+      updateItem,
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Services" }),
       await PredefinedMenuItem.new({ item: "Separator" }),
@@ -88,7 +108,8 @@ async function setupMenu() {
   }
   const t = i18next.t.bind(i18next);
 
-  const appSubmenu = IS_MAC ? await buildAppSubmenu() : null;
+  const updateItem = await buildUpdateMenuItem();
+  const appSubmenu = IS_MAC ? await buildAppSubmenu(updateItem) : null;
 
   const fileSubmenu = await Submenu.new({
     text: t("menu.file"),
@@ -222,7 +243,13 @@ async function setupMenu() {
 
   const items = appSubmenu
     ? [appSubmenu, fileSubmenu, editSubmenu, viewSubmenu, windowSubmenu]
-    : [fileSubmenu, editSubmenu, viewSubmenu, windowSubmenu];
+    : [
+        fileSubmenu,
+        editSubmenu,
+        viewSubmenu,
+        windowSubmenu,
+        await Submenu.new({ text: t("menu.help"), items: [updateItem] }),
+      ];
   const menu = await Menu.new({ items });
 
   if (IS_MAC) {
@@ -230,6 +257,7 @@ async function setupMenu() {
   } else {
     await menu.setAsWindowMenu();
   }
+  await syncUpdateMenuItem();
 }
 
 export function useAppMenu() {
@@ -243,4 +271,12 @@ export function useAppMenu() {
       for (const u of unlistens) void u.then((fn) => fn());
     };
   }, [i18n.resolvedLanguage]);
+
+  useEffect(
+    () =>
+      useUpdateStore.subscribe((state, prev) => {
+        if (state.status !== prev.status) void syncUpdateMenuItem();
+      }),
+    [],
+  );
 }

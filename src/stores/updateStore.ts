@@ -14,10 +14,13 @@ interface UpdateState {
   downloaded: number;
   total: number | null;
   error: string | null;
+  version: string | null;
+  // Windows/Linux only: Sparkle keeps the downloaded update on macOS.
   update: Update | null;
   pendingUpdateVersion: string | null;
   setStatus: (status: UpdateStatus) => void;
-  setUpdateAvailable: (update: Update) => void;
+  setUpdateAvailable: (version: string, update: Update | null) => void;
+  setReady: (version: string) => void;
   setProgress: (downloaded: number, total: number | null) => void;
   setError: (error: string) => void;
   setPendingUpdateVersion: (version: string | null) => void;
@@ -28,17 +31,20 @@ export const useUpdateStore = create<UpdateState>((set) => ({
   downloaded: 0,
   total: null,
   error: null,
+  version: null,
   update: null,
   pendingUpdateVersion: null,
   setStatus: (status) => set({ status }),
-  setUpdateAvailable: (update) =>
+  setUpdateAvailable: (version, update) =>
     set({
       status: "downloading",
+      version,
       update,
       downloaded: 0,
       total: null,
       error: null,
     }),
+  setReady: (version) => set({ status: "ready", version, error: null }),
   setProgress: (downloaded, total) =>
     set((state) =>
       state.downloaded === downloaded && state.total === total
