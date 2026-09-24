@@ -2,20 +2,16 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { useUpdateStore } from "../stores/updateStore";
 import { UpdateReadyToast } from "../components/UpdateReadyToast/UpdateReadyToast";
-import { IS_MAC } from "../utils/platform";
 
 const TOAST_ID = "update-ready";
 
 export function useUpdateReadyToast() {
   const status = useUpdateStore((s) => s.status);
-  const update = useUpdateStore((s) => s.update);
+  const version = useUpdateStore((s) => s.version);
   const pendingUpdateVersion = useUpdateStore((s) => s.pendingUpdateVersion);
 
   useEffect(() => {
-    // Sparkle shows its own update UI on macOS.
-    if (IS_MAC) return;
-
-    const alreadyConsented = update !== null && pendingUpdateVersion === update.version;
+    const alreadyConsented = version !== null && pendingUpdateVersion === version;
     const installInFlight = status === "installing";
     const promptForConsent = status === "ready" && !alreadyConsented;
     const shouldShow = installInFlight || promptForConsent;
@@ -30,5 +26,5 @@ export function useUpdateReadyToast() {
     } else {
       toast.dismiss(TOAST_ID);
     }
-  }, [status, update, pendingUpdateVersion]);
+  }, [status, version, pendingUpdateVersion]);
 }

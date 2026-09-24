@@ -143,22 +143,27 @@ fn open_terminal() {
     }
 }
 
-// Every appcast item is tagged with a channel, and Sparkle only reads allowed
-// channels from its delegate (no Info.plist key). Must run in setup, before
-// Sparkle's first check.
+// Must run in setup, before Sparkle's first check. Every appcast item is tagged
+// with a channel, and Sparkle only reads allowed channels from its delegate (no
+// Info.plist key). Handling the install on quit replaces Sparkle's reminders
+// with the app's own prompt.
 #[cfg(target_os = "macos")]
-fn set_sparkle_channel(app: &tauri::App) {
+fn configure_sparkle(app: &tauri::App) {
     use tauri_plugin_sparkle_updater::SparkleUpdaterExt;
 
+    let Some(updater) = app.sparkle_updater() else {
+        return;
+    };
     let channel = if cfg!(target_arch = "aarch64") {
         "arm64"
     } else {
         "x64"
     };
-    if let Some(updater) = app.sparkle_updater() {
-        if let Err(e) = updater.set_allowed_channels(Some(vec![channel.to_string()])) {
-            eprintln!("Failed to set Sparkle update channel: {e}");
-        }
+    if let Err(e) = updater.set_allowed_channels(Some(vec![channel.to_string()])) {
+        eprintln!("Failed to set Sparkle update channel: {e}");
+    }
+    if let Err(e) = updater.set_handles_install_on_quit(true) {
+        eprintln!("Failed to take over Sparkle's install prompt: {e}");
     }
 }
 
@@ -194,7 +199,7 @@ pub fn run() {
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
-            set_sparkle_channel(app);
+            configure_sparkle(app);
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
