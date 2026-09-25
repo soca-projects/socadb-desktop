@@ -128,6 +128,7 @@
     "newConversation": "Nouvelle conversation",
     "newChat": "Nouveau chat",
     "closeChat": "Fermer le chat",
+    "apiKeyNeeded": "Ajoutez votre clé API {{name}} dans les paramètres, section Agents, pour discuter.",
     "askAi": "Demander à l'IA de modifier le schéma...",
     "whatToBuild": "Que souhaitez-vous créer ?",
     "stop": "Arrêter",

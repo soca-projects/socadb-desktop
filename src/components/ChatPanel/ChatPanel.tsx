@@ -14,6 +14,7 @@ import {
   DEFAULT_MODEL,
   getAvailableModels,
   getProviderFromModel,
+  PROVIDERS,
   resolveEffort,
 } from "../../types/chat";
 import { EffortPicker } from "../EffortPicker/EffortPicker";
@@ -146,6 +147,14 @@ export function ChatPanel() {
   const activeLoginType = useChatStore(
     (s) => s.providers[activeProviderId]?.loginType ?? "subscription",
   );
+  const activeApiKeyStored = useChatStore(
+    (s) => s.providers[activeProviderId]?.apiKeyStored ?? false,
+  );
+  // Known to fail before sending, so say so instead of letting the agent error.
+  const needsApiKey = activeLoginType === "api-key" && !activeApiKeyStored;
+  const apiKeyNeededText = t("chat.apiKeyNeeded", {
+    name: PROVIDERS[activeProviderId].name,
+  });
   const { displayed: displayedEffort, toSend: effortToSend } = resolveEffort(
     selectedModel,
     storedEffort,
@@ -161,7 +170,7 @@ export function ChatPanel() {
 
   const handleSend = useCallback(
     async (content: string) => {
-      if (isStreaming) return;
+      if (isStreaming || needsApiKey) return;
       if (!isPanelOpen) togglePanel();
       addUserMessage(content);
       startAssistantMessage();
@@ -194,6 +203,7 @@ export function ChatPanel() {
       selectedModel,
       activeProviderId,
       activeLoginType,
+      needsApiKey,
       effortToSend,
     ],
   );
@@ -312,23 +322,27 @@ export function ChatPanel() {
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            <p className="text-[13px] text-tertiary">{t("chat.whatToBuild")}</p>
-            <div className="flex flex-col items-center gap-2">
-              {[
-                t("chat.suggestion1"),
-                t("chat.suggestion2"),
-                t("chat.suggestion3"),
-                t("chat.suggestion4"),
-              ].map((suggestion) => (
-                <button
-                  key={suggestion}
-                  onClick={() => handleSend(suggestion)}
-                  className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
+            <p className="text-center text-[13px] text-tertiary">
+              {needsApiKey ? apiKeyNeededText : t("chat.whatToBuild")}
+            </p>
+            {!needsApiKey && (
+              <div className="flex flex-col items-center gap-2">
+                {[
+                  t("chat.suggestion1"),
+                  t("chat.suggestion2"),
+                  t("chat.suggestion3"),
+                  t("chat.suggestion4"),
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => handleSend(suggestion)}
+                    className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -343,8 +357,9 @@ export function ChatPanel() {
       <ChatInput
         onSend={handleSend}
         onStop={handleStop}
-        disabled={false}
+        disabled={needsApiKey}
         isStreaming={isStreaming}
+        placeholder={needsApiKey ? apiKeyNeededText : undefined}
       />
     </div>
   );
