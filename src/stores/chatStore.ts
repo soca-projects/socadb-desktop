@@ -1,12 +1,35 @@
 import { create } from "zustand";
 import type {
   ChatMessage,
+  EffortLevel,
   Provider,
   ToolCallInfo,
   Conversation,
   ProviderId,
 } from "../types/chat";
+import {
+  DEFAULT_EFFORT_BY_PROVIDER,
+  EFFORT_LEVELS_BY_PROVIDER,
+  PROVIDER_IDS,
+} from "../types/chat";
 import { genId } from "../utils/id";
+
+const EFFORT_STORAGE_PREFIX = "socadb-effort-";
+
+function loadEffortByProvider(): Record<ProviderId, EffortLevel> {
+  const result = { ...DEFAULT_EFFORT_BY_PROVIDER };
+  for (const id of PROVIDER_IDS) {
+    try {
+      const stored = localStorage.getItem(`${EFFORT_STORAGE_PREFIX}${id}`);
+      if (stored && EFFORT_LEVELS_BY_PROVIDER[id].includes(stored as EffortLevel)) {
+        result[id] = stored as EffortLevel;
+      }
+    } catch {
+      /* empty */
+    }
+  }
+  return result;
+}
 
 function createConversation(): Conversation {
   const now = new Date().toISOString();
@@ -27,6 +50,7 @@ interface ChatState {
   isStreaming: boolean;
   isPanelOpen: boolean;
   providers: Record<string, Provider>;
+  effortByProvider: Record<ProviderId, EffortLevel>;
 
   messages: ChatMessage[];
   sessionId: string | null;
@@ -46,6 +70,7 @@ interface ChatState {
   togglePanel: () => void;
   clearHistory: () => void;
   setProvider: (id: ProviderId, provider: Provider) => void;
+  setEffort: (providerId: ProviderId, effort: EffortLevel) => void;
   setMessages: (messages: ChatMessage[]) => void;
   setSessionId: (sessionId: string | null) => void;
 }
@@ -82,6 +107,7 @@ export const useChatStore = create<ChatState>()((set) => ({
   isStreaming: false,
   isPanelOpen: false,
   providers: {},
+  effortByProvider: loadEffortByProvider(),
 
   newConversation: () =>
     set((state) => {
@@ -285,6 +311,19 @@ export const useChatStore = create<ChatState>()((set) => ({
     set((state) => ({
       providers: { ...state.providers, [id]: provider },
     })),
+
+  setEffort: (providerId, effort) =>
+    set((state) => {
+      if (state.effortByProvider[providerId] === effort) return state;
+      try {
+        localStorage.setItem(`${EFFORT_STORAGE_PREFIX}${providerId}`, effort);
+      } catch {
+        // ignore
+      }
+      return {
+        effortByProvider: { ...state.effortByProvider, [providerId]: effort },
+      };
+    }),
 
   setMessages: (messages) => set({ messages }),
 

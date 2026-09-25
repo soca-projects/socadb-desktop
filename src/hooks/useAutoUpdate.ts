@@ -1,48 +1,59 @@
 import { useEffect, useRef } from "react";
-import { check } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
-import { ask } from "@tauri-apps/plugin-dialog";
-import i18next from "../i18n";
-import { useSchemaStore } from "../stores/schemaStore";
-import { saveCurrentSchema } from "../utils/fileOperations";
+import { listen } from "@tauri-apps/api/event";
+import {
+  checkForUpdates,
+  handleSparkleCycleFinished,
+  handleSparkleUpdateFound,
+  handleSparkleUpdateStaged,
+} from "../utils/updater";
+import {
+  parseCycleFinishedPayload,
+  parseVersionPayload,
+  SPARKLE_EVENTS,
+} from "../utils/sparkle";
+import { IS_MAC } from "../utils/platform";
 
-async function showUpdateDialog(version: string): Promise<boolean> {
-  const t = i18next.t;
-  return ask(t("updater.description", { version }), {
-    title: t("updater.title"),
-    okLabel: t("updater.install"),
-    cancelLabel: t("updater.later"),
-    kind: "info",
-  });
+const POLL_INTERVAL_MS = 30 * 60 * 1000;
+
+function listenSparkle() {
+  return [
+    listen(SPARKLE_EVENTS.updateFound, (event) => {
+      const version = parseVersionPayload(event.payload);
+      if (version) handleSparkleUpdateFound(version);
+    }),
+    listen(SPARKLE_EVENTS.updateStaged, (event) => {
+      const version = parseVersionPayload(event.payload);
+      if (version) handleSparkleUpdateStaged(version);
+    }),
+    listen(SPARKLE_EVENTS.cycleFinished, (event) => {
+      handleSparkleCycleFinished(parseCycleFinishedPayload(event.payload));
+    }),
+  ];
 }
 
 export function useAutoUpdate() {
-  const didCheck = useRef(false);
+  const didStart = useRef(false);
 
   useEffect(() => {
-    if (didCheck.current) return;
-    didCheck.current = true;
-
-    async function checkForUpdate() {
-      try {
-        const update = await check();
-        if (!update) return;
-
-        const yes = await showUpdateDialog(update.version);
-        if (!yes) return;
-
-        const { schema, savedAt } = useSchemaStore.getState();
-        if (savedAt !== schema.updatedAt) {
-          await saveCurrentSchema();
-        }
-
-        await update.downloadAndInstall();
-        await relaunch();
-      } catch {
-        // Silent fail — updater not configured or no network
+    if (IS_MAC) {
+      // Sparkle schedules later checks itself.
+      const unlistens = listenSparkle();
+      if (!didStart.current) {
+        didStart.current = true;
+        void Promise.all(unlistens).then(() => checkForUpdates({ userInitiated: false }));
       }
+      return () => {
+        for (const unlisten of unlistens) void unlisten.then((fn) => fn());
+      };
     }
 
-    void checkForUpdate();
+    if (!didStart.current) {
+      didStart.current = true;
+      void checkForUpdates({ userInitiated: false });
+    }
+    const interval = setInterval(() => {
+      void checkForUpdates({ userInitiated: false });
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, []);
 }

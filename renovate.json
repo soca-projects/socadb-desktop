@@ -1,0 +1,53 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":semanticCommits",
+    ":timezone(Europe/Paris)"
+  ],
+  "schedule": ["before 5am on monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 10,
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchFileNames": ["package.json"],
+      "addLabels": ["frontend"],
+      "groupName": "frontend minor and patch",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchFileNames": ["mcp-server/package.json"],
+      "addLabels": ["mcp-server"],
+      "groupName": "mcp-server minor and patch",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "matchManagers": ["cargo"],
+      "addLabels": ["rust"],
+      "groupName": "rust minor and patch",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["ci"],
+      "groupName": "github-actions minor and patch",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Tailwind v4+ is incompatible with WebKit on macOS — pinned to v3.",
+      "matchPackageNames": ["tailwindcss"],
+      "allowedVersions": "<4"
+    },
+    {
+      "description": "Throttle major bumps to the first Monday of the month — each major dep gets its own PR so they can be reviewed and shipped independently.",
+      "matchUpdateTypes": ["major"],
+      "schedule": ["before 5am on the first day of the month"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  }
+}

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import { query, listSessions, type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
 import {
+  CLAUDE_EFFORTS,
   emit,
   getClaudeSdkOptions,
   getMcpBinaryPath,
   getModuleDir,
   startRunner,
   type ChatSendCommand,
+  type ClaudeEffort,
 } from "./agent-runner-shared.ts";
 
 const __dirname = getModuleDir(import.meta.url);
@@ -20,9 +22,15 @@ async function handleSend(cmd: ChatSendCommand) {
   abortController = new AbortController();
 
   try {
+    const effort =
+      cmd.effort && CLAUDE_EFFORTS.includes(cmd.effort as ClaudeEffort)
+        ? (cmd.effort as ClaudeEffort)
+        : undefined;
+
     const options: Options = {
       ...sdkOptions,
       model: cmd.model,
+      ...(effort !== undefined ? { effort } : {}),
       systemPrompt: {
         type: "preset",
         preset: "claude_code",

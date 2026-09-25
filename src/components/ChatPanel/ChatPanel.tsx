@@ -14,7 +14,9 @@ import {
   DEFAULT_MODEL,
   getAvailableModels,
   getProviderFromModel,
+  resolveEffort,
 } from "../../types/chat";
+import { EffortPicker } from "../EffortPicker/EffortPicker";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
@@ -124,6 +126,7 @@ export function ChatPanel() {
   const startAssistantMessage = useChatStore((s) => s.startAssistantMessage);
   const newConversation = useChatStore((s) => s.newConversation);
   const switchConversation = useChatStore((s) => s.switchConversation);
+  const setEffort = useChatStore((s) => s.setEffort);
 
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -141,6 +144,12 @@ export function ChatPanel() {
   const availableModels = getAvailableModels(providers);
   const isConnected = availableModels.length > 0;
   const activeProviderId = getProviderFromModel(selectedModel);
+  const storedEffort = useChatStore((s) => s.effortByProvider[activeProviderId]);
+  const { displayed: displayedEffort, toSend: effortToSend } = resolveEffort(
+    selectedModel,
+    storedEffort,
+    activeProviderId,
+  );
 
   useEffect(() => {
     if (isPanelOpen) {
@@ -157,13 +166,14 @@ export function ChatPanel() {
 
       const systemPrompt = buildSystemPrompt();
       try {
-        await sendChatMessage(
-          content,
+        await sendChatMessage({
+          message: content,
           systemPrompt,
-          activeProviderId,
-          sessionId ?? undefined,
-          selectedModel,
-        );
+          providerId: activeProviderId,
+          sessionId: sessionId ?? undefined,
+          model: selectedModel,
+          effort: effortToSend,
+        });
       } catch (e) {
         const store = useChatStore.getState();
         const msg = e instanceof Error ? e.message : String(e);
@@ -180,6 +190,7 @@ export function ChatPanel() {
       isStreaming,
       selectedModel,
       activeProviderId,
+      effortToSend,
     ],
   );
 
@@ -273,6 +284,12 @@ export function ChatPanel() {
             className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
           />
         </div>
+        <EffortPicker
+          modelId={selectedModel}
+          value={displayedEffort}
+          onChange={(effort) => setEffort(activeProviderId, effort)}
+          disabled={isStreaming}
+        />
         <button
           onClick={newConversation}
           disabled={isStreaming}

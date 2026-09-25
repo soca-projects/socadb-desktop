@@ -302,6 +302,7 @@ pub async fn chat_send(
     system_prompt: String,
     session_id: Option<String>,
     model: Option<String>,
+    effort: Option<String>,
 ) -> Result<(), String> {
     ensure_agent(&app, &provider_id).await?;
     send_to_agent(
@@ -313,6 +314,7 @@ pub async fn chat_send(
             "systemPrompt": system_prompt,
             "sessionId": session_id,
             "model": model,
+            "effort": effort,
         }),
     )
     .await
