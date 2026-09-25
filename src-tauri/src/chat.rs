@@ -197,7 +197,8 @@ pub fn agent_runner_path(layout: &RuntimeLayout, provider_id: &str) -> PathBuf {
 
 fn api_key_env_var(provider_id: &str) -> &'static str {
     match provider_id {
-        "codex" => "OPENAI_API_KEY",
+        // `codex exec` reads CODEX_API_KEY and ignores OPENAI_API_KEY.
+        "codex" => "CODEX_API_KEY",
         _ => "ANTHROPIC_API_KEY",
     }
 }
