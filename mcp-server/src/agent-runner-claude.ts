@@ -3,6 +3,7 @@ import { query, listSessions, type Options, type Query } from "@anthropic-ai/cla
 import {
   CLAUDE_EFFORTS,
   emit,
+  emitError,
   getClaudeCodeBinaryPath,
   getClaudeSdkOptions,
   getMcpBinaryPath,
@@ -70,6 +71,18 @@ async function handleSend(cmd: ChatSendCommand) {
     let finalResponse = "";
 
     for await (const message of currentQuery) {
+      // The CLI retries a rejected key 10 times with backoff, about three
+      // minutes of silence before the error; the first retry already says why.
+      if (
+        message.type === "system" &&
+        message.subtype === "api_retry" &&
+        message.error === "authentication_failed"
+      ) {
+        abortController.abort();
+        emitError("claude", `API Error: ${message.error_status ?? 401} authentication failed`, true);
+        return;
+      }
+
       if (message.type === "system" && message.subtype === "init") {
         currentSessionId = (message as Record<string, unknown>).session_id as string;
         emit({
@@ -133,12 +146,7 @@ async function handleSend(cmd: ChatSendCommand) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("[agent] error:", errorMessage);
-    emit({
-      type: "chat_event",
-      event: "error",
-      message: errorMessage,
-      providerId: "claude",
-    });
+    emitError("claude", errorMessage);
   } finally {
     currentQuery = undefined;
     abortController = undefined;

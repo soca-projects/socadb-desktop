@@ -2,6 +2,7 @@
 import {
   CODEX_EFFORTS,
   emit,
+  emitError,
   getMcpBinaryPath,
   getModuleDir,
   startRunner,
@@ -109,12 +110,7 @@ async function handleSend(cmd: ChatSendCommand) {
         }
 
         case "error":
-          emit({
-            type: "chat_event",
-            event: "error",
-            message: event.message,
-            providerId: "codex",
-          });
+          emitError("codex", event.message);
           break;
       }
     }
@@ -128,12 +124,7 @@ async function handleSend(cmd: ChatSendCommand) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("[codex-agent] error:", errorMessage);
-    emit({
-      type: "chat_event",
-      event: "error",
-      message: errorMessage,
-      providerId: "codex",
-    });
+    emitError("codex", errorMessage);
   } finally {
     abortController = undefined;
   }
