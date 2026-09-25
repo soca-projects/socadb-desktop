@@ -31,6 +31,9 @@ use std::os::windows::process::CommandExt;
 struct AgentProcess {
     stdin: tokio::process::ChildStdin,
     pid: Option<u32>,
+    // Tells the exit watcher whether the map entry is still this process or a
+    // replacement spawned after an auth change.
+    generation: u64,
     // What auth state the running agent was spawned with. Compared on each
     // `ensure_agent` so a switch (subscription ↔ api-key, key rotation)
     // picks up at the next user message via a lazy respawn rather than a
@@ -50,6 +53,7 @@ struct AgentState {
 }
 
 static AGENT: std::sync::OnceLock<Arc<Mutex<AgentState>>> = std::sync::OnceLock::new();
+static NEXT_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 
 fn get_agent() -> &'static Arc<Mutex<AgentState>> {
     AGENT.get_or_init(|| {
@@ -238,6 +242,7 @@ async fn spawn_agent(
     })?;
 
     let child_pid = child.id();
+    let generation = NEXT_GENERATION.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let stdin = child.stdin.take().ok_or("Failed to capture stdin")?;
     let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
     let stderr = child.stderr.take();
@@ -257,6 +262,15 @@ async fn spawn_agent(
 
         let status = child.wait().await;
         let mut guard = get_agent().lock().await;
+        let is_current = guard
+            .processes
+            .get(&pid)
+            .is_some_and(|p| p.generation == generation);
+        if !is_current {
+            // Killed on purpose (auth change, reset): the map already holds
+            // its replacement, or nothing, and the exit is not an error.
+            return;
+        }
         guard.processes.remove(&pid);
         drop(guard);
 
@@ -294,6 +308,7 @@ async fn spawn_agent(
     Ok(AgentProcess {
         stdin,
         pid: child_pid,
+        generation,
         spawned_auth,
     })
 }
