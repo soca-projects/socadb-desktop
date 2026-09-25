@@ -6,29 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
-## [0.1.3](https://github.com/soca-projects/socadb-desktop/compare/v0.1.2...v0.1.3) (2026-09-25)
+## [0.1.3] - 2026-09-25
 
+Updates no longer interrupt your work. SocaDB downloads new versions in
+the background and asks once they are ready: restart and install now, or
+install the next time you quit. On macOS, updates now go through Sparkle,
+which installs from a separate helper, so quitting mid-install can no
+longer leave a broken app. This release also restores Codex on macOS,
+adds a reasoning effort picker to the chat, and fixes keyboard shortcuts
+on Windows.
 
-### Features
+### Added
 
-* **chat:** add per-model reasoning effort picker ([e6bac3a](https://github.com/soca-projects/socadb-desktop/commit/e6bac3a86614e7650b0f742f9de4818196b429d6))
-* **chat:** add per-model reasoning effort picker ([a79f5a0](https://github.com/soca-projects/socadb-desktop/commit/a79f5a06e4929813884ecc242071217bcf0b1976))
-* **updater:** route macOS updates through Sparkle ([#66](https://github.com/soca-projects/socadb-desktop/issues/66)) ([179d16f](https://github.com/soca-projects/socadb-desktop/commit/179d16faf1efad7611eb52233c7f79e28378f036))
-* **updater:** show the update prompt in the app on macOS ([#70](https://github.com/soca-projects/socadb-desktop/issues/70)) ([36e9bde](https://github.com/soca-projects/socadb-desktop/commit/36e9bde83f4a39a7ca1cc9730553d4d9f3e3cb8a))
-* **updater:** silent background download with non-dismissible install toast ([f605838](https://github.com/soca-projects/socadb-desktop/commit/f60583859355174b48e9d2e10952a4560845d8a9))
-* **updater:** silent background download with non-dismissible install toast ([4e45b3b](https://github.com/soca-projects/socadb-desktop/commit/4e45b3b3d62b34905492a51462bed7efeedc18b2))
+- **Background updates with an install prompt**. Updates download while
+  you work. Once the new version is ready, a prompt offers to restart and
+  install now or to install the next time you quit. (#58, #70)
+- **Check for Updates menu entry**. In the SocaDB menu on macOS and in a
+  new Help menu on Windows and Linux. It follows the update as it
+  downloads, turns into "Restart & install" once the update is ready, and
+  tells you when SocaDB is already up to date. (#70)
+- **Reasoning effort picker**. Pick low through max next to the model
+  selector. The choice is remembered per provider, and the picker only
+  offers the levels the selected model supports. (#60)
 
+### Changed
 
-### Bug Fixes
+- **macOS updates go through Sparkle**. The update installs from a
+  separate helper, so the app can quit at any time and the installation
+  still completes. Users on 0.1.2 receive this version through the
+  previous updater; Sparkle handles every update after it. (#66, #70)
 
-* **chat:** bump codex to 0.155.1 to restore the OpenAI provider on macOS ([1a4872c](https://github.com/soca-projects/socadb-desktop/commit/1a4872c900a7d4f8656d0bf77daa326724b509a9))
-* **chat:** restore the OpenAI provider on macOS ([d12a5e2](https://github.com/soca-projects/socadb-desktop/commit/d12a5e2576e1bc57d78aef15325a5f014110d39d))
-* **chat:** show the real codex login and logout commands ([29dc345](https://github.com/soca-projects/socadb-desktop/commit/29dc34517813bf9a0c34146d2f03b52c0a3c261b))
-* **platform:** guard navigator access for Node-environment tests ([7c54d93](https://github.com/soca-projects/socadb-desktop/commit/7c54d935749e8732dcd6d50dada4f6d8928fe617))
-* **windows:** use PowerShell install command for Claude Code ([d66920d](https://github.com/soca-projects/socadb-desktop/commit/d66920d59f53813a8abe60ad25eee42192b68491))
-* **windows:** use PowerShell install command for Claude Code ([161c060](https://github.com/soca-projects/socadb-desktop/commit/161c0601600246a8d86699a4b57ee15134c1a4e8))
-* **windows:** wire keyboard shortcuts via JS keydown fallback ([950e794](https://github.com/soca-projects/socadb-desktop/commit/950e7944e6bf1a55af2e81682e9bdb0d1bf8f653))
-* **windows:** wire keyboard shortcuts via JS keydown fallback ([8b3b8bb](https://github.com/soca-projects/socadb-desktop/commit/8b3b8bbdd0838a6e2a0e1a5235d118dcb128e1df))
+### Fixed
+
+- **Codex on macOS, again**. Apple revoked the certificate that signed
+  the Codex CLI bundled in 0.1.2, and macOS blocked it at launch. The
+  Codex SDK moves to 0.155.1, and the tools bundled with the app are now
+  re-signed at build time, so a certificate revoked by a vendor can no
+  longer keep SocaDB from opening. The Codex sign-in and sign-out
+  commands shown in Settings are corrected. (#69, #66)
+- **Keyboard shortcuts on Windows**. Menu shortcuts such as `Ctrl+S`,
+  `Ctrl+O` and `Ctrl+Z` work again. (#64)
+- **Claude Code install command on Windows**. Settings shows the
+  PowerShell command instead of a bash one-liner that Windows cannot
+  run. (#65)
 
 ## [0.1.2] - 2026-05-15
 
@@ -159,6 +179,7 @@ replaced by 0.1.1.
   with shortcuts, undo / redo with 50-step history, light / dark theme,
   and English / French interface.
 
+[0.1.3]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/soca-projects/socadb-desktop/releases/tag/v0.1.0
