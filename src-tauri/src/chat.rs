@@ -360,10 +360,15 @@ async fn ensure_agent(
                 }
                 None => (None, SpawnedAuth::ApiKeyMissing),
             },
-            // Keep an existing agent through a transient keyring backend
-            // hiccup so a 50ms blip can't silently log the user out.
+            // Keep an agent already running on a key through a transient
+            // keyring hiccup so a 50ms blip can't silently log the user out.
+            // A subscription agent must not stand in for the chosen key.
             KeyringLookup::Error => {
-                if guard.processes.contains_key(provider_id) {
+                let running_on_key = guard
+                    .processes
+                    .get(provider_id)
+                    .is_some_and(|p| matches!(p.spawned_auth, SpawnedAuth::ApiKey(_)));
+                if running_on_key {
                     return Ok(());
                 }
                 match read_plaintext_api_key(app, provider_id) {
