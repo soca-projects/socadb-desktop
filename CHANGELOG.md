@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.3](https://github.com/soca-projects/socadb-desktop/compare/v0.1.2...v0.1.3) (2026-09-25)
+
+
+### Features
+
+* **chat:** add per-model reasoning effort picker ([e6bac3a](https://github.com/soca-projects/socadb-desktop/commit/e6bac3a86614e7650b0f742f9de4818196b429d6))
+* **chat:** add per-model reasoning effort picker ([a79f5a0](https://github.com/soca-projects/socadb-desktop/commit/a79f5a06e4929813884ecc242071217bcf0b1976))
+* **updater:** route macOS updates through Sparkle ([#66](https://github.com/soca-projects/socadb-desktop/issues/66)) ([179d16f](https://github.com/soca-projects/socadb-desktop/commit/179d16faf1efad7611eb52233c7f79e28378f036))
+* **updater:** show the update prompt in the app on macOS ([#70](https://github.com/soca-projects/socadb-desktop/issues/70)) ([36e9bde](https://github.com/soca-projects/socadb-desktop/commit/36e9bde83f4a39a7ca1cc9730553d4d9f3e3cb8a))
+* **updater:** silent background download with non-dismissible install toast ([f605838](https://github.com/soca-projects/socadb-desktop/commit/f60583859355174b48e9d2e10952a4560845d8a9))
+* **updater:** silent background download with non-dismissible install toast ([4e45b3b](https://github.com/soca-projects/socadb-desktop/commit/4e45b3b3d62b34905492a51462bed7efeedc18b2))
+
+
+### Bug Fixes
+
+* **chat:** bump codex to 0.155.1 to restore the OpenAI provider on macOS ([1a4872c](https://github.com/soca-projects/socadb-desktop/commit/1a4872c900a7d4f8656d0bf77daa326724b509a9))
+* **chat:** restore the OpenAI provider on macOS ([d12a5e2](https://github.com/soca-projects/socadb-desktop/commit/d12a5e2576e1bc57d78aef15325a5f014110d39d))
+* **chat:** show the real codex login and logout commands ([29dc345](https://github.com/soca-projects/socadb-desktop/commit/29dc34517813bf9a0c34146d2f03b52c0a3c261b))
+* **platform:** guard navigator access for Node-environment tests ([7c54d93](https://github.com/soca-projects/socadb-desktop/commit/7c54d935749e8732dcd6d50dada4f6d8928fe617))
+* **windows:** use PowerShell install command for Claude Code ([d66920d](https://github.com/soca-projects/socadb-desktop/commit/d66920d59f53813a8abe60ad25eee42192b68491))
+* **windows:** use PowerShell install command for Claude Code ([161c060](https://github.com/soca-projects/socadb-desktop/commit/161c0601600246a8d86699a4b57ee15134c1a4e8))
+* **windows:** wire keyboard shortcuts via JS keydown fallback ([950e794](https://github.com/soca-projects/socadb-desktop/commit/950e7944e6bf1a55af2e81682e9bdb0d1bf8f653))
+* **windows:** wire keyboard shortcuts via JS keydown fallback ([8b3b8bb](https://github.com/soca-projects/socadb-desktop/commit/8b3b8bbdd0838a6e2a0e1a5235d118dcb128e1df))
+
 ## [0.1.2] - 2026-05-15
 
 Windows actually works now. v0.1.1 published Windows binaries, but several

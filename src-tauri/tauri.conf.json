@@ -52,7 +52,9 @@
       }
     },
     "macOS": {
-      "frameworks": ["./Sparkle.framework"],
+      "frameworks": [
+        "./Sparkle.framework"
+      ],
       "signingIdentity": "-",
       "hardenedRuntime": false
     }
