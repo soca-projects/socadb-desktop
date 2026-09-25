@@ -7,11 +7,11 @@ const TOAST_ID = "update-ready";
 
 export function useUpdateReadyToast() {
   const status = useUpdateStore((s) => s.status);
-  const update = useUpdateStore((s) => s.update);
+  const version = useUpdateStore((s) => s.version);
   const pendingUpdateVersion = useUpdateStore((s) => s.pendingUpdateVersion);
 
   useEffect(() => {
-    const alreadyConsented = update !== null && pendingUpdateVersion === update.version;
+    const alreadyConsented = version !== null && pendingUpdateVersion === version;
     const installInFlight = status === "installing";
     const promptForConsent = status === "ready" && !alreadyConsented;
     const shouldShow = installInFlight || promptForConsent;
@@ -20,11 +20,11 @@ export function useUpdateReadyToast() {
         id: TOAST_ID,
         duration: Infinity,
         dismissible: false,
-        position: "bottom-right",
+        position: "bottom-center",
         unstyled: true,
       });
     } else {
       toast.dismiss(TOAST_ID);
     }
-  }, [status, update, pendingUpdateVersion]);
+  }, [status, version, pendingUpdateVersion]);
 }

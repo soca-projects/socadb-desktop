@@ -176,6 +176,10 @@
     "toggleTheme": "Toggle Theme",
     "window": "Window",
     "about": "About SocaDB",
+    "checkForUpdates": "Check for Updates...",
+    "checkingForUpdates": "Checking for Updates...",
+    "downloadingUpdate": "Downloading Update...",
+    "help": "Help",
     "hideSocaDB": "Hide SocaDB",
     "quitSocaDB": "Quit SocaDB",
     "exit": "Exit"
@@ -227,6 +231,9 @@
     "installing": "Installing...",
     "installingTitle": "Installing the update",
     "installingHint": "Don't close SocaDB. This may take up to 30 seconds.",
+    "relaunchHint": "SocaDB will quit and reopen.",
+    "upToDate": "SocaDB is up to date (v{{version}})",
+    "checkFailed": "Couldn't check for updates: {{error}}",
     "releaseNotes": "release notes",
     "failed": "Update install failed: {{error}}"
   },

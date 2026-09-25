@@ -13,3 +13,8 @@ mcp-server/node_modules/
 .env.local
 .env.development
 CLAUDE.md
+
+# Sparkle framework downloaded locally for dev/CI, not committed.
+# Bundled into the .app by CI for releases.
+src-tauri/Sparkle.framework/
+src-tauri/sparkle-bin/

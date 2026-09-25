@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/macOS-schema.json",
+  "identifier": "macos-sparkle",
+  "description": "macOS-only permissions for Sparkle updater plugin",
+  "platforms": ["macOS"],
+  "windows": ["main"],
+  "permissions": [
+    "sparkle-updater:allow-check-for-updates-in-background",
+    "sparkle-updater:allow-session-in-progress",
+    "sparkle-updater:allow-pending-update",
+    "sparkle-updater:allow-install-pending-update"
+  ]
+}

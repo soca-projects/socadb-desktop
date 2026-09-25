@@ -75,7 +75,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     cliName: "Codex",
     installCommand: "npm install -g @openai/codex",
     startCommand: "codex",
-    loginCommand: "codex auth login",
+    loginCommand: "codex login",
   },
 };
 

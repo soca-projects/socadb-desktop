@@ -69,6 +69,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      # The Sparkle plugin's build.rs links against it, so cargo fails without it.
+      - name: Download Sparkle.framework
+        if: matrix.platform == 'macos-latest'
+        run: ./scripts/macos/download-sparkle.sh
+
       # Override Tauri's pinned linuxdeploy-plugin-gtk with our patched version
       # that tolerates Bun-compiled / static binaries inside the AppDir. Without
       # this, AppImage bundling crashes because linuxdeploy runs `ldd` on the

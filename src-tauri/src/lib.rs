@@ -141,13 +141,42 @@ fn open_terminal() {
     }
 }
 
+// Must run in setup, before Sparkle's first check. Every appcast item is tagged
+// with a channel, and Sparkle only reads allowed channels from its delegate (no
+// Info.plist key). Handling the install on quit replaces Sparkle's reminders
+// with the app's own prompt.
+#[cfg(target_os = "macos")]
+fn configure_sparkle(app: &tauri::App) {
+    use tauri_plugin_sparkle_updater::SparkleUpdaterExt;
+
+    let Some(updater) = app.sparkle_updater() else {
+        return;
+    };
+    let channel = if cfg!(target_arch = "aarch64") {
+        "arm64"
+    } else {
+        "x64"
+    };
+    if let Err(e) = updater.set_allowed_channels(Some(vec![channel.to_string()])) {
+        eprintln!("Failed to set Sparkle update channel: {e}");
+    }
+    if let Err(e) = updater.set_handles_install_on_quit(true) {
+        eprintln!("Failed to take over Sparkle's install prompt: {e}");
+    }
+}
+
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_process::init());
+
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_plugin_sparkle_updater::init());
+
+    builder
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             read_schema_file,
@@ -163,6 +192,9 @@ pub fn run() {
             chat::chat_reset,
         ])
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            configure_sparkle(app);
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 match ws::start_ws_server(handle).await {

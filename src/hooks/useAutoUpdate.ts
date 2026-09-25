@@ -1,57 +1,59 @@
 import { useEffect, useRef } from "react";
-import { check } from "@tauri-apps/plugin-updater";
-import { useUpdateStore } from "../stores/updateStore";
-import { toMessage } from "../utils/errorMessage";
+import { listen } from "@tauri-apps/api/event";
+import {
+  checkForUpdates,
+  handleSparkleCycleFinished,
+  handleSparkleUpdateFound,
+  handleSparkleUpdateStaged,
+} from "../utils/updater";
+import {
+  parseCycleFinishedPayload,
+  parseVersionPayload,
+  SPARKLE_EVENTS,
+} from "../utils/sparkle";
+import { IS_MAC } from "../utils/platform";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 
-async function runCheckAndDownload() {
-  const store = useUpdateStore.getState();
-  if (store.status !== "idle" && store.status !== "error") return;
-
-  store.setStatus("checking");
-  try {
-    const update = await check();
-    if (!update) {
-      store.setStatus("idle");
-      return;
-    }
-
-    store.setUpdateAvailable(update);
-
-    let downloaded = 0;
-    let total: number | null = null;
-    await update.download((event) => {
-      if (event.event === "Started") {
-        total = event.data.contentLength ?? null;
-        useUpdateStore.getState().setProgress(0, total);
-      } else if (event.event === "Progress") {
-        downloaded += event.data.chunkLength;
-        useUpdateStore.getState().setProgress(downloaded, total);
-      }
-    });
-
-    useUpdateStore.getState().setStatus("ready");
-  } catch (error) {
-    const message = toMessage(error);
-    console.error("[updater] check/download failed:", message);
-    useUpdateStore.getState().setError(message);
-  }
+function listenSparkle() {
+  return [
+    listen(SPARKLE_EVENTS.updateFound, (event) => {
+      const version = parseVersionPayload(event.payload);
+      if (version) handleSparkleUpdateFound(version);
+    }),
+    listen(SPARKLE_EVENTS.updateStaged, (event) => {
+      const version = parseVersionPayload(event.payload);
+      if (version) handleSparkleUpdateStaged(version);
+    }),
+    listen(SPARKLE_EVENTS.cycleFinished, (event) => {
+      handleSparkleCycleFinished(parseCycleFinishedPayload(event.payload));
+    }),
+  ];
 }
 
 export function useAutoUpdate() {
   const didStart = useRef(false);
 
   useEffect(() => {
-    if (didStart.current) return;
-    didStart.current = true;
+    if (IS_MAC) {
+      // Sparkle schedules later checks itself.
+      const unlistens = listenSparkle();
+      if (!didStart.current) {
+        didStart.current = true;
+        void Promise.all(unlistens).then(() => checkForUpdates({ userInitiated: false }));
+      }
+      return () => {
+        for (const unlisten of unlistens) void unlisten.then((fn) => fn());
+      };
+    }
 
-    void runCheckAndDownload();
-
+    if (!didStart.current) {
+      didStart.current = true;
+      void checkForUpdates({ userInitiated: false });
+    }
     const interval = setInterval(() => {
-      void runCheckAndDownload();
+      void checkForUpdates({ userInitiated: false });
     }, POLL_INTERVAL_MS);
-
     return () => clearInterval(interval);
   }, []);
 }

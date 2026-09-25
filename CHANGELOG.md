@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.3] - 2026-09-25
+
+Updates no longer interrupt your work. SocaDB downloads new versions in
+the background and asks once they are ready: restart and install now, or
+install the next time you quit. On macOS, updates now go through Sparkle,
+which installs from a separate helper, so quitting mid-install can no
+longer leave a broken app. This release also restores Codex on macOS,
+adds a reasoning effort picker to the chat, and fixes keyboard shortcuts
+on Windows.
+
+### Added
+
+- **Background updates with an install prompt**. Updates download while
+  you work. Once the new version is ready, a prompt offers to restart and
+  install now or to install the next time you quit. (#58, #70)
+- **Check for Updates menu entry**. In the SocaDB menu on macOS and in a
+  new Help menu on Windows and Linux. It follows the update as it
+  downloads, turns into "Restart & install" once the update is ready, and
+  tells you when SocaDB is already up to date. (#70)
+- **Reasoning effort picker**. Pick low through max next to the model
+  selector. The choice is remembered per provider, and the picker only
+  offers the levels the selected model supports. (#60)
+
+### Changed
+
+- **macOS updates go through Sparkle**. The update installs from a
+  separate helper, so the app can quit at any time and the installation
+  still completes. Users on 0.1.2 receive this version through the
+  previous updater; Sparkle handles every update after it. (#66, #70)
+
+### Fixed
+
+- **Codex on macOS, again**. Apple revoked the certificate that signed
+  the Codex CLI bundled in 0.1.2, and macOS blocked it at launch. The
+  Codex SDK moves to 0.155.1, and the tools bundled with the app are now
+  re-signed at build time, so a certificate revoked by a vendor can no
+  longer keep SocaDB from opening. The Codex sign-in and sign-out
+  commands shown in Settings are corrected. (#69, #66)
+- **Keyboard shortcuts on Windows**. Menu shortcuts such as `Ctrl+S`,
+  `Ctrl+O` and `Ctrl+Z` work again. (#64)
+- **Claude Code install command on Windows**. Settings shows the
+  PowerShell command instead of a bash one-liner that Windows cannot
+  run. (#65)
+
 ## [0.1.2] - 2026-05-15
 
 Windows actually works now. v0.1.1 published Windows binaries, but several
@@ -135,6 +179,7 @@ replaced by 0.1.1.
   with shortcuts, undo / redo with 50-step history, light / dark theme,
   and English / French interface.
 
+[0.1.3]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/soca-projects/socadb-desktop/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/soca-projects/socadb-desktop/releases/tag/v0.1.0
