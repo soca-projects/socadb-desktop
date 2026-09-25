@@ -90,22 +90,6 @@ fn hash_key(key: &str) -> u64 {
     h.finish()
 }
 
-// Fallback for hosts whose OS keyring isn't usable. Reads the plaintext copy
-// the frontend wrote into ~/.socadb/config.json when `keyring_set` failed.
-// Always preferred behind the keyring; this is only consulted when the
-// keyring returns Empty (no entry on a working backend).
-fn read_plaintext_api_key(app: &AppHandle, provider_id: &str) -> Option<String> {
-    let home = app.path().home_dir().ok()?;
-    let config_path = home.join(".socadb").join("config.json");
-    let content = std::fs::read_to_string(&config_path).ok()?;
-    let json: serde_json::Value = serde_json::from_str(&content).ok()?;
-    json.get("apiKeys")?
-        .get(provider_id)?
-        .as_str()
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-}
-
 fn kill_process(pid: u32) {
     #[cfg(unix)]
     {
@@ -351,15 +335,7 @@ async fn ensure_agent(
                 let hash = hash_key(&key);
                 (Some(key), SpawnedAuth::ApiKey(hash))
             }
-            // No keyring entry — check the plaintext fallback the frontend
-            // writes when the OS keyring backend isn't usable.
-            KeyringLookup::Empty => match read_plaintext_api_key(app, provider_id) {
-                Some(key) => {
-                    let hash = hash_key(&key);
-                    (Some(key), SpawnedAuth::ApiKey(hash))
-                }
-                None => (None, SpawnedAuth::ApiKeyMissing),
-            },
+            KeyringLookup::Empty => (None, SpawnedAuth::ApiKeyMissing),
             // Keep an agent already running on a key through a transient
             // keyring hiccup so a 50ms blip can't silently log the user out.
             // A subscription agent must not stand in for the chosen key.
@@ -371,13 +347,7 @@ async fn ensure_agent(
                 if running_on_key {
                     return Ok(());
                 }
-                match read_plaintext_api_key(app, provider_id) {
-                    Some(key) => {
-                        let hash = hash_key(&key);
-                        (Some(key), SpawnedAuth::ApiKey(hash))
-                    }
-                    None => (None, SpawnedAuth::ApiKeyMissing),
-                }
+                (None, SpawnedAuth::ApiKeyMissing)
             }
         },
     };

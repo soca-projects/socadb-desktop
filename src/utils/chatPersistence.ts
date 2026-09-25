@@ -218,9 +218,7 @@ export function persistProvider(id: ProviderId, provider: Provider) {
   void saveProviderConfig(id, provider);
 }
 
-// Best-effort scrub of any plaintext copy of `id`'s key from config.json.
-// Used after a successful keyring write to drop the fallback once the secure
-// store is available again, and during clearApiKey to fully revoke.
+// Best-effort scrub of a legacy plaintext copy of `id`'s key from config.json.
 async function clearPlaintextApiKey(id: ProviderId): Promise<void> {
   try {
     await queueConfigWrite(async () => {
@@ -238,61 +236,34 @@ async function clearPlaintextApiKey(id: ProviderId): Promise<void> {
   }
 }
 
-async function writePlaintextApiKey(id: ProviderId, apiKey: string): Promise<boolean> {
+// API keys live in the OS keyring only; the agent reads them from there.
+export async function saveApiKey(id: ProviderId, apiKey: string): Promise<boolean> {
   try {
-    await queueConfigWrite(async () => {
-      const existing = await loadConfigFile();
-      const migrated = existing ? migrateConfig(existing) : emptyMigrated();
-      migrated.apiKeys[id] = apiKey;
-      await writeConfigToDisk(migrated);
-    });
+    await invoke("keyring_set", { account: id, password: apiKey });
+  } catch {
+    return false;
+  }
+  void clearPlaintextApiKey(id);
+  return true;
+}
+
+export async function clearApiKey(id: ProviderId): Promise<boolean> {
+  await clearPlaintextApiKey(id);
+  try {
+    await invoke("keyring_delete", { account: id });
     return true;
   } catch {
     return false;
   }
 }
 
-async function readPlaintextApiKey(id: ProviderId): Promise<string | null> {
-  const existing = await loadConfigFile();
-  return existing?.apiKeys?.[id] ?? null;
-}
-
-// Tries the OS keyring first. On platforms without a working secret service
-// (uncommon Linux setups, locked or disabled backend), falls back to the
-// plaintext `apiKeys` map in ~/.socadb/config.json. The keyring is always
-// preferred — successful keyring writes scrub any plaintext leftover so the
-// two sources can't drift.
-export async function saveApiKey(id: ProviderId, apiKey: string): Promise<boolean> {
-  try {
-    await invoke("keyring_set", { account: id, password: apiKey });
-    void clearPlaintextApiKey(id);
-    return true;
-  } catch {
-    return await writePlaintextApiKey(id, apiKey);
-  }
-}
-
-export async function clearApiKey(id: ProviderId): Promise<boolean> {
-  let keyringOk = true;
-  try {
-    await invoke("keyring_delete", { account: id });
-  } catch {
-    keyringOk = false;
-  }
-  await clearPlaintextApiKey(id);
-  // If the keyring delete failed but no plaintext copy existed, treat it as
-  // "nothing to remove" rather than surfacing a confusing error.
-  return keyringOk || (await readPlaintextApiKey(id)) === null;
-}
-
 export async function isApiKeyStored(id: ProviderId): Promise<boolean> {
   try {
     const key = await invoke<string | null>("keyring_get", { account: id });
-    if (key !== null && key.length > 0) return true;
+    return key !== null && key.length > 0;
   } catch {
-    // Keyring unavailable — fall through to the plaintext check.
+    return false;
   }
-  return (await readPlaintextApiKey(id)) !== null;
 }
 
 let chatPersistenceInitialized = false;
