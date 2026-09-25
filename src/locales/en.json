@@ -186,6 +186,9 @@
   },
   "chatError": {
     "generic": "Error: {{message}}",
+    "notSignedIn": "You're not signed in to {{cli}}. Open a terminal, run `{{command}}`, then try again. Detailed steps are in Settings, under Agents.",
+    "apiKeyRejected": "{{name}} rejected the API key. Check or replace it in Settings, under Agents.",
+    "apiKeyMissing": "No {{name}} API key is saved. Add one in Settings, under Agents, or switch to your subscription.",
     "creditBalance": "Error: {{message}}\n\nAdd credits on the [{{consoleName}}]({{consoleUrl}}), then try again. If it still fails, reconnect your API key in Settings."
   },
   "toast": {

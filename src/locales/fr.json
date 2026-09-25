@@ -186,6 +186,9 @@
   },
   "chatError": {
     "generic": "Erreur : {{message}}",
+    "notSignedIn": "Vous n'êtes pas connecté à {{cli}}. Ouvrez un terminal, lancez `{{command}}`, puis réessayez. Les étapes détaillées sont dans les paramètres, section Agents.",
+    "apiKeyRejected": "{{name}} a refusé la clé API. Vérifiez-la ou remplacez-la dans les paramètres, section Agents.",
+    "apiKeyMissing": "Aucune clé API {{name}} n'est enregistrée. Ajoutez-la dans les paramètres, section Agents, ou passez en mode abonnement.",
     "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres."
   },
   "toast": {

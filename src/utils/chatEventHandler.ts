@@ -3,6 +3,7 @@ import type { ChatEvent, ProviderId } from "../types/chat";
 import { PROVIDERS } from "../types/chat";
 import { ChatErrorZ } from "./zodSchemas";
 import { resetAgent } from "./chatCommands";
+import { authErrorText } from "./chatErrors";
 import i18next from "../i18n";
 
 function ensureAssistantMessage() {
@@ -72,7 +73,11 @@ export function handleChatEvent(parsed: ChatEvent) {
         const providerId = (parsed.providerId as ProviderId) ?? "claude";
         const meta = PROVIDERS[providerId];
 
-        if (lower.includes("credit balance")) {
+        if (errorParse.success && errorParse.data.code === "auth") {
+          store.appendAssistantText(
+            authErrorText(providerId, store.providers[providerId]),
+          );
+        } else if (lower.includes("credit balance")) {
           store.appendAssistantText(
             i18next.t("chatError.creditBalance", {
               message: errorMsg,

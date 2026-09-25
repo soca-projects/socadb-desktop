@@ -154,4 +154,5 @@ export const McpCreateRelationZ = McpRelationEndpointsZ.extend({
 
 export const ChatErrorZ = z.object({
   message: z.string(),
+  code: z.literal("auth").optional(),
 });
