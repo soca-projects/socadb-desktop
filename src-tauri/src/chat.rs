@@ -203,6 +203,14 @@ fn api_key_env_var(provider_id: &str) -> &'static str {
     }
 }
 
+// Credentials the CLIs would pick up from the environment on their own.
+fn inherited_auth_env_vars(provider_id: &str) -> &'static [&'static str] {
+    match provider_id {
+        "codex" => &["CODEX_API_KEY", "OPENAI_API_KEY"],
+        _ => &["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"],
+    }
+}
+
 async fn spawn_agent(
     app: &AppHandle,
     provider_id: &str,
@@ -230,8 +238,17 @@ async fn spawn_agent(
     #[cfg(windows)]
     cmd.creation_flags(CREATE_NO_WINDOW);
 
-    if let Some(key) = api_key {
-        cmd.env(api_key_env_var(provider_id), key);
+    match api_key {
+        Some(key) => {
+            cmd.env(api_key_env_var(provider_id), key);
+        }
+        // A key inherited from the shell that launched SocaDB would bill the
+        // API behind a subscription, or stand in for a key the user removed.
+        None => {
+            for var in inherited_auth_env_vars(provider_id) {
+                cmd.env_remove(var);
+            }
+        }
     }
 
     let mut child = cmd.spawn().map_err(|e| {
