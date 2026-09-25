@@ -71,8 +71,7 @@ async function handleSend(cmd: ChatSendCommand) {
     let finalResponse = "";
 
     for await (const message of currentQuery) {
-      // The CLI retries a rejected key 10 times with backoff, about three
-      // minutes of silence before the error; the first retry already says why.
+      // The CLI retries a rejected key 10 times (~3 min); the first retry says why.
       if (
         message.type === "system" &&
         message.subtype === "api_retry" &&

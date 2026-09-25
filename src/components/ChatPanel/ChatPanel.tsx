@@ -150,7 +150,6 @@ export function ChatPanel() {
   const activeApiKeyStored = useChatStore(
     (s) => s.providers[activeProviderId]?.apiKeyStored ?? false,
   );
-  // Known to fail before sending, so say so instead of letting the agent error.
   const needsApiKey = activeLoginType === "api-key" && !activeApiKeyStored;
   const apiKeyNeededText = t("chat.apiKeyNeeded", {
     name: PROVIDERS[activeProviderId].name,

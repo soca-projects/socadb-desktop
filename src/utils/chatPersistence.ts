@@ -236,7 +236,6 @@ async function clearPlaintextApiKey(id: ProviderId): Promise<void> {
   }
 }
 
-// API keys live in the OS keyring only; the agent reads them from there.
 export async function saveApiKey(id: ProviderId, apiKey: string): Promise<boolean> {
   try {
     await invoke("keyring_set", { account: id, password: apiKey });

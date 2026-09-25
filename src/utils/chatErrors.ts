@@ -1,7 +1,6 @@
 import i18next from "../i18n";
 import { PROVIDERS, type Provider, type ProviderId } from "../types/chat";
 
-// Replaces a CLI's auth error with the step that fixes it for the login type in use.
 export function authErrorText(
   providerId: ProviderId,
   provider: Provider | undefined,

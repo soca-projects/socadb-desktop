@@ -106,7 +106,6 @@ export function emit(event: Record<string, unknown>) {
   process.stdout.write(JSON.stringify(event) + "\n");
 }
 
-// Missing or rejected credentials, as the Claude and Codex CLIs word them.
 const AUTH_ERROR_PATTERN =
   /not logged in|please run \/login|authentication_error|invalid api key|api key is invalid|401 unauthorized/i;
 
@@ -114,7 +113,6 @@ export function isAuthErrorMessage(message: string): boolean {
   return AUTH_ERROR_PATTERN.test(message);
 }
 
-// `code: "auth"` lets the app replace the CLI's wording with sign-in steps.
 export function emitError(providerId: string, message: string, auth = isAuthErrorMessage(message)) {
   emit({
     type: "chat_event",

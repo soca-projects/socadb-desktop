@@ -31,8 +31,6 @@ use std::os::windows::process::CommandExt;
 struct AgentProcess {
     stdin: tokio::process::ChildStdin,
     pid: Option<u32>,
-    // Tells the exit watcher whether the map entry is still this process or a
-    // replacement spawned after an auth change.
     generation: u64,
     // What auth state the running agent was spawned with. Compared on each
     // `ensure_agent` so a switch (subscription ↔ api-key, key rotation)
@@ -187,7 +185,6 @@ fn api_key_env_var(provider_id: &str) -> &'static str {
     }
 }
 
-// Credentials the CLIs would pick up from the environment on their own.
 fn inherited_auth_env_vars(provider_id: &str) -> &'static [&'static str] {
     match provider_id {
         "codex" => &["CODEX_API_KEY", "OPENAI_API_KEY"],
@@ -226,8 +223,7 @@ async fn spawn_agent(
         Some(key) => {
             cmd.env(api_key_env_var(provider_id), key);
         }
-        // A key inherited from the shell that launched SocaDB would bill the
-        // API behind a subscription, or stand in for a key the user removed.
+        // An inherited key would bill the API behind a subscription.
         None => {
             for var in inherited_auth_env_vars(provider_id) {
                 cmd.env_remove(var);
@@ -268,9 +264,8 @@ async fn spawn_agent(
             .processes
             .get(&pid)
             .is_some_and(|p| p.generation == generation);
+        // Killed on purpose: the entry is its replacement, or gone.
         if !is_current {
-            // Killed on purpose (auth change, reset): the map already holds
-            // its replacement, or nothing, and the exit is not an error.
             return;
         }
         guard.processes.remove(&pid);
@@ -338,7 +333,6 @@ async fn ensure_agent(
             KeyringLookup::Empty => (None, SpawnedAuth::ApiKeyMissing),
             // Keep an agent already running on a key through a transient
             // keyring hiccup so a 50ms blip can't silently log the user out.
-            // A subscription agent must not stand in for the chosen key.
             KeyringLookup::Error => {
                 let running_on_key = guard
                     .processes
