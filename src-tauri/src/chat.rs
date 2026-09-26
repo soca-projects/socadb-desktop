@@ -43,8 +43,11 @@ struct AgentProcess {
 enum SpawnedAuth {
     Subscription,
     ApiKey(u64),
-    ApiKeyMissing,
 }
+
+// Error codes the frontend maps to translated messages.
+const API_KEY_MISSING: &str = "api_key_missing";
+const KEYRING_UNAVAILABLE: &str = "keyring_unavailable";
 
 struct AgentState {
     processes: HashMap<String, AgentProcess>,
@@ -330,7 +333,12 @@ async fn ensure_agent(
                 let hash = hash_key(&key);
                 (Some(key), SpawnedAuth::ApiKey(hash))
             }
-            KeyringLookup::Empty => (None, SpawnedAuth::ApiKeyMissing),
+            // A keyless agent would fall back to the CLI's own login and
+            // bill the subscription the user opted out of.
+            KeyringLookup::Empty => {
+                kill_and_remove_agent(&mut guard.processes, provider_id);
+                return Err(API_KEY_MISSING.into());
+            }
             // Keep an agent already running on a key through a transient
             // keyring hiccup so a 50ms blip can't silently log the user out.
             KeyringLookup::Error => {
@@ -341,7 +349,8 @@ async fn ensure_agent(
                 if running_on_key {
                     return Ok(());
                 }
-                (None, SpawnedAuth::ApiKeyMissing)
+                kill_and_remove_agent(&mut guard.processes, provider_id);
+                return Err(KEYRING_UNAVAILABLE.into());
             }
         },
     };

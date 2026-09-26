@@ -190,6 +190,7 @@
     "notSignedIn": "Vous n'êtes pas connecté à {{cli}}. Ouvrez un terminal, lancez `{{command}}`, puis réessayez. Les étapes détaillées sont dans les paramètres, section Agents.",
     "apiKeyRejected": "{{name}} a refusé la clé API. Vérifiez-la ou remplacez-la dans les paramètres, section Agents.",
     "apiKeyMissing": "Aucune clé API {{name}} n'est enregistrée. Ajoutez-la dans les paramètres, section Agents, ou passez en mode abonnement.",
+    "keyringUnavailable": "SocaDB n'a pas pu lire votre clé API {{name}} dans le trousseau du système. Autorisez l'accès si le système le demande, ou enregistrez à nouveau la clé dans les paramètres, section Agents.",
     "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres."
   },
   "toast": {

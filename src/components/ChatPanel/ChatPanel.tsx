@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
+import { chatSendErrorText } from "../../utils/chatErrors";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { serializeRelation } from "../../utils/schemaQueries";
 import {
@@ -187,8 +188,7 @@ export function ChatPanel() {
         });
       } catch (e) {
         const store = useChatStore.getState();
-        const msg = e instanceof Error ? e.message : String(e);
-        store.appendAssistantText(msg);
+        store.appendAssistantText(chatSendErrorText(activeProviderId, e));
         store.finishResponse("");
       }
     },

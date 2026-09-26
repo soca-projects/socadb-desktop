@@ -30,7 +30,8 @@ export function stopChat(providerId: ProviderId) {
 
 // Fire-and-forget preheat: pays the spawn cost ahead of the first send.
 export function initChat(providerId: ProviderId, loginType: LoginType) {
-  void invoke("chat_init", { providerId, loginType });
+  // chat_send reports the same failure when the user actually sends.
+  invoke("chat_init", { providerId, loginType }).catch(() => undefined);
 }
 
 export function resetAgent(providerId: ProviderId) {

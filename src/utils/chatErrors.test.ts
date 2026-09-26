@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import i18next from "../i18n";
 import { makeProvider } from "../types/chat";
 import { isAuthErrorMessage } from "../../mcp-server/src/agent-runner-shared";
-import { authErrorText } from "./chatErrors";
+import { authErrorText, chatSendErrorText } from "./chatErrors";
 
 beforeAll(async () => {
   await i18next.changeLanguage("en");
@@ -54,5 +54,20 @@ describe("authErrorText", () => {
 
   it("falls back to subscription steps when the provider is unknown", () => {
     expect(authErrorText("claude", undefined)).toContain("`claude /login`");
+  });
+});
+
+describe("chatSendErrorText", () => {
+  it("translates the codes chat_send refuses with", () => {
+    expect(chatSendErrorText("claude", "api_key_missing")).toContain(
+      "No Anthropic API key",
+    );
+    expect(chatSendErrorText("codex", "keyring_unavailable")).toContain("keychain");
+  });
+
+  it("passes other errors through", () => {
+    expect(chatSendErrorText("claude", new Error("Agent runner not found"))).toBe(
+      "Agent runner not found",
+    );
   });
 });
