@@ -23,7 +23,7 @@
       "identifier": "fs:scope",
       "allow": [
         { "path": "$HOME/.claude.json" },
-        { "path": "$HOME/Library/Application Support/Claude/**" },
+        { "path": "$DATA/Claude/**" },
         { "path": "$HOME/.socadb/**" }
       ]
     }
