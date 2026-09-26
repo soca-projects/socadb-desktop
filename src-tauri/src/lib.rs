@@ -102,7 +102,17 @@ fn atomic_write(path: String, content: String) -> Result<(), String> {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let tmp = target.with_extension("tmp");
-    std::fs::write(&tmp, content).map_err(|e| e.to_string())?;
+    let _ = std::fs::remove_file(&tmp);
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    if let Ok(meta) = std::fs::metadata(target) {
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        options.mode(meta.permissions().mode());
+    }
+    let mut file = options.open(&tmp).map_err(|e| e.to_string())?;
+    std::io::Write::write_all(&mut file, content.as_bytes()).map_err(|e| e.to_string())?;
+    drop(file);
     std::fs::rename(&tmp, target).map_err(|e| e.to_string())
 }
 
