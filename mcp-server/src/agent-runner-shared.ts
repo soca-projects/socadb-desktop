@@ -1,8 +1,8 @@
 import { createInterface } from "readline";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import { existsSync } from "fs";
-import { platform, arch } from "os";
+import { existsSync, mkdirSync } from "fs";
+import { platform, arch, homedir } from "os";
 
 // Mirror of EffortLevel in src/types/chat.ts. Kept in sync manually because
 // mcp-server cannot import from the frontend tree. A test in
@@ -74,6 +74,14 @@ export function getClaudeCodeBinaryPath(moduleDir: string): string | undefined {
     `[agent-runner] bundled claude binary not found, falling back to PATH. Searched:\n${candidates.map((c) => `  ${c}`).join("\n")}\n`,
   );
   return undefined;
+}
+
+// Outside any repository, so no project-level Claude Code config applies, and
+// independent of where the app is installed, so sessions stay in one place.
+export function getAgentWorkDir(): string {
+  const dir = join(homedir(), ".socadb", "agent");
+  mkdirSync(dir, { recursive: true });
+  return dir;
 }
 
 export function getMcpBinaryPath(moduleDir: string): string {

@@ -4,6 +4,7 @@ import {
   CLAUDE_EFFORTS,
   emit,
   emitError,
+  getAgentWorkDir,
   getClaudeCodeBinaryPath,
   getClaudeSdkOptions,
   getMcpBinaryPath,
@@ -34,6 +35,7 @@ async function handleSend(cmd: ChatSendCommand) {
       ...sdkOptions,
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
       model: cmd.model,
+      cwd: getAgentWorkDir(),
       ...(effort !== undefined ? { effort } : {}),
       systemPrompt: {
         type: "preset",
@@ -46,6 +48,10 @@ async function handleSend(cmd: ChatSendCommand) {
       maxTurns: 500,
       allowedTools: ["mcp__socadb", "WebSearch", "WebFetch"],
       permissionMode: "bypassPermissions" as const,
+      // Keep the user's own Claude Code setup (hooks, plugins, MCP servers,
+      // CLAUDE.md) out of SocaDB's agent.
+      settingSources: [],
+      strictMcpConfig: true,
       includePartialMessages: true,
       mcpServers: {
         socadb: {
