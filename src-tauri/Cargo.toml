@@ -25,7 +25,7 @@ dirs = "6"
 tauri-plugin-opener = "2.5.3"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
-keyring = "3"
+keyring = { version = "3", features = ["apple-native", "windows-native"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-plugin-sparkle-updater = { git = "https://github.com/Cassidy321/tauri-plugin-sparkle-updater", rev = "61f040d092581ff706590e7d25bd5128a0290d4c" }
