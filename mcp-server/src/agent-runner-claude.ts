@@ -39,6 +39,8 @@ async function handleSend(cmd: ChatSendCommand) {
         type: "preset",
         preset: "claude_code",
         append: cmd.systemPrompt,
+        // The append carries the live schema; a recorded prompt would go stale on resume.
+        snapshot: false,
       },
       abortController,
       maxTurns: 500,
