@@ -3,6 +3,8 @@ import { query, listSessions, type Options, type Query } from "@anthropic-ai/cla
 import {
   CLAUDE_EFFORTS,
   emit,
+  emitError,
+  getClaudeCodeBinaryPath,
   getClaudeSdkOptions,
   getMcpBinaryPath,
   getModuleDir,
@@ -13,6 +15,7 @@ import {
 
 const __dirname = getModuleDir(import.meta.url);
 const sdkOptions = getClaudeSdkOptions();
+const claudeCodePath = getClaudeCodeBinaryPath(__dirname);
 
 let currentQuery: Query | undefined;
 let abortController: AbortController | undefined;
@@ -29,6 +32,7 @@ async function handleSend(cmd: ChatSendCommand) {
 
     const options: Options = {
       ...sdkOptions,
+      ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
       model: cmd.model,
       ...(effort !== undefined ? { effort } : {}),
       systemPrompt: {
@@ -67,6 +71,17 @@ async function handleSend(cmd: ChatSendCommand) {
     let finalResponse = "";
 
     for await (const message of currentQuery) {
+      // The CLI retries a rejected key 10 times (~3 min); the first retry says why.
+      if (
+        message.type === "system" &&
+        message.subtype === "api_retry" &&
+        message.error === "authentication_failed"
+      ) {
+        abortController.abort();
+        emitError("claude", `API Error: ${message.error_status ?? 401} authentication failed`, true);
+        return;
+      }
+
       if (message.type === "system" && message.subtype === "init") {
         currentSessionId = (message as Record<string, unknown>).session_id as string;
         emit({
@@ -130,12 +145,7 @@ async function handleSend(cmd: ChatSendCommand) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("[agent] error:", errorMessage);
-    emit({
-      type: "chat_event",
-      event: "error",
-      message: errorMessage,
-      providerId: "claude",
-    });
+    emitError("claude", errorMessage);
   } finally {
     currentQuery = undefined;
     abortController = undefined;
@@ -148,58 +158,7 @@ function handleStop() {
   }
 }
 
-async function handleStatus() {
-  try {
-    const q = query({
-      prompt: "what is 2+2?",
-      options: {
-        ...sdkOptions,
-        model: "claude-haiku-4-5-20251001",
-        maxTurns: 0,
-        maxBudgetUsd: 0.00001,
-      },
-    });
-
-    const info = await q.accountInfo();
-    q.return();
-
-    let loggedIn = false;
-    let loginType: string | undefined;
-
-    if (info.apiKeySource && info.apiKeySource !== "") {
-      loggedIn = true;
-      loginType = "api-key";
-    }
-
-    const hasSubscription =
-      (info.tokenSource && info.tokenSource !== "") ||
-      (info.subscriptionType && info.subscriptionType !== "");
-
-    if (hasSubscription && info.email) {
-      loggedIn = true;
-      loginType = "subscription";
-    }
-
-    emit({
-      type: "chat_status_result",
-      providerId: "claude",
-      loggedIn,
-      email: info.email ?? null,
-      loginType: loginType ?? null,
-    });
-  } catch {
-    emit({
-      type: "chat_status_result",
-      providerId: "claude",
-      loggedIn: false,
-      email: null,
-      loginType: null,
-    });
-  }
-}
-
 startRunner({
   handleSend,
   handleStop,
-  handleStatus,
 });

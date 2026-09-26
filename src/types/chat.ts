@@ -2,14 +2,13 @@ import { IS_WINDOWS } from "../utils/platform";
 
 export type ProviderId = "claude" | "codex";
 
-export type ConnectionMethod = "subscription" | "api-key";
+export type LoginType = "subscription" | "api-key";
 
 export interface Provider {
   id: ProviderId;
   name: string;
-  connected: boolean;
-  connectionMethod: ConnectionMethod | null;
-  email: string | null;
+  loginType: LoginType;
+  apiKeyStored: boolean;
 }
 
 export interface SupportedModel {
@@ -29,7 +28,6 @@ export interface ProviderMeta {
   installCommand: string;
   startCommand: string;
   loginCommand: string;
-  logoutCommand: string;
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
@@ -62,7 +60,6 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
       : "curl -fsSL https://claude.ai/install.sh | bash",
     startCommand: "claude",
     loginCommand: "claude /login",
-    logoutCommand: "claude /logout",
   },
   codex: {
     id: "codex",
@@ -79,7 +76,6 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     installCommand: "npm install -g @openai/codex",
     startCommand: "codex",
     loginCommand: "codex login",
-    logoutCommand: "codex logout",
   },
 };
 
@@ -91,19 +87,14 @@ export function getProviderFromModel(modelId: string): ProviderId {
 
 export function makeProvider(
   id: ProviderId,
-  connected: boolean,
-  connectionMethod: ConnectionMethod | null,
-  email: string | null,
+  loginType: LoginType = "subscription",
+  apiKeyStored = false,
 ): Provider {
-  return { id, name: PROVIDERS[id].name, connected, connectionMethod, email };
+  return { id, name: PROVIDERS[id].name, loginType, apiKeyStored };
 }
 
-export function getAvailableModels(
-  providers: Record<string, Provider>,
-): SupportedModel[] {
-  return PROVIDER_IDS.flatMap((id) =>
-    providers[id]?.connected ? PROVIDERS[id].models : [],
-  );
+export function getAvailableModels(): SupportedModel[] {
+  return PROVIDER_IDS.flatMap((id) => PROVIDERS[id].models);
 }
 
 export const DEFAULT_MODEL = "claude-sonnet-4-6";
@@ -184,14 +175,8 @@ export interface Conversation {
   updatedAt: string;
 }
 
-export interface ChatStatusResult {
-  loggedIn: boolean;
-  email: string | null;
-  loginType: ConnectionMethod | null;
-}
-
 export interface ChatEvent {
-  type: "chat_event" | "chat_status_result" | "ready";
+  type: "chat_event" | "ready";
   event?: string;
   [key: string]: unknown;
 }

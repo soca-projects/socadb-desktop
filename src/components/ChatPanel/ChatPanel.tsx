@@ -8,12 +8,14 @@ import {
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
+import { chatSendErrorText } from "../../utils/chatErrors";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { serializeRelation } from "../../utils/schemaQueries";
 import {
   DEFAULT_MODEL,
   getAvailableModels,
   getProviderFromModel,
+  PROVIDERS,
   resolveEffort,
 } from "../../types/chat";
 import { EffortPicker } from "../EffortPicker/EffortPicker";
@@ -118,7 +120,6 @@ export function ChatPanel() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const sessionId = useChatStore((s) => s.sessionId);
-  const providers = useChatStore((s) => s.providers);
   const conversations = useChatStore((s) => s.conversations);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const togglePanel = useChatStore((s) => s.togglePanel);
@@ -141,10 +142,19 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const availableModels = getAvailableModels(providers);
-  const isConnected = availableModels.length > 0;
+  const availableModels = getAvailableModels();
   const activeProviderId = getProviderFromModel(selectedModel);
   const storedEffort = useChatStore((s) => s.effortByProvider[activeProviderId]);
+  const activeLoginType = useChatStore(
+    (s) => s.providers[activeProviderId]?.loginType ?? "subscription",
+  );
+  const activeApiKeyStored = useChatStore(
+    (s) => s.providers[activeProviderId]?.apiKeyStored ?? false,
+  );
+  const needsApiKey = activeLoginType === "api-key" && !activeApiKeyStored;
+  const apiKeyNeededText = t("chat.apiKeyNeeded", {
+    name: PROVIDERS[activeProviderId].name,
+  });
   const { displayed: displayedEffort, toSend: effortToSend } = resolveEffort(
     selectedModel,
     storedEffort,
@@ -152,14 +162,15 @@ export function ChatPanel() {
   );
 
   useEffect(() => {
-    if (isPanelOpen) {
-      void initChat(activeProviderId);
-    }
-  }, [isPanelOpen, activeProviderId]);
+    // Skip the preheat while a stream is in flight so a loginType change in
+    // Settings doesn't respawn the agent mid-response. The current stream's
+    // env is immutable; the next message picks up the new auth via chat_send.
+    if (isPanelOpen && !isStreaming) initChat(activeProviderId, activeLoginType);
+  }, [isPanelOpen, activeProviderId, activeLoginType, isStreaming]);
 
   const handleSend = useCallback(
     async (content: string) => {
-      if (isStreaming) return;
+      if (isStreaming || needsApiKey) return;
       if (!isPanelOpen) togglePanel();
       addUserMessage(content);
       startAssistantMessage();
@@ -170,14 +181,14 @@ export function ChatPanel() {
           message: content,
           systemPrompt,
           providerId: activeProviderId,
+          loginType: activeLoginType,
           sessionId: sessionId ?? undefined,
           model: selectedModel,
           effort: effortToSend,
         });
       } catch (e) {
         const store = useChatStore.getState();
-        const msg = e instanceof Error ? e.message : String(e);
-        store.appendAssistantText(msg);
+        store.appendAssistantText(chatSendErrorText(activeProviderId, e));
         store.finishResponse("");
       }
     },
@@ -190,6 +201,8 @@ export function ChatPanel() {
       isStreaming,
       selectedModel,
       activeProviderId,
+      activeLoginType,
+      needsApiKey,
       effortToSend,
     ],
   );
@@ -217,9 +230,7 @@ export function ChatPanel() {
           </span>
         </div>
         <div className="flex items-center gap-2 px-3 py-2">
-          <span className="flex-1 text-[13px] text-tertiary">
-            {isConnected ? t("chat.askAi") : t("chat.connectProvider")}
-          </span>
+          <span className="flex-1 text-[13px] text-tertiary">{t("chat.askAi")}</span>
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white opacity-40">
             <PaperPlaneRight size={12} weight="fill" />
           </div>
@@ -310,10 +321,10 @@ export function ChatPanel() {
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            <p className="text-[13px] text-tertiary">
-              {isConnected ? t("chat.whatToBuild") : t("chat.connectInSettings")}
+            <p className="text-center text-[13px] text-tertiary">
+              {needsApiKey ? apiKeyNeededText : t("chat.whatToBuild")}
             </p>
-            {isConnected && (
+            {!needsApiKey && (
               <div className="flex flex-col items-center gap-2">
                 {[
                   t("chat.suggestion1"),
@@ -345,8 +356,9 @@ export function ChatPanel() {
       <ChatInput
         onSend={handleSend}
         onStop={handleStop}
-        disabled={!isConnected}
+        disabled={needsApiKey}
         isStreaming={isStreaming}
+        placeholder={needsApiKey ? apiKeyNeededText : undefined}
       />
     </div>
   );

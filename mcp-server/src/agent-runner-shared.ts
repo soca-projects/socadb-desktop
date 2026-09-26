@@ -40,14 +40,40 @@ export interface ChatStopCommand {
   type: "chat_stop";
 }
 
-export interface ChatStatusCommand {
-  type: "chat_status" | "chat_init";
-}
-
-export type Command = ChatSendCommand | ChatStopCommand | ChatStatusCommand;
+export type Command = ChatSendCommand | ChatStopCommand;
 
 export function getModuleDir(importMetaUrl: string): string {
   return dirname(fileURLToPath(importMetaUrl));
+}
+
+// Resolves the bundled `claude` CLI binary so we can pass it as
+// `pathToClaudeCodeExecutable` and avoid the SDK's implicit PATH lookup.
+export function getClaudeCodeBinaryPath(moduleDir: string): string | undefined {
+  const npmOs =
+    platform() === "darwin"
+      ? "darwin"
+      : platform() === "win32"
+        ? "win32"
+        : "linux";
+  const cpu = arch() === "arm64" ? "arm64" : "x64";
+  const ext = platform() === "win32" ? ".exe" : "";
+  const pkgDir = `claude-agent-sdk-${npmOs}-${cpu}`;
+  const binary = `claude${ext}`;
+
+  const candidates = [
+    join(moduleDir, "node_modules", "@anthropic-ai", pkgDir, binary),
+    join(moduleDir, "..", "node_modules", "@anthropic-ai", pkgDir, binary),
+    join(moduleDir, "..", "..", "node_modules", "@anthropic-ai", pkgDir, binary),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  // Logged so a missing binary is diagnosable instead of the SDK's generic
+  // "claude not found".
+  process.stderr.write(
+    `[agent-runner] bundled claude binary not found, falling back to PATH. Searched:\n${candidates.map((c) => `  ${c}`).join("\n")}\n`,
+  );
+  return undefined;
 }
 
 export function getMcpBinaryPath(moduleDir: string): string {
@@ -80,10 +106,26 @@ export function emit(event: Record<string, unknown>) {
   process.stdout.write(JSON.stringify(event) + "\n");
 }
 
+const AUTH_ERROR_PATTERN =
+  /not logged in|please run \/login|authentication_error|invalid api key|api key is invalid|401 unauthorized|could not be refreshed|sign in again/i;
+
+export function isAuthErrorMessage(message: string): boolean {
+  return AUTH_ERROR_PATTERN.test(message);
+}
+
+export function emitError(providerId: string, message: string, auth = isAuthErrorMessage(message)) {
+  emit({
+    type: "chat_event",
+    event: "error",
+    message,
+    providerId,
+    ...(auth ? { code: "auth" } : {}),
+  });
+}
+
 export interface RunnerHandlers {
   handleSend: (cmd: ChatSendCommand) => Promise<void>;
   handleStop: () => void;
-  handleStatus: () => Promise<void>;
 }
 
 export function startRunner(handlers: RunnerHandlers) {
@@ -99,10 +141,6 @@ export function startRunner(handlers: RunnerHandlers) {
           break;
         case "chat_stop":
           handlers.handleStop();
-          break;
-        case "chat_status":
-        case "chat_init":
-          void handlers.handleStatus();
           break;
       }
     } catch {

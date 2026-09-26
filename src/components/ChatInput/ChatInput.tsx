@@ -10,9 +10,16 @@ interface ChatInputProps {
   onStop?: () => void;
   disabled: boolean;
   isStreaming?: boolean;
+  placeholder?: string;
 }
 
-export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  onStop,
+  disabled,
+  isStreaming,
+  placeholder,
+}: ChatInputProps) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -51,7 +58,7 @@ export function ChatInput({ onSend, onStop, disabled, isStreaming }: ChatInputPr
         value={value}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
-        placeholder={t("chat.askAi")}
+        placeholder={placeholder ?? t("chat.askAi")}
         disabled={disabled}
         autoCorrect="off"
         autoComplete="off"

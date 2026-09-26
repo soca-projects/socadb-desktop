@@ -10,7 +10,7 @@ import {
   PROVIDER_IDS,
   resolveEffort,
 } from "./chat";
-import type { EffortLevel, Provider } from "./chat";
+import type { EffortLevel } from "./chat";
 import { CLAUDE_EFFORTS, CODEX_EFFORTS } from "../../mcp-server/src/agent-runner-shared";
 
 describe("getProviderFromModel", () => {
@@ -32,85 +32,40 @@ describe("getProviderFromModel", () => {
 });
 
 describe("makeProvider", () => {
-  it("creates a connected provider with subscription", () => {
-    const p = makeProvider("claude", true, "subscription", "test@example.com");
+  it("defaults to subscription with no stored key", () => {
+    const p = makeProvider("claude");
     expect(p).toEqual({
       id: "claude",
       name: "Anthropic",
-      connected: true,
-      connectionMethod: "subscription",
-      email: "test@example.com",
+      loginType: "subscription",
+      apiKeyStored: false,
     });
   });
 
-  it("creates a disconnected provider", () => {
-    const p = makeProvider("codex", false, null, null);
+  it("creates an api-key provider with stored flag", () => {
+    const p = makeProvider("codex", "api-key", true);
     expect(p).toEqual({
       id: "codex",
       name: "OpenAI",
-      connected: false,
-      connectionMethod: null,
-      email: null,
+      loginType: "api-key",
+      apiKeyStored: true,
     });
   });
 
-  it("creates a provider with api-key connection", () => {
-    const p = makeProvider("codex", true, "api-key", null);
-    expect(p.connected).toBe(true);
-    expect(p.connectionMethod).toBe("api-key");
-    expect(p.email).toBeNull();
-  });
-
   it("uses the correct name from PROVIDERS registry", () => {
-    const claude = makeProvider("claude", false, null, null);
-    const codex = makeProvider("codex", false, null, null);
-    expect(claude.name).toBe(PROVIDERS.claude.name);
-    expect(codex.name).toBe(PROVIDERS.codex.name);
+    expect(makeProvider("claude").name).toBe(PROVIDERS.claude.name);
+    expect(makeProvider("codex").name).toBe(PROVIDERS.codex.name);
   });
 });
 
 describe("getAvailableModels", () => {
-  it("returns empty array when no providers connected", () => {
-    const providers: Record<string, Provider> = {};
-    expect(getAvailableModels(providers)).toEqual([]);
-  });
-
-  it("returns claude models when only claude connected", () => {
-    const providers: Record<string, Provider> = {
-      claude: makeProvider("claude", true, "subscription", null),
-    };
-    const models = getAvailableModels(providers);
-    expect(models).toEqual(PROVIDERS.claude.models);
-  });
-
-  it("returns codex models when only codex connected", () => {
-    const providers: Record<string, Provider> = {
-      codex: makeProvider("codex", true, "api-key", null),
-    };
-    const models = getAvailableModels(providers);
-    expect(models).toEqual(PROVIDERS.codex.models);
-  });
-
-  it("returns all models when both connected", () => {
-    const providers: Record<string, Provider> = {
-      claude: makeProvider("claude", true, "subscription", null),
-      codex: makeProvider("codex", true, "api-key", null),
-    };
-    const models = getAvailableModels(providers);
+  it("returns every model across providers", () => {
+    const models = getAvailableModels();
     expect(models.length).toBe(
       PROVIDERS.claude.models.length + PROVIDERS.codex.models.length,
     );
     expect(models[0].id).toBe("claude-opus-4-7");
     expect(models[models.length - 1].id).toBe("gpt-5.4-mini");
-  });
-
-  it("excludes disconnected providers", () => {
-    const providers: Record<string, Provider> = {
-      claude: makeProvider("claude", true, "subscription", null),
-      codex: makeProvider("codex", false, null, null),
-    };
-    const models = getAvailableModels(providers);
-    expect(models).toEqual(PROVIDERS.claude.models);
   });
 });
 
