@@ -1,6 +1,7 @@
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { homeDir, join } from "@tauri-apps/api/path";
+import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import { dataDir, homeDir, join } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/core";
+import { McpClientConfigZ, McpServerEntryZ } from "./zodSchemas";
 
 interface McpServerConfig {
   command: string;
@@ -8,85 +9,57 @@ interface McpServerConfig {
   type?: string;
 }
 
-async function getMcpBinaryPath(): Promise<string> {
-  return invoke<string>("get_mcp_binary_path");
+const SERVER_NAME = "socadb";
+
+export function withSocadbServer(
+  config: unknown,
+  server: McpServerConfig,
+): Record<string, unknown> | null {
+  const parsed = McpClientConfigZ.safeParse(config);
+  if (!parsed.success) return null;
+  const servers = parsed.data.mcpServers ?? {};
+  const existing = McpServerEntryZ.safeParse(servers[SERVER_NAME]);
+  const current = existing.success ? existing.data : {};
+  if (current.command === server.command) return null;
+  return {
+    ...parsed.data,
+    mcpServers: { ...servers, [SERVER_NAME]: { ...current, ...server } },
+  };
 }
 
-function addMcpServer(
-  config: Record<string, unknown>,
-  serverName: string,
-  serverConfig: McpServerConfig,
-): boolean {
-  const servers = (config.mcpServers ?? {}) as Record<string, unknown>;
-  if (servers[serverName]) return false;
-  servers[serverName] = serverConfig;
-  config.mcpServers = servers;
-  return true;
-}
-
-async function registerClaudeCode(binaryPath: string): Promise<boolean> {
-  const home = await homeDir();
-  const configPath = await join(home, ".claude.json");
-
-  let config: Record<string, unknown> = {};
-  try {
-    const content = await readTextFile(configPath);
-    config = JSON.parse(content);
-  } catch {
-    // File doesn't exist or invalid JSON, start fresh
-  }
-
-  const added = addMcpServer(config, "socadb", {
-    command: binaryPath,
-    args: [],
-    type: "stdio",
+async function registerIn(configPath: string, server: McpServerConfig) {
+  // Only clients already set up here: never create a config file for them.
+  if (!(await exists(configPath))) return;
+  const updated = withSocadbServer(JSON.parse(await readTextFile(configPath)), server);
+  if (!updated) return;
+  await invoke("atomic_write", {
+    path: configPath,
+    content: JSON.stringify(updated, null, 2),
   });
-
-  if (added) {
-    await writeTextFile(configPath, JSON.stringify(config, null, 2));
-  }
-  return added;
-}
-
-async function registerClaudeDesktop(binaryPath: string): Promise<boolean> {
-  const home = await homeDir();
-  const configPath = await join(
-    home,
-    "Library",
-    "Application Support",
-    "Claude",
-    "claude_desktop_config.json",
-  );
-
-  let config: Record<string, unknown> = {};
-  try {
-    const content = await readTextFile(configPath);
-    config = JSON.parse(content);
-  } catch {
-    // File doesn't exist or invalid JSON, start fresh
-  }
-
-  const added = addMcpServer(config, "socadb", {
-    command: binaryPath,
-    args: [],
-  });
-
-  if (added) {
-    await writeTextFile(configPath, JSON.stringify(config, null, 2));
-  }
-  return added;
 }
 
 export async function registerMcpServers() {
+  // A dev build would point the clients at the checkout's binary.
+  if (import.meta.env.DEV) return;
   try {
-    const binaryPath = await getMcpBinaryPath();
-
-    await registerClaudeCode(binaryPath);
-
-    try {
-      await registerClaudeDesktop(binaryPath);
-    } catch {
-      // Claude Desktop not installed, skip
+    const command = await invoke<string>("get_mcp_binary_path");
+    const targets = [
+      {
+        path: await join(await homeDir(), ".claude.json"),
+        server: { command, args: [], type: "stdio" },
+      },
+      {
+        path: await join(await dataDir(), "Claude", "claude_desktop_config.json"),
+        server: { command, args: [] },
+      },
+    ];
+    for (const { path, server } of targets) {
+      try {
+        await registerIn(path, server);
+      } catch (e) {
+        // Never rewrite a file we couldn't parse: it holds the client's whole config.
+        console.warn(`MCP registration skipped for ${path}:`, e);
+      }
     }
   } catch (e) {
     console.error("MCP registration failed:", e);

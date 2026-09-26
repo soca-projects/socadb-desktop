@@ -156,3 +156,11 @@ export const ChatErrorZ = z.object({
   message: z.string(),
   code: z.literal("auth").optional(),
 });
+
+export const McpClientConfigZ = z.looseObject({
+  mcpServers: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const McpServerEntryZ = z.looseObject({
+  command: z.string().optional(),
+});
