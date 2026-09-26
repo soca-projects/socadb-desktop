@@ -10,7 +10,7 @@ import { platform, arch, homedir } from "os";
 export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
 export type ClaudeEffort = "low" | "medium" | "high" | "xhigh" | "max";
-export type CodexEffort = "low" | "medium" | "high" | "xhigh";
+export type CodexEffort = "low" | "medium" | "high" | "xhigh" | "max";
 
 export const CLAUDE_EFFORTS: readonly ClaudeEffort[] = [
   "low",
@@ -25,6 +25,7 @@ export const CODEX_EFFORTS: readonly CodexEffort[] = [
   "medium",
   "high",
   "xhigh",
+  "max",
 ];
 
 export interface ChatSendCommand {

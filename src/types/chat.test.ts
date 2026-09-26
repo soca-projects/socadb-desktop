@@ -15,15 +15,15 @@ import { CLAUDE_EFFORTS, CODEX_EFFORTS } from "../../mcp-server/src/agent-runner
 
 describe("getProviderFromModel", () => {
   it("returns claude for claude models", () => {
-    expect(getProviderFromModel("claude-opus-4-7")).toBe("claude");
-    expect(getProviderFromModel("claude-sonnet-4-6")).toBe("claude");
+    expect(getProviderFromModel("claude-fable-5-1")).toBe("claude");
+    expect(getProviderFromModel("claude-sonnet-5")).toBe("claude");
     expect(getProviderFromModel("claude-haiku-4-5")).toBe("claude");
   });
 
   it("returns codex for gpt models", () => {
-    expect(getProviderFromModel("gpt-5.5")).toBe("codex");
-    expect(getProviderFromModel("gpt-5.4")).toBe("codex");
-    expect(getProviderFromModel("gpt-5.4-mini")).toBe("codex");
+    expect(getProviderFromModel("gpt-6-astra")).toBe("codex");
+    expect(getProviderFromModel("gpt-6-sol")).toBe("codex");
+    expect(getProviderFromModel("gpt-6-luna")).toBe("codex");
   });
 
   it("defaults to claude for unknown models", () => {
@@ -64,8 +64,8 @@ describe("getAvailableModels", () => {
     expect(models.length).toBe(
       PROVIDERS.claude.models.length + PROVIDERS.codex.models.length,
     );
-    expect(models[0].id).toBe("claude-opus-4-7");
-    expect(models[models.length - 1].id).toBe("gpt-5.4-mini");
+    expect(models[0].id).toBe("claude-fable-5-1");
+    expect(models[models.length - 1].id).toBe("gpt-6-luna");
   });
 });
 
@@ -132,15 +132,15 @@ describe("EFFORT_LEVELS_BY_PROVIDER equals union of per-model lists", () => {
 
 describe("resolveEffort", () => {
   it("returns stored value when supported by the model", () => {
-    const r = resolveEffort("claude-opus-4-7", "xhigh", "claude");
+    const r = resolveEffort("claude-opus-5-5", "xhigh", "claude");
     expect(r.displayed).toBe("xhigh");
     expect(r.toSend).toBe("xhigh");
   });
 
   it("falls back to provider default when stored is not in the model's list", () => {
-    const r = resolveEffort("claude-sonnet-4-6", "xhigh", "claude");
+    const r = resolveEffort("some-unknown-model", "xhigh", "claude");
     expect(r.displayed).toBe(DEFAULT_EFFORT_BY_PROVIDER.claude);
-    expect(r.toSend).toBe(DEFAULT_EFFORT_BY_PROVIDER.claude);
+    expect(r.toSend).toBeUndefined();
   });
 
   it("sends undefined when the model doesn't support effort at all", () => {
