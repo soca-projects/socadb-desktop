@@ -109,9 +109,15 @@ async function handleSend(cmd: ChatSendCommand) {
           break;
         }
 
+        // The exec process then exits non-zero; report the first cause only.
         case "error":
-          emitError("codex", event.message);
-          break;
+        case "turn.failed":
+          abortController.abort();
+          emitError(
+            "codex",
+            event.type === "error" ? event.message : event.error.message,
+          );
+          return;
       }
     }
 

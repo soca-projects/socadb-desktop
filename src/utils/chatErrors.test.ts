@@ -12,7 +12,9 @@ describe("isAuthErrorMessage", () => {
   // Messages captured from the bundled CLIs with no login and with a bad key.
   it.each([
     "Claude Code returned an error result: Not logged in · Please run /login",
+    "Claude Code returned an error result: Invalid API key · Fix external API key",
     'Claude Code returned an error result: Failed to authenticate. API Error: 401 {"type":"error","error":{"type":"authentication_error","message":"API key is invalid."}}',
+    "Your access token could not be refreshed. Please log out and sign in again.",
     "Codex Exec exited with code 1: Reading prompt from stdin...\nERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://api.openai.com/v1/responses",
   ])("flags %s", (message) => {
     expect(isAuthErrorMessage(message)).toBe(true);
