@@ -39,7 +39,7 @@ async function handleSend(cmd: ChatSendCommand) {
     });
 
     const threadOptions = {
-      model: cmd.model ?? "gpt-5.5",
+      model: cmd.model ?? "gpt-6-sol",
       skipGitRepoCheck: true,
       webSearchEnabled: true,
       sandboxMode: "danger-full-access" as const,
