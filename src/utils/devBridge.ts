@@ -75,15 +75,16 @@ function pick(matches: Element[], target: string, index?: number): Element | nul
   return matches[0];
 }
 
-function find(target: string, index?: number): Element {
+function find(target: string, index?: number, includeHidden = false): Element {
+  const shown = (el: Element) => includeHidden || isVisible(el);
   if (target.startsWith("css=")) {
-    const matches = [...document.querySelectorAll(target.slice(4))].filter(isVisible);
+    const matches = [...document.querySelectorAll(target.slice(4))].filter(shown);
     const el = pick(matches, target, index);
     if (!el) throw new Error(`No visible element matches ${target}`);
     return el;
   }
   const want = normalize(target);
-  const interactive = [...document.querySelectorAll(INTERACTIVE)].filter(isVisible);
+  const interactive = [...document.querySelectorAll(INTERACTIVE)].filter(shown);
   const byName =
     pick(
       interactive.filter((el) => normalize(accessibleName(el)) === want),
@@ -107,8 +108,19 @@ function find(target: string, index?: number): Element {
   throw new Error(`No visible element matches "${target}"`);
 }
 
-function click(target: string, index?: number): string {
-  const el = find(target, index);
+function click(target: string, index?: number, force = false): string {
+  const el = find(target, index, force);
+  if (force) {
+    el.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: window,
+      }),
+    );
+    return `force-clicked ${describe(el)}`;
+  }
   el.scrollIntoView({ block: "center", inline: "center" });
   const rect = el.getBoundingClientRect();
   const x = rect.left + rect.width / 2;
@@ -313,8 +325,10 @@ const TargetZ = z.object({
 
 const actions = {
   dev_click: (p: unknown) => {
-    const { target, index } = TargetZ.parse(p);
-    return click(target, index);
+    const { target, index, force } = TargetZ.extend({
+      force: z.boolean().default(false),
+    }).parse(p);
+    return click(target, index, force);
   },
   dev_type: (p: unknown) => {
     const {
@@ -327,6 +341,14 @@ const actions = {
       append: z.boolean().default(false),
     }).parse(p);
     return type(target, value, append, index);
+  },
+  dev_focus: (p: unknown) => {
+    const { target, index } = TargetZ.parse(p);
+    const el = find(target, index);
+    if (!(el instanceof HTMLElement))
+      throw new Error(`${describe(el)} cannot take focus`);
+    el.focus();
+    return `focused ${describe(el)}`;
   },
   dev_select: (p: unknown) => {
     const { target, index, option } = TargetZ.extend({ option: z.string() }).parse(p);

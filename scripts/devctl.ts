@@ -8,7 +8,10 @@ const USAGE = `Commands:
   snapshot                         visible interactive elements
   text [target] [--max N]          visible text (whole window by default)
   state                            schema, chat and window state
-  click <target> [--index N]       click by accessible name, text, or css=<selector>
+  click <target> [--index N] [--force]
+                                   click by accessible name, text, or css=<selector>;
+                                   --force clicks hidden elements (hover-only controls)
+  focus <target> [--index N]       focus an element (reveals :focus-within controls)
   type <target> <text> [--append] [--index N]
   clear <target> [--index N]
   select <target> <option> [--index N]
@@ -120,8 +123,13 @@ async function main() {
       );
       break;
     }
-    case "click":
-      result = await send("dev_click", { target: args[0], ...at }, 10000);
+    case "click": {
+      const force = flag(args, "--force");
+      result = await send("dev_click", { target: args[0], force, ...at }, 10000);
+      break;
+    }
+    case "focus":
+      result = await send("dev_focus", { target: args[0], ...at }, 10000);
       break;
     case "type": {
       const append = flag(args, "--append");
