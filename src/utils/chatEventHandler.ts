@@ -100,7 +100,9 @@ export function handleChatEvent(parsed: ChatEvent) {
           );
         }
       }
-      store.finishResponse("");
+      // An error ends the turn, not the conversation: dropping the session here
+      // would make the next message start over without the agent's memory.
+      store.finishResponse(store.sessionId ?? "");
       break;
     }
   }
