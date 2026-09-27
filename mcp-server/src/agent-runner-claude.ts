@@ -61,6 +61,9 @@ async function handleSend(cmd: ChatSendCommand) {
       // CLAUDE.md) out of SocaDB's agent.
       settingSources: [],
       strictMcpConfig: true,
+      // Auto-memory is shared by every session of the cwd: the agent must only
+      // remember its own conversation, and forget it when that is deleted.
+      settings: { autoMemoryEnabled: false },
       includePartialMessages: true,
       sessionStore,
       mcpServers: {
