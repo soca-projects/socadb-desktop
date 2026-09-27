@@ -171,6 +171,9 @@ export interface ChatMessage {
 export interface Conversation {
   id: string;
   name: string;
+  nameEdited?: boolean;
+  provider?: ProviderId;
+  model?: string;
   sessionId: string | null;
   messages: ChatMessage[];
   createdAt: string;

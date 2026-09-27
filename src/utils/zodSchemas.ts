@@ -164,3 +164,35 @@ export const McpClientConfigZ = z.looseObject({
 export const McpServerEntryZ = z.looseObject({
   command: z.string().optional(),
 });
+
+const ToolCallInfoZ = z.object({
+  id: z.string(),
+  name: z.string(),
+  input: z.record(z.string(), z.unknown()),
+  result: z.string().nullable(),
+  isSuccess: z.boolean(),
+});
+
+export const ChatMessageZ = z.object({
+  id: z.string(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+  toolCalls: z.array(ToolCallInfoZ),
+  timestamp: z.string(),
+});
+
+export const ConversationZ = z.object({
+  id: z.string(),
+  name: z.string(),
+  nameEdited: z.boolean().optional(),
+  provider: z.enum(["claude", "codex"]).optional(),
+  model: z.string().optional(),
+  sessionId: z.string().nullable(),
+  messages: z.array(ChatMessageZ),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const ConversationFileZ = ConversationZ.extend({ version: z.literal(1) });
+
+export const LegacyConversationsZ = z.object({ conversations: z.array(z.unknown()) });
