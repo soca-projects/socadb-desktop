@@ -100,6 +100,11 @@ export function getAvailableModels(): SupportedModel[] {
 
 export const DEFAULT_MODEL = "claude-sonnet-5";
 
+export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderId, string> = {
+  claude: DEFAULT_MODEL,
+  codex: "gpt-6-sol",
+};
+
 export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
 // Per-model effort support, sourced from official docs:

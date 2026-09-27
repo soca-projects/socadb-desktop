@@ -9,11 +9,15 @@ import type {
 } from "../types/chat";
 import {
   DEFAULT_EFFORT_BY_PROVIDER,
+  DEFAULT_MODEL,
+  DEFAULT_MODEL_BY_PROVIDER,
   EFFORT_LEVELS_BY_PROVIDER,
   PROVIDER_IDS,
+  getProviderFromModel,
   makeProvider,
 } from "../types/chat";
 import { genId } from "../utils/id";
+import { providerFromSessionId } from "../utils/conversationFiles";
 
 function defaultProviders(): Record<string, Provider> {
   return Object.fromEntries(PROVIDER_IDS.map((id) => [id, makeProvider(id)]));
@@ -59,11 +63,16 @@ interface ChatState {
 
   messages: ChatMessage[];
   sessionId: string | null;
+  selectedModel: string;
+  providerSwitch: { from: ProviderId; model: string } | null;
 
   newConversation: () => void;
   switchConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   setConversations: (conversations: Conversation[]) => void;
+  selectModel: (modelId: string) => void;
+  renameConversation: (id: string, name: string) => void;
+  deleteAllConversations: () => void;
 
   addUserMessage: (content: string) => void;
   startAssistantMessage: () => void;
@@ -96,6 +105,23 @@ function syncToConversation(state: ChatState): Partial<ChatState> {
   };
 }
 
+// Switching conversations must not reorder the history, so no updatedAt bump here.
+function syncedConversations(state: ChatState): Conversation[] {
+  if (!state.activeConversationId) return state.conversations;
+  return state.conversations.map((c) =>
+    c.id === state.activeConversationId
+      ? { ...c, messages: state.messages, sessionId: state.sessionId }
+      : c,
+  );
+}
+
+function modelFor(conversation: Conversation, fallback: string): string {
+  if (conversation.model) return conversation.model;
+  const provider = conversation.provider ?? providerFromSessionId(conversation.sessionId);
+  if (!provider || provider === getProviderFromModel(fallback)) return fallback;
+  return DEFAULT_MODEL_BY_PROVIDER[provider];
+}
+
 function autoName(messages: ChatMessage[]): string {
   const first = messages.find((m) => m.role === "user");
   if (!first) return "New Chat";
@@ -111,30 +137,21 @@ export const useChatStore = create<ChatState>()((set) => ({
   sessionId: null,
   isStreaming: false,
   isPanelOpen: false,
+  selectedModel: DEFAULT_MODEL,
+  providerSwitch: null,
   providers: defaultProviders(),
   effortByProvider: loadEffortByProvider(),
 
   newConversation: () =>
     set((state) => {
-      const synced = state.activeConversationId
-        ? state.conversations.map((c) =>
-            c.id === state.activeConversationId
-              ? {
-                  ...c,
-                  messages: state.messages,
-                  sessionId: state.sessionId,
-                  updatedAt: new Date().toISOString(),
-                }
-              : c,
-          )
-        : state.conversations;
       const conv = createConversation();
       return {
-        conversations: [conv, ...synced],
+        conversations: [conv, ...syncedConversations(state)],
         activeConversationId: conv.id,
         messages: [],
         sessionId: null,
         isStreaming: false,
+        providerSwitch: null,
       };
     }),
 
@@ -142,24 +159,14 @@ export const useChatStore = create<ChatState>()((set) => ({
     set((state) => {
       const target = state.conversations.find((c) => c.id === id);
       if (!target) return {};
-      const synced = state.activeConversationId
-        ? state.conversations.map((c) =>
-            c.id === state.activeConversationId
-              ? {
-                  ...c,
-                  messages: state.messages,
-                  sessionId: state.sessionId,
-                  updatedAt: new Date().toISOString(),
-                }
-              : c,
-          )
-        : state.conversations;
       return {
-        conversations: synced,
+        conversations: syncedConversations(state),
         activeConversationId: id,
         messages: target.messages,
         sessionId: target.sessionId,
         isStreaming: false,
+        selectedModel: modelFor(target, state.selectedModel),
+        providerSwitch: null,
       };
     }),
 
@@ -187,15 +194,69 @@ export const useChatStore = create<ChatState>()((set) => ({
       return { conversations: remaining };
     }),
 
-  setConversations: (conversations) => {
-    const active = conversations[0];
-    return set({
-      conversations,
-      activeConversationId: active?.id ?? null,
-      messages: active?.messages ?? [],
-      sessionId: active?.sessionId ?? null,
-    });
-  },
+  setConversations: (conversations) =>
+    set((state) => {
+      const active = conversations[0];
+      return {
+        conversations,
+        activeConversationId: active?.id ?? null,
+        messages: active?.messages ?? [],
+        sessionId: active?.sessionId ?? null,
+        selectedModel: active
+          ? modelFor(active, state.selectedModel)
+          : state.selectedModel,
+      };
+    }),
+
+  selectModel: (modelId) =>
+    set((state) => {
+      const next = getProviderFromModel(modelId);
+      const active = state.conversations.find((c) => c.id === state.activeConversationId);
+      const current = active?.provider ?? providerFromSessionId(state.sessionId);
+      if (state.messages.length > 0 && current && current !== next) {
+        const conv = createConversation();
+        return {
+          conversations: [conv, ...syncedConversations(state)],
+          activeConversationId: conv.id,
+          messages: [],
+          sessionId: null,
+          selectedModel: modelId,
+          providerSwitch: { from: current, model: modelId },
+        };
+      }
+      return {
+        selectedModel: modelId,
+        conversations:
+          active && state.messages.length > 0
+            ? state.conversations.map((c) =>
+                c.id === active.id ? { ...c, model: modelId } : c,
+              )
+            : state.conversations,
+      };
+    }),
+
+  renameConversation: (id, name) =>
+    set((state) => {
+      const trimmed = name.trim();
+      if (!trimmed) return {};
+      return {
+        conversations: state.conversations.map((c) =>
+          c.id === id ? { ...c, name: trimmed, nameEdited: true } : c,
+        ),
+      };
+    }),
+
+  deleteAllConversations: () =>
+    set(() => {
+      const conv = createConversation();
+      return {
+        conversations: [conv],
+        activeConversationId: conv.id,
+        messages: [],
+        sessionId: null,
+        providerSwitch: null,
+      };
+    }),
 
   addUserMessage: (content) =>
     set((state) => {
@@ -219,18 +280,21 @@ export const useChatStore = create<ChatState>()((set) => ({
         },
       ];
 
-      const name = state.messages.length === 0 ? autoName(msgs) : undefined;
+      const isFirst = state.messages.length === 0;
 
       return {
         messages: msgs,
         isStreaming: true,
         streamingConversationId: activeId,
+        providerSwitch: null,
         conversations: convs.map((c) =>
           c.id === activeId
             ? {
                 ...c,
                 messages: msgs,
-                ...(name ? { name } : {}),
+                provider: getProviderFromModel(state.selectedModel),
+                model: state.selectedModel,
+                ...(isFirst && !c.nameEdited ? { name: autoName(msgs) } : {}),
                 updatedAt: new Date().toISOString(),
               }
             : c,

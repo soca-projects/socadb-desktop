@@ -12,7 +12,6 @@ import { chatSendErrorText } from "../../utils/chatErrors";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { serializeRelation } from "../../utils/schemaQueries";
 import {
-  DEFAULT_MODEL,
   getAvailableModels,
   getProviderFromModel,
   PROVIDERS,
@@ -129,7 +128,8 @@ export function ChatPanel() {
   const switchConversation = useChatStore((s) => s.switchConversation);
   const setEffort = useChatStore((s) => s.setEffort);
 
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const selectedModel = useChatStore((s) => s.selectedModel);
+  const selectModel = useChatStore((s) => s.selectModel);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { size, startResize } = useResize({
@@ -280,7 +280,7 @@ export function ChatPanel() {
         <div className="relative">
           <select
             value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
+            onChange={(e) => selectModel(e.target.value)}
             disabled={isStreaming}
             className="appearance-none rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
           >
