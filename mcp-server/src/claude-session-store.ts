@@ -1,16 +1,26 @@
 import { appendFile, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type {
-  SessionKey,
-  SessionStore,
-  SessionStoreEntry,
-} from "@anthropic-ai/claude-agent-sdk";
+
+// Not imported from the SDK: the frontend typecheck reaches this file through its test,
+// without mcp-server's dependencies.
+interface SessionKey {
+  projectKey: string;
+  sessionId: string;
+  subpath?: string;
+}
+
+interface SessionStoreEntry {
+  type: string;
+  uuid?: string;
+  timestamp?: string;
+  [k: string]: unknown;
+}
 
 const SAFE_SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 
 // Keyed by session id alone, unlike the SDK's own transcripts whose project key
 // comes from the cwd: sessions must survive the app moving.
-export class FileSessionStore implements SessionStore {
+export class FileSessionStore {
   private readonly queues = new Map<string, Promise<void>>();
   private readonly seen = new Map<string, Set<string>>();
 
