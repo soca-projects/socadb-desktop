@@ -144,7 +144,11 @@ export function ChatPanel() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, view]);
+  }, [messages]);
+
+  const scrollToEnd = useCallback((el: HTMLDivElement | null) => {
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
 
   const availableModels = getAvailableModels();
   const activeProviderId = getProviderFromModel(selectedModel);
@@ -331,7 +335,11 @@ export function ChatPanel() {
         </button>
       </div>
 
-      <div key={`${view}-${activeConversationId}`} className="flex-1 overflow-y-auto">
+      <div
+        key={`${view}-${activeConversationId}`}
+        ref={view === "chat" ? scrollToEnd : undefined}
+        className="flex-1 overflow-y-auto"
+      >
         {view === "history" ? (
           <ChatHistory onOpen={() => setView("chat")} />
         ) : messages.length === 0 ? (
