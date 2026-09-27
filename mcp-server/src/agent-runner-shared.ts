@@ -85,6 +85,10 @@ export function getAgentWorkDir(): string {
   return dir;
 }
 
+export function getClaudeSessionsDir(): string {
+  return join(homedir(), ".socadb", "sessions", "claude");
+}
+
 export function getMcpBinaryPath(moduleDir: string): string {
   const os = platform() === "darwin" ? "darwin" : platform() === "win32" ? "windows" : "linux";
   const cpu = arch() === "arm64" ? "arm64" : "x64";

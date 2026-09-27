@@ -1,5 +1,12 @@
 #!/usr/bin/env node
-import { query, listSessions, type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
+import {
+  importSessionToStore,
+  listSessions,
+  query,
+  type Options,
+  type Query,
+} from "@anthropic-ai/claude-agent-sdk";
+import { FileSessionStore } from "./claude-session-store.ts";
 import {
   CLAUDE_EFFORTS,
   emit,
@@ -7,6 +14,7 @@ import {
   getAgentWorkDir,
   getClaudeCodeBinaryPath,
   getClaudeSdkOptions,
+  getClaudeSessionsDir,
   getMcpBinaryPath,
   getModuleDir,
   startRunner,
@@ -17,6 +25,7 @@ import {
 const __dirname = getModuleDir(import.meta.url);
 const sdkOptions = getClaudeSdkOptions();
 const claudeCodePath = getClaudeCodeBinaryPath(__dirname);
+const sessionStore = new FileSessionStore(getClaudeSessionsDir());
 
 let currentQuery: Query | undefined;
 let abortController: AbortController | undefined;
@@ -53,6 +62,7 @@ async function handleSend(cmd: ChatSendCommand) {
       settingSources: [],
       strictMcpConfig: true,
       includePartialMessages: true,
+      sessionStore,
       mcpServers: {
         socadb: {
           command: getMcpBinaryPath(__dirname),
@@ -63,11 +73,16 @@ async function handleSend(cmd: ChatSendCommand) {
     };
 
     if (cmd.sessionId) {
-      const sessions = await listSessions();
-      const found = sessions.find((s) => s.sessionId === cmd.sessionId);
-      if (found) {
+      if (await sessionStore.has(cmd.sessionId)) {
         options.resume = cmd.sessionId;
-        options.cwd = found.cwd;
+      } else {
+        const found = (await listSessions()).find((s) => s.sessionId === cmd.sessionId);
+        if (found) {
+          await importSessionToStore(cmd.sessionId, sessionStore, { dir: found.cwd });
+          options.resume = cmd.sessionId;
+        } else {
+          emit({ type: "chat_event", event: "memory_lost" });
+        }
       }
     }
 

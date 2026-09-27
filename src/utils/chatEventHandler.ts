@@ -56,6 +56,12 @@ export function handleChatEvent(parsed: ChatEvent) {
       );
       break;
 
+    case "memory_lost":
+      if (isStale) break;
+      ensureAssistantMessage();
+      store.appendAssistantText(`${i18next.t("chat.memoryLost")}\n\n`);
+      break;
+
     case "done":
       if (!isStale && parsed.response) {
         ensureAssistantMessage();
