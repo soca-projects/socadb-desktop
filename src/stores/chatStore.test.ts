@@ -46,7 +46,18 @@ describe("chatStore conversations", () => {
     expect(s.activeConversationId).not.toBe(id);
     expect(s.messages).toEqual([]);
     expect(s.selectedModel).toBe("gpt-6-sol");
-    expect(s.providerSwitch).toEqual({ from: "claude", model: "gpt-6-sol" });
+    expect(s.providerSwitch).toEqual({
+      from: "claude",
+      fromModel: "claude-sonnet-5",
+      model: "gpt-6-sol",
+    });
+  });
+
+  it("drops the notice when another model is picked in the new conversation", () => {
+    startConversation();
+    useChatStore.getState().selectModel("gpt-6-sol");
+    useChatStore.getState().selectModel("claude-sonnet-5");
+    expect(useChatStore.getState().providerSwitch).toBeNull();
   });
 
   it("switches provider freely before the first message", () => {

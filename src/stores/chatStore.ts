@@ -64,7 +64,7 @@ interface ChatState {
   messages: ChatMessage[];
   sessionId: string | null;
   selectedModel: string;
-  providerSwitch: { from: ProviderId; model: string } | null;
+  providerSwitch: { from: ProviderId; fromModel: string; model: string } | null;
 
   newConversation: () => void;
   switchConversation: (id: string) => void;
@@ -221,11 +221,16 @@ export const useChatStore = create<ChatState>()((set) => ({
           messages: [],
           sessionId: null,
           selectedModel: modelId,
-          providerSwitch: { from: current, model: modelId },
+          providerSwitch: {
+            from: current,
+            fromModel: active?.model ?? state.selectedModel,
+            model: modelId,
+          },
         };
       }
       return {
         selectedModel: modelId,
+        providerSwitch: null,
         conversations:
           active && state.messages.length > 0
             ? state.conversations.map((c) =>

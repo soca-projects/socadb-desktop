@@ -132,6 +132,7 @@ export function ChatPanel() {
 
   const selectedModel = useChatStore((s) => s.selectedModel);
   const selectModel = useChatStore((s) => s.selectModel);
+  const providerSwitch = useChatStore((s) => s.providerSwitch);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { size, startResize } = useResize({
@@ -143,7 +144,7 @@ export function ChatPanel() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, view]);
 
   const availableModels = getAvailableModels();
   const activeProviderId = getProviderFromModel(selectedModel);
@@ -217,6 +218,38 @@ export function ChatPanel() {
   if (focusMode) return null;
 
   const activeConv = conversations.find((c) => c.id === activeConversationId);
+  const modelName = (id: string) =>
+    availableModels.find((m) => m.id === id)?.displayName ?? id;
+
+  const pickers = (
+    <>
+      <div className="relative min-w-0">
+        <select
+          value={selectedModel}
+          onChange={(e) => selectModel(e.target.value)}
+          disabled={isStreaming}
+          aria-label={t("chat.model")}
+          className="w-full min-w-0 appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
+        >
+          {availableModels.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.displayName}
+            </option>
+          ))}
+        </select>
+        <CaretDown
+          size={10}
+          className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
+        />
+      </div>
+      <EffortPicker
+        modelId={selectedModel}
+        value={displayedEffort}
+        onChange={(effort) => setEffort(activeProviderId, effort)}
+        disabled={isStreaming}
+      />
+    </>
+  );
   const conversationTitle =
     activeConv && activeConv.messages.length > 0
       ? activeConv.name
@@ -278,30 +311,6 @@ export function ChatPanel() {
         <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-secondary">
           {view === "history" ? t("chat.history") : conversationTitle}
         </span>
-        <div className="relative">
-          <select
-            value={selectedModel}
-            onChange={(e) => selectModel(e.target.value)}
-            disabled={isStreaming}
-            className="appearance-none rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
-          >
-            {availableModels.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.displayName}
-              </option>
-            ))}
-          </select>
-          <CaretDown
-            size={10}
-            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
-          />
-        </div>
-        <EffortPicker
-          modelId={selectedModel}
-          value={displayedEffort}
-          onChange={(effort) => setEffort(activeProviderId, effort)}
-          disabled={isStreaming}
-        />
         <button
           onClick={() => {
             newConversation();
@@ -322,32 +331,45 @@ export function ChatPanel() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div key={`${view}-${activeConversationId}`} className="flex-1 overflow-y-auto">
         {view === "history" ? (
           <ChatHistory onOpen={() => setView("chat")} />
         ) : messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4 px-4 py-3">
-            <p className="text-center text-[13px] text-tertiary">
-              {needsApiKey ? apiKeyNeededText : t("chat.whatToBuild")}
-            </p>
-            {!needsApiKey && (
-              <div className="flex flex-col items-center gap-2">
-                {[
-                  t("chat.suggestion1"),
-                  t("chat.suggestion2"),
-                  t("chat.suggestion3"),
-                  t("chat.suggestion4"),
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => handleSend(suggestion)}
-                    className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex min-h-full flex-col px-4 py-3">
+            <div className="m-auto flex flex-col items-center gap-4">
+              {providerSwitch && (
+                <p
+                  role="status"
+                  className="max-w-[280px] rounded-lg border border-accent/25 bg-accent-light px-2.5 py-2 text-left text-[12px] leading-snug text-secondary"
+                >
+                  {t("chat.providerSwitched", {
+                    model: modelName(providerSwitch.model),
+                    previous: modelName(providerSwitch.fromModel),
+                  })}
+                </p>
+              )}
+              <p className="text-center text-[13px] text-tertiary">
+                {needsApiKey ? apiKeyNeededText : t("chat.whatToBuild")}
+              </p>
+              {!needsApiKey && (
+                <div className="flex flex-col items-center gap-2">
+                  {[
+                    t("chat.suggestion1"),
+                    t("chat.suggestion2"),
+                    t("chat.suggestion3"),
+                    t("chat.suggestion4"),
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => handleSend(suggestion)}
+                      className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3 px-4 py-3">
@@ -366,6 +388,7 @@ export function ChatPanel() {
           disabled={needsApiKey}
           isStreaming={isStreaming}
           placeholder={needsApiKey ? apiKeyNeededText : undefined}
+          footer={pickers}
         />
       )}
     </div>
