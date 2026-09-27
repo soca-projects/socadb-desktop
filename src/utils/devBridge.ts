@@ -148,6 +148,40 @@ function click(target: string, index?: number, force = false): string {
   return `clicked ${describe(el)}`;
 }
 
+function drag(target: string, dx: number, dy: number, index?: number): string {
+  const el = find(target, index);
+  const rect = el.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  const at = (px: number, py: number, buttons: number) => ({
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    view: window,
+    clientX: px,
+    clientY: py,
+    button: 0,
+    buttons,
+  });
+  const pointer = { pointerId: 1, pointerType: "mouse", isPrimary: true };
+  el.dispatchEvent(new PointerEvent("pointerdown", { ...at(x, y, 1), ...pointer }));
+  el.dispatchEvent(new MouseEvent("mousedown", at(x, y, 1)));
+  const steps = 10;
+  for (let i = 1; i <= steps; i++) {
+    const px = x + (dx * i) / steps;
+    const py = y + (dy * i) / steps;
+    document.dispatchEvent(
+      new PointerEvent("pointermove", { ...at(px, py, 1), ...pointer }),
+    );
+    document.dispatchEvent(new MouseEvent("mousemove", at(px, py, 1)));
+  }
+  document.dispatchEvent(
+    new PointerEvent("pointerup", { ...at(x + dx, y + dy, 0), ...pointer }),
+  );
+  document.dispatchEvent(new MouseEvent("mouseup", at(x + dx, y + dy, 0)));
+  return `dragged ${describe(el)} by ${dx},${dy}`;
+}
+
 // React drops an input event when the value matches its tracker; setting the
 // value through the prototype setter leaves the tracker on the old value.
 function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: string) {
@@ -341,6 +375,13 @@ const actions = {
       append: z.boolean().default(false),
     }).parse(p);
     return type(target, value, append, index);
+  },
+  dev_drag: (p: unknown) => {
+    const { target, index, dx, dy } = TargetZ.extend({
+      dx: z.number(),
+      dy: z.number(),
+    }).parse(p);
+    return drag(target, dx, dy, index);
   },
   dev_focus: (p: unknown) => {
     const { target, index } = TargetZ.parse(p);

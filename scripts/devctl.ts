@@ -11,6 +11,8 @@ const USAGE = `Commands:
   click <target> [--index N] [--force]
                                    click by accessible name, text, or css=<selector>;
                                    --force clicks hidden elements (hover-only controls)
+  drag <target> <dx> <dy> [--index N]
+                                   press, move by dx,dy pixels, release
   focus <target> [--index N]       focus an element (reveals :focus-within controls)
   type <target> <text> [--append] [--index N]
   clear <target> [--index N]
@@ -128,6 +130,13 @@ async function main() {
       result = await send("dev_click", { target: args[0], force, ...at }, 10000);
       break;
     }
+    case "drag":
+      result = await send(
+        "dev_drag",
+        { target: args[0], dx: Number(args[1]), dy: Number(args[2]), ...at },
+        10000,
+      );
+      break;
     case "focus":
       result = await send("dev_focus", { target: args[0], ...at }, 10000);
       break;
