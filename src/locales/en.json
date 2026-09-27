@@ -108,7 +108,9 @@
     "conversations": "Conversations",
     "deleteAllDescription": "Conversations are kept until you delete them. Deleting also erases the agent's memory of Claude conversations.",
     "deleteAllConversations": "Delete all conversations",
-    "deleteAllConfirm": "Delete all conversations? This can't be undone."
+    "deleteAllConfirm": "Delete all conversations? This can't be undone.",
+    "deleteAll": "Delete all",
+    "cancel": "Cancel"
   },
   "agent": {
     "ownApiKey": "Your own API key",

@@ -43,4 +43,23 @@ describe("handleChatEvent", () => {
     expect(state.sessionId).toBe("s-1");
     expect(state.conversations[0].sessionId).toBe("s-1");
   });
+
+  it("keeps a stale answer's session out of the conversation now open", () => {
+    const store = useChatStore.getState();
+    store.newConversation();
+    store.addUserMessage("hello");
+    useChatStore.getState().deleteAllConversations();
+    handleChatEvent({
+      type: "chat_event",
+      event: "done",
+      response: "hi",
+      sessionId: "deleted-session",
+    });
+
+    const state = useChatStore.getState();
+    expect(state.isStreaming).toBe(false);
+    expect(state.sessionId).not.toBe("deleted-session");
+    expect(state.conversations[0].sessionId).not.toBe("deleted-session");
+    expect(state.conversations[0].messages).toEqual([]);
+  });
 });

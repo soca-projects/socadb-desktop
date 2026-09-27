@@ -69,7 +69,10 @@ export function handleChatEvent(parsed: ChatEvent) {
         ensureAssistantMessage();
         store.setAssistantText(parsed.response as string);
       }
-      store.finishResponse((parsed.sessionId as string) ?? "");
+      // A stale answer belongs to another conversation: its session must not land here.
+      store.finishResponse(
+        isStale ? (store.sessionId ?? "") : ((parsed.sessionId as string) ?? ""),
+      );
       break;
 
     case "error": {

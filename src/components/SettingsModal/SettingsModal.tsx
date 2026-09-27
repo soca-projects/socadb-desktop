@@ -319,6 +319,7 @@ function SidebarItem({
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const { t, i18n } = useTranslation();
   const providers = useChatStore((s) => s.providers);
+  const isStreaming = useChatStore((s) => s.isStreaming);
 
   const [section, setSection] = useState<Section>("agents");
 
@@ -332,7 +333,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   );
 
   const handleDeleteAllConversations = useCallback(async () => {
-    if (await ask(t("settings.deleteAllConfirm"), { kind: "warning" })) {
+    const confirmed = await ask(t("settings.deleteAllConfirm"), {
+      kind: "warning",
+      okLabel: t("settings.deleteAll"),
+      cancelLabel: t("settings.cancel"),
+    });
+    if (confirmed) {
       useChatStore.getState().deleteAllConversations();
     }
   }, [t]);
@@ -391,7 +397,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               <button
                 type="button"
                 onClick={handleDeleteAllConversations}
-                className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
+                disabled={isStreaming}
+                title={isStreaming ? t("chat.deleteWhileAnswering") : undefined}
+                className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50 disabled:hover:bg-transparent dark:text-red-400"
               >
                 {t("settings.deleteAllConversations")}
               </button>
