@@ -31,6 +31,7 @@ import {
 import { SUPPORTED_LANGUAGES, type Language } from "../../i18n";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 
 type Section = "agents" | "language";
@@ -330,6 +331,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     [providers],
   );
 
+  const handleDeleteAllConversations = useCallback(async () => {
+    if (await ask(t("settings.deleteAllConfirm"), { kind: "warning" })) {
+      useChatStore.getState().deleteAllConversations();
+    }
+  }, [t]);
+
   return (
     <Modal onClose={onClose} maxWidth="max-w-2xl">
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
@@ -374,6 +381,21 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 />
               );
             })}
+            <div className="space-y-2 border-t border-border pt-4">
+              <h3 className="text-[13px] font-medium text-primary">
+                {t("settings.conversations")}
+              </h3>
+              <p className="text-[12.5px] text-tertiary">
+                {t("settings.deleteAllDescription")}
+              </p>
+              <button
+                type="button"
+                onClick={handleDeleteAllConversations}
+                className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
+              >
+                {t("settings.deleteAllConversations")}
+              </button>
+            </div>
           </div>
 
           <div className={section !== "language" ? "hidden" : ""}>

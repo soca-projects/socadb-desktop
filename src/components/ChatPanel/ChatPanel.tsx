@@ -2,7 +2,9 @@ import { useRef, useEffect, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   XIcon as X,
+  ArrowLeftIcon as ArrowLeft,
   CaretDownIcon as CaretDown,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
   PlusIcon as Plus,
   PaperPlaneRightIcon as PaperPlaneRight,
 } from "@phosphor-icons/react";
@@ -12,7 +14,6 @@ import { chatSendErrorText } from "../../utils/chatErrors";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { serializeRelation } from "../../utils/schemaQueries";
 import {
-  DEFAULT_MODEL,
   getAvailableModels,
   getProviderFromModel,
   PROVIDERS,
@@ -22,6 +23,7 @@ import { EffortPicker } from "../EffortPicker/EffortPicker";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
+import { ChatHistory } from "../ChatHistory/ChatHistory";
 import {
   CHAT_PANEL_MIN_WIDTH,
   CHAT_PANEL_MIN_HEIGHT,
@@ -126,10 +128,11 @@ export function ChatPanel() {
   const addUserMessage = useChatStore((s) => s.addUserMessage);
   const startAssistantMessage = useChatStore((s) => s.startAssistantMessage);
   const newConversation = useChatStore((s) => s.newConversation);
-  const switchConversation = useChatStore((s) => s.switchConversation);
   const setEffort = useChatStore((s) => s.setEffort);
 
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const selectedModel = useChatStore((s) => s.selectedModel);
+  const selectModel = useChatStore((s) => s.selectModel);
+  const providerSwitch = useChatStore((s) => s.providerSwitch);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { size, startResize } = useResize({
@@ -137,10 +140,11 @@ export function ChatPanel() {
     height: CHAT_PANEL_DEFAULT_HEIGHT,
   });
   const focusMode = useFocusStore((s) => s.focusMode);
+  const [view, setView] = useState<"chat" | "history">("chat");
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, view]);
 
   const availableModels = getAvailableModels();
   const activeProviderId = getProviderFromModel(selectedModel);
@@ -213,12 +217,45 @@ export function ChatPanel() {
 
   if (focusMode) return null;
 
+  const activeConv = conversations.find((c) => c.id === activeConversationId);
+  const modelName = (id: string) =>
+    availableModels.find((m) => m.id === id)?.displayName ?? id;
+
+  const pickers = (
+    <>
+      <div className="relative min-w-0">
+        <select
+          value={selectedModel}
+          onChange={(e) => selectModel(e.target.value)}
+          disabled={isStreaming}
+          aria-label={t("chat.model")}
+          className="w-full min-w-0 appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
+        >
+          {availableModels.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.displayName}
+            </option>
+          ))}
+        </select>
+        <CaretDown
+          size={10}
+          className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
+        />
+      </div>
+      <EffortPicker
+        modelId={selectedModel}
+        value={displayedEffort}
+        onChange={(effort) => setEffort(activeProviderId, effort)}
+        disabled={isStreaming}
+      />
+    </>
+  );
+  const conversationTitle =
+    activeConv && activeConv.messages.length > 0
+      ? activeConv.name
+      : t("chat.newConversation");
+
   if (!isPanelOpen) {
-    const activeConv = conversations.find((c) => c.id === activeConversationId);
-    const convName =
-      activeConv && activeConv.messages.length > 0
-        ? activeConv.name
-        : t("chat.newConversation");
     return (
       <div
         className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
@@ -226,7 +263,7 @@ export function ChatPanel() {
       >
         <div className="border-b border-border px-3 py-1.5">
           <span className="block truncate text-[11px] font-medium text-tertiary">
-            {convName}
+            {conversationTitle}
           </span>
         </div>
         <div className="flex items-center gap-2 px-3 py-2">
@@ -259,50 +296,26 @@ export function ChatPanel() {
       />
 
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <div className="relative min-w-0 flex-1">
-          <select
-            value={activeConversationId ?? ""}
-            onChange={(e) => switchConversation(e.target.value)}
-            disabled={isStreaming || conversations.length <= 1}
-            className="w-full appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
-          >
-            {conversations.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <CaretDown
-            size={10}
-            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
-          />
-        </div>
-        <div className="relative">
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            disabled={isStreaming}
-            className="appearance-none rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
-          >
-            {availableModels.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.displayName}
-              </option>
-            ))}
-          </select>
-          <CaretDown
-            size={10}
-            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
-          />
-        </div>
-        <EffortPicker
-          modelId={selectedModel}
-          value={displayedEffort}
-          onChange={(effort) => setEffort(activeProviderId, effort)}
-          disabled={isStreaming}
-        />
         <button
-          onClick={newConversation}
+          onClick={() => setView(view === "history" ? "chat" : "history")}
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          aria-label={view === "history" ? t("chat.backToChat") : t("chat.history")}
+          title={view === "history" ? t("chat.backToChat") : t("chat.history")}
+        >
+          {view === "history" ? (
+            <ArrowLeft size={14} />
+          ) : (
+            <ClockCounterClockwise size={14} />
+          )}
+        </button>
+        <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-secondary">
+          {view === "history" ? t("chat.history") : conversationTitle}
+        </span>
+        <button
+          onClick={() => {
+            newConversation();
+            setView("chat");
+          }}
           disabled={isStreaming}
           className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary disabled:opacity-50 disabled:pointer-events-none"
           aria-label={t("chat.newChat")}
@@ -318,33 +331,48 @@ export function ChatPanel() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3">
-        {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4">
-            <p className="text-center text-[13px] text-tertiary">
-              {needsApiKey ? apiKeyNeededText : t("chat.whatToBuild")}
-            </p>
-            {!needsApiKey && (
-              <div className="flex flex-col items-center gap-2">
-                {[
-                  t("chat.suggestion1"),
-                  t("chat.suggestion2"),
-                  t("chat.suggestion3"),
-                  t("chat.suggestion4"),
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => handleSend(suggestion)}
-                    className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
+      <div key={`${view}-${activeConversationId}`} className="flex-1 overflow-y-auto">
+        {view === "history" ? (
+          <ChatHistory onOpen={() => setView("chat")} />
+        ) : messages.length === 0 ? (
+          <div className="flex min-h-full flex-col px-4 py-3">
+            <div className="m-auto flex flex-col items-center gap-4">
+              {providerSwitch && (
+                <p
+                  role="status"
+                  className="max-w-[280px] rounded-lg border border-accent/25 bg-accent-light px-2.5 py-2 text-left text-[12px] leading-snug text-secondary"
+                >
+                  {t("chat.providerSwitched", {
+                    model: modelName(providerSwitch.model),
+                    previous: modelName(providerSwitch.fromModel),
+                  })}
+                </p>
+              )}
+              <p className="text-center text-[13px] text-tertiary">
+                {needsApiKey ? apiKeyNeededText : t("chat.whatToBuild")}
+              </p>
+              {!needsApiKey && (
+                <div className="flex flex-col items-center gap-2">
+                  {[
+                    t("chat.suggestion1"),
+                    t("chat.suggestion2"),
+                    t("chat.suggestion3"),
+                    t("chat.suggestion4"),
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => handleSend(suggestion)}
+                      className="rounded-full border border-border px-3.5 py-1.5 text-[12px] text-tertiary transition-colors hover:border-border-hover hover:bg-surface-muted hover:text-secondary"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 px-4 py-3">
             {messages.map((msg) => (
               <ChatMessage key={msg.id} message={msg} />
             ))}
@@ -353,13 +381,16 @@ export function ChatPanel() {
         )}
       </div>
 
-      <ChatInput
-        onSend={handleSend}
-        onStop={handleStop}
-        disabled={needsApiKey}
-        isStreaming={isStreaming}
-        placeholder={needsApiKey ? apiKeyNeededText : undefined}
-      />
+      {view === "chat" && (
+        <ChatInput
+          onSend={handleSend}
+          onStop={handleStop}
+          disabled={needsApiKey}
+          isStreaming={isStreaming}
+          placeholder={needsApiKey ? apiKeyNeededText : undefined}
+          footer={pickers}
+        />
+      )}
     </div>
   );
 }

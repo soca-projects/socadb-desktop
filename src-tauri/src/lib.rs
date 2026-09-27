@@ -1,4 +1,5 @@
 mod chat;
+mod conversations;
 mod ws;
 
 use std::process::Command;
@@ -95,9 +96,7 @@ async fn mcp_respond(connection_id: u64, response: String) {
     ws::send_to_client(connection_id, response).await;
 }
 
-#[tauri::command]
-fn atomic_write(path: String, content: String) -> Result<(), String> {
-    let target = std::path::Path::new(&path);
+pub(crate) fn write_atomic(target: &std::path::Path, content: &str) -> Result<(), String> {
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -114,6 +113,11 @@ fn atomic_write(path: String, content: String) -> Result<(), String> {
     std::io::Write::write_all(&mut file, content.as_bytes()).map_err(|e| e.to_string())?;
     drop(file);
     std::fs::rename(&tmp, target).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn atomic_write(path: String, content: String) -> Result<(), String> {
+    write_atomic(std::path::Path::new(&path), &content)
 }
 
 #[tauri::command]
@@ -200,6 +204,11 @@ pub fn run() {
             chat::chat_send,
             chat::chat_stop,
             chat::chat_reset,
+            conversations::conversation_list,
+            conversations::conversation_write,
+            conversations::conversation_delete,
+            conversations::conversation_retire_legacy,
+            conversations::claude_sessions_prune,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
