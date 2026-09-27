@@ -5,7 +5,9 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
-use tokio_tungstenite::accept_async;
+use tokio_tungstenite::accept_hdr_async;
+use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, Response};
+use tokio_tungstenite::tungstenite::http::StatusCode;
 use tokio_tungstenite::tungstenite::Message;
 
 type WsSink = futures_util::stream::SplitSink<
@@ -52,8 +54,20 @@ pub async fn start_ws_server(app: AppHandle) -> Result<u16, String> {
     Ok(port)
 }
 
+// Browsers always send Origin on a WebSocket handshake and our MCP clients
+// never do; without this, any web page could find the port and drive the app.
+#[allow(clippy::result_large_err)] // signature fixed by tungstenite's handshake Callback
+fn reject_browser_origin(request: &Request, response: Response) -> Result<Response, ErrorResponse> {
+    if request.headers().contains_key("origin") {
+        let mut error = ErrorResponse::new(None);
+        *error.status_mut() = StatusCode::FORBIDDEN;
+        return Err(error);
+    }
+    Ok(response)
+}
+
 async fn handle_connection(stream: tokio::net::TcpStream, app: AppHandle) {
-    let ws_stream = match accept_async(stream).await {
+    let ws_stream = match accept_hdr_async(stream, reject_browser_origin).await {
         Ok(ws) => ws,
         Err(e) => {
             eprintln!("WebSocket handshake error: {e}");
