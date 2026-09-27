@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileSessionStore } from "../../mcp-server/src/claude-session-store";
@@ -35,6 +35,14 @@ describe("FileSessionStore", () => {
       { type: "title" },
       { type: "assistant", uuid: "b" },
     ]);
+  });
+
+  it("keeps transcripts private to the user, like the SDK's own", async () => {
+    await store.append({ ...key, subpath: "subagents/agent-1" }, [{ type: "user" }]);
+    const dir = join(root, SESSION);
+    expect(statSync(dir).mode & 0o777).toBe(0o700);
+    expect(statSync(join(dir, "subagents")).mode & 0o777).toBe(0o700);
+    expect(statSync(join(dir, "subagents", "agent-1.jsonl")).mode & 0o777).toBe(0o600);
   });
 
   it("keys by session id only, whatever the project key", async () => {

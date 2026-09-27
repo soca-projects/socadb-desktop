@@ -76,8 +76,8 @@ export class FileSessionStore {
         lines.push(JSON.stringify(entry));
       }
       if (lines.length === 0) return;
-      await mkdir(dirname(file), { recursive: true });
-      await appendFile(file, `${lines.join("\n")}\n`, "utf8");
+      await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+      await appendFile(file, `${lines.join("\n")}\n`, { encoding: "utf8", mode: 0o600 });
     });
     this.queues.set(
       file,
