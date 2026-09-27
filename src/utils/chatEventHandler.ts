@@ -59,7 +59,9 @@ export function handleChatEvent(parsed: ChatEvent) {
     case "memory_lost":
       if (isStale) break;
       ensureAssistantMessage();
-      store.appendAssistantText(`${i18next.t("chat.memoryLost")}\n\n`);
+      // Its own message: "done" replaces the text of the last one.
+      store.setAssistantText(i18next.t("chat.memoryLost"));
+      store.startAssistantMessage();
       break;
 
     case "done":

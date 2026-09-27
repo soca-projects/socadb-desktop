@@ -141,7 +141,7 @@
     "suggestion2": "Ajouter une table utilisateurs avec champs d'auth",
     "suggestion3": "Schéma pour une app type Spotify",
     "suggestion4": "Analyser mon schéma et suggérer des améliorations",
-    "memoryLost": "*L'agent ne se souvient plus de cette conversation : sa mémoire a été effacée. Il repart du schéma actuel.*",
+    "memoryLost": "L'agent ne se souvient plus de cette conversation : sa mémoire a été effacée. Il repart du schéma actuel.",
     "history": "Historique",
     "backToChat": "Retour à la conversation",
     "searchConversations": "Rechercher dans les conversations",
