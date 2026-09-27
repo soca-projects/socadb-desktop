@@ -51,7 +51,6 @@ function scheduleWrite(conversation: Conversation) {
   );
 }
 
-// Empty conversations stay in memory: they get a file with their first message.
 function persistChanges(conversations: Conversation[]) {
   const current = new Map(conversations.map((c) => [c.id, c]));
   for (const [id, previous] of saved) {

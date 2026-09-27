@@ -12,7 +12,7 @@ fn claude_sessions_dir() -> Result<PathBuf, String> {
     Ok(home()?.join(".socadb").join("sessions").join("claude"))
 }
 
-// Ids become file names: letters, digits and dashes only, so no path escapes.
+// Ids become file names, so this is the guard against path escapes.
 fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 64 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
 }
@@ -37,8 +37,8 @@ fn remove_path(path: &Path) -> Result<(), String> {
     }
 }
 
-// Also removes the SDK's local copies, matched by exact name in every Claude
-// project directory: a session may have run from any cwd.
+// Searches every Claude project directory: the SDK files a session under the cwd
+// it ran from, and that cwd has varied.
 fn remove_claude_session(session_id: &str) -> Result<(), String> {
     if !is_uuid(session_id) {
         return Err(format!("Invalid session id: {session_id}"));
