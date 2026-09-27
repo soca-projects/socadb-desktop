@@ -104,7 +104,11 @@
     "agents": "Agents",
     "language": "Langue",
     "languageDescription": "Choisissez la langue de l'application.",
-    "close": "Fermer"
+    "close": "Fermer",
+    "conversations": "Conversations",
+    "deleteAllDescription": "Les conversations sont gardées jusqu'à ce que vous les supprimiez. La suppression efface aussi la mémoire de l'agent pour les conversations Claude.",
+    "deleteAllConversations": "Supprimer toutes les conversations",
+    "deleteAllConfirm": "Supprimer toutes les conversations ? C'est définitif."
   },
   "agent": {
     "ownApiKey": "Votre propre clé API",
