@@ -103,9 +103,12 @@ pub fn conversation_retire_legacy() -> Result<(), String> {
     }
 }
 
+// Only our copies: an orphan can come from a conversation that lost its session id,
+// and the SDK transcript is then the last trace of that memory.
 #[tauri::command]
 pub fn claude_sessions_prune(keep: Vec<String>) -> Result<u32, String> {
-    let entries = match std::fs::read_dir(claude_sessions_dir()?) {
+    let dir = claude_sessions_dir()?;
+    let entries = match std::fs::read_dir(&dir) {
         Ok(entries) => entries,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(0),
         Err(e) => return Err(e.to_string()),
@@ -114,7 +117,7 @@ pub fn claude_sessions_prune(keep: Vec<String>) -> Result<u32, String> {
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
         if is_uuid(&name) && !keep.contains(&name) {
-            remove_claude_session(&name)?;
+            remove_path(&dir.join(&name))?;
             removed += 1;
         }
     }
