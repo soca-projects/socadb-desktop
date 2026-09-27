@@ -76,106 +76,136 @@ async function handleSend(cmd: ChatSendCommand) {
     };
 
     if (cmd.sessionId) {
-      if (await sessionStore.has(cmd.sessionId)) {
-        options.resume = cmd.sessionId;
-      } else {
-        const found = (await listSessions()).find((s) => s.sessionId === cmd.sessionId);
-        if (found) {
-          await importSessionToStore(cmd.sessionId, sessionStore, { dir: found.cwd });
-          options.resume = cmd.sessionId;
-        } else {
-          emit({ type: "chat_event", event: "memory_lost" });
-        }
-      }
+      if (await canResume(cmd.sessionId)) options.resume = cmd.sessionId;
+      else emit({ type: "chat_event", event: "memory_lost" });
     }
 
-    currentQuery = query({
-      prompt: cmd.message,
-      options,
-    });
-
-    let finalResponse = "";
-
-    for await (const message of currentQuery) {
-      // The CLI retries a rejected key 10 times (~3 min); the first retry says why.
-      if (
-        message.type === "system" &&
-        message.subtype === "api_retry" &&
-        message.error === "authentication_failed"
-      ) {
-        abortController.abort();
-        emitError("claude", `API Error: ${message.error_status ?? 401} authentication failed`, true);
-        return;
-      }
-
-      if (message.type === "system" && message.subtype === "init") {
-        currentSessionId = (message as Record<string, unknown>).session_id as string;
-        emit({
-          type: "chat_event",
-          event: "session_init",
-          sessionId: currentSessionId,
-        });
-      }
-
-      if (message.type === "assistant" && message.message?.content) {
-        for (const content of message.message.content) {
-          if (content.type === "text") {
-            finalResponse += content.text;
-          }
-          if (content.type === "tool_use" && content.name) {
-            emit({
-              type: "chat_event",
-              event: "tool_use",
-              toolName: content.name,
-              toolInput: content.input,
-              toolUseId: content.id,
-            });
-          }
-        }
-      }
-
-      if (message.type === "user" && message.message?.content) {
-        for (const content of message.message.content) {
-          if (typeof content === "string") continue;
-          if (content.type === "tool_result" && content.tool_use_id) {
-            emit({
-              type: "chat_event",
-              event: "tool_result",
-              toolUseId: content.tool_use_id,
-              output: content.content,
-              isError: content.is_error || false,
-            });
-          }
-        }
-      }
-
-      if (
-        message.type === "stream_event" &&
-        message.event.type === "content_block_delta" &&
-        message.event.delta.type === "text_delta"
-      ) {
-        emit({
-          type: "chat_event",
-          event: "text_delta",
-          text: message.event.delta.text,
-        });
-      }
+    const turn = { started: false };
+    try {
+      await runTurn(cmd.message, options, abortController, turn);
+    } catch (error) {
+      // A session the CLI can't load fails before it starts. Keeping it would fail
+      // every later message of the conversation, so start over without it.
+      if (!options.resume || turn.started || abortController.signal.aborted) throw error;
+      console.error("[agent] resume failed:", errorText(error));
+      emit({ type: "chat_event", event: "memory_lost" });
+      delete options.resume;
+      await runTurn(cmd.message, options, abortController, turn);
     }
-
-    emit({
-      type: "chat_event",
-      event: "done",
-      response: finalResponse,
-      sessionId: currentSessionId,
-    });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = errorText(error);
     console.error("[agent] error:", errorMessage);
     emitError("claude", errorMessage);
   } finally {
     currentQuery = undefined;
     abortController = undefined;
   }
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function canResume(sessionId: string): Promise<boolean> {
+  try {
+    if (await sessionStore.has(sessionId)) return true;
+    const found = (await listSessions()).find((s) => s.sessionId === sessionId);
+    if (!found) return false;
+    await importSessionToStore(sessionId, sessionStore, { dir: found.cwd });
+    return true;
+  } catch (error) {
+    console.error("[agent] session import failed:", errorText(error));
+    return false;
+  }
+}
+
+async function runTurn(
+  prompt: string,
+  options: Options,
+  controller: AbortController,
+  turn: { started: boolean },
+) {
+  currentQuery = query({ prompt, options });
+
+  let finalResponse = "";
+
+  for await (const message of currentQuery) {
+    // The CLI retries a rejected key 10 times (~3 min); the first retry says why.
+    if (
+      message.type === "system" &&
+      message.subtype === "api_retry" &&
+      message.error === "authentication_failed"
+    ) {
+      controller.abort();
+      emitError(
+        "claude",
+        `API Error: ${message.error_status ?? 401} authentication failed`,
+        true,
+      );
+      return;
+    }
+
+    if (message.type === "system" && message.subtype === "init") {
+      turn.started = true;
+      currentSessionId = (message as Record<string, unknown>).session_id as string;
+      emit({
+        type: "chat_event",
+        event: "session_init",
+        sessionId: currentSessionId,
+      });
+    }
+
+    if (message.type === "assistant" && message.message?.content) {
+      for (const content of message.message.content) {
+        if (content.type === "text") {
+          finalResponse += content.text;
+        }
+        if (content.type === "tool_use" && content.name) {
+          emit({
+            type: "chat_event",
+            event: "tool_use",
+            toolName: content.name,
+            toolInput: content.input,
+            toolUseId: content.id,
+          });
+        }
+      }
+    }
+
+    if (message.type === "user" && message.message?.content) {
+      for (const content of message.message.content) {
+        if (typeof content === "string") continue;
+        if (content.type === "tool_result" && content.tool_use_id) {
+          emit({
+            type: "chat_event",
+            event: "tool_result",
+            toolUseId: content.tool_use_id,
+            output: content.content,
+            isError: content.is_error || false,
+          });
+        }
+      }
+    }
+
+    if (
+      message.type === "stream_event" &&
+      message.event.type === "content_block_delta" &&
+      message.event.delta.type === "text_delta"
+    ) {
+      emit({
+        type: "chat_event",
+        event: "text_delta",
+        text: message.event.delta.text,
+      });
+    }
+  }
+
+  emit({
+    type: "chat_event",
+    event: "done",
+    response: finalResponse,
+    sessionId: currentSessionId,
+  });
 }
 
 function handleStop() {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { appendFileSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileSessionStore } from "../../mcp-server/src/claude-session-store";
@@ -43,6 +43,17 @@ describe("FileSessionStore", () => {
     expect(statSync(dir).mode & 0o777).toBe(0o700);
     expect(statSync(join(dir, "subagents")).mode & 0o777).toBe(0o700);
     expect(statSync(join(dir, "subagents", "agent-1.jsonl")).mode & 0o777).toBe(0o600);
+  });
+
+  it("survives a torn line: loads the rest and keeps appending", async () => {
+    await store.append(key, [{ type: "user", uuid: "a" }]);
+    appendFileSync(join(root, SESSION, "main.jsonl"), '\n{"type":"assistant","uu');
+    const fresh = new FileSessionStore(root);
+    await fresh.append(key, [{ type: "user", uuid: "b" }]);
+    expect(await fresh.load(key)).toEqual([
+      { type: "user", uuid: "a" },
+      { type: "user", uuid: "b" },
+    ]);
   });
 
   it("keys by session id only, whatever the project key", async () => {

@@ -18,6 +18,12 @@ interface SessionStoreEntry {
 
 const SAFE_SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 
+function isEntry(value: unknown): value is SessionStoreEntry {
+  return (
+    typeof value === "object" && value !== null && "type" in value && typeof value.type === "string"
+  );
+}
+
 // Keyed by session id alone, unlike the SDK's own transcripts whose project key
 // comes from the cwd: sessions must survive the app moving.
 export class FileSessionStore {
@@ -46,10 +52,18 @@ export class FileSessionStore {
     } catch {
       return null;
     }
-    return content
-      .split("\n")
-      .filter((line) => line.trim())
-      .map((line) => JSON.parse(line) as SessionStoreEntry);
+    // A torn append (full disk, killed process) must cost one entry, not the session.
+    const entries: SessionStoreEntry[] = [];
+    for (const line of content.split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        const value: unknown = JSON.parse(line);
+        if (isEntry(value)) entries.push(value);
+      } catch {
+        console.error(`[session-store] skipped an unreadable line in ${file}`);
+      }
+    }
+    return entries;
   }
 
   private async uuids(file: string): Promise<Set<string>> {
@@ -77,7 +91,8 @@ export class FileSessionStore {
       }
       if (lines.length === 0) return;
       await mkdir(dirname(file), { recursive: true, mode: 0o700 });
-      await appendFile(file, `${lines.join("\n")}\n`, { encoding: "utf8", mode: 0o600 });
+      // Newline first, so a torn previous write can't swallow this batch's first entry.
+      await appendFile(file, `\n${lines.join("\n")}`, { encoding: "utf8", mode: 0o600 });
     });
     this.queues.set(
       file,
