@@ -23,7 +23,7 @@ import {
 import type { z } from "zod";
 import type { Column, Table, Schema } from "../types/schema";
 
-type McpResult = { ok: true; data: unknown } | { ok: false; error: string };
+export type McpResult = { ok: true; data: unknown } | { ok: false; error: string };
 
 function success(data: unknown): McpResult {
   return { ok: true, data };
@@ -245,6 +245,11 @@ export async function dispatchMcpAction(
   action: string,
   payload: Record<string, unknown>,
 ): Promise<McpResult> {
+  // Dynamic import keeps the UI-driving actions out of release bundles.
+  if (import.meta.env.DEV && action.startsWith("dev_")) {
+    const { dispatchDevAction } = await import("./devBridge");
+    return dispatchDevAction(action, payload);
+  }
   const handler = handlers[action];
   if (!handler) return fail(`Unknown action: ${action}`);
   return handler(payload);
