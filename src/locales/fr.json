@@ -137,7 +137,28 @@
     "suggestion2": "Ajouter une table utilisateurs avec champs d'auth",
     "suggestion3": "Schéma pour une app type Spotify",
     "suggestion4": "Analyser mon schéma et suggérer des améliorations",
-    "memoryLost": "*L'agent ne se souvient plus de cette conversation : sa mémoire a été effacée. Il repart du schéma actuel.*"
+    "memoryLost": "*L'agent ne se souvient plus de cette conversation : sa mémoire a été effacée. Il repart du schéma actuel.*",
+    "history": "Historique",
+    "backToChat": "Retour à la conversation",
+    "searchConversations": "Rechercher dans les conversations",
+    "noConversations": "Aucune conversation pour l'instant.",
+    "noMatch": "Aucune conversation ne contient « {{query}} ».",
+    "rename": "Renommer",
+    "renameLabel": "Nouveau titre",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer « {{name}} » ? La conversation et la mémoire de l'agent seront effacées.",
+    "cancel": "Annuler",
+    "deleteWhileAnswering": "Impossible pendant une réponse",
+    "openConversation": "Conversation ouverte",
+    "providerSwitched": "Nouvelle conversation : {{model}} ne peut pas reprendre une conversation commencée avec {{previous}}.",
+    "model": "Modèle",
+    "groups": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "week": "7 derniers jours",
+      "month": "30 derniers jours",
+      "older": "Plus ancien"
+    }
   },
   "provider": {
     "claude": {

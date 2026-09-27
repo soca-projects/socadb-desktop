@@ -137,7 +137,28 @@
     "suggestion2": "Add a users table with auth fields",
     "suggestion3": "Schema for a Spotify-like music app",
     "suggestion4": "Explain my current schema and suggest improvements",
-    "memoryLost": "*The agent no longer remembers this conversation: its memory was deleted. It starts over from the current schema.*"
+    "memoryLost": "*The agent no longer remembers this conversation: its memory was deleted. It starts over from the current schema.*",
+    "history": "History",
+    "backToChat": "Back to the conversation",
+    "searchConversations": "Search conversations",
+    "noConversations": "No conversations yet.",
+    "noMatch": "No conversation contains “{{query}}”.",
+    "rename": "Rename",
+    "renameLabel": "New title",
+    "delete": "Delete",
+    "deleteConfirm": "Delete “{{name}}”? The conversation and the agent's memory of it will be erased.",
+    "cancel": "Cancel",
+    "deleteWhileAnswering": "Can't delete while it's answering",
+    "openConversation": "Open conversation",
+    "providerSwitched": "New conversation: {{model}} can't continue a conversation started with {{previous}}.",
+    "model": "Model",
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Last 7 days",
+      "month": "Last 30 days",
+      "older": "Older"
+    }
   },
   "provider": {
     "claude": {
