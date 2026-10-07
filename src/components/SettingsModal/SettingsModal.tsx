@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../Modal/Modal";
 import {
@@ -31,6 +31,7 @@ import {
 import { SUPPORTED_LANGUAGES, type Language } from "../../i18n";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 
 type Section = "agents" | "language";
@@ -318,6 +319,8 @@ function SidebarItem({
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const { t, i18n } = useTranslation();
   const providers = useChatStore((s) => s.providers);
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const deleteAllHintId = useId();
 
   const [section, setSection] = useState<Section>("agents");
 
@@ -329,6 +332,17 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     },
     [providers],
   );
+
+  const handleDeleteAllConversations = useCallback(async () => {
+    const confirmed = await ask(t("settings.deleteAllConfirm"), {
+      kind: "warning",
+      okLabel: t("settings.deleteAll"),
+      cancelLabel: t("settings.cancel"),
+    });
+    if (confirmed) {
+      useChatStore.getState().deleteAllConversations();
+    }
+  }, [t]);
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-2xl">
@@ -374,6 +388,30 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 />
               );
             })}
+            <div className="space-y-2 border-t border-border pt-4">
+              <h3 className="text-[13px] font-medium text-primary">
+                {t("settings.conversations")}
+              </h3>
+              <p className="text-[12.5px] text-tertiary">
+                {t("settings.deleteAllDescription")}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <button
+                  type="button"
+                  onClick={handleDeleteAllConversations}
+                  disabled={isStreaming}
+                  aria-describedby={isStreaming ? deleteAllHintId : undefined}
+                  className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50 disabled:hover:bg-transparent dark:text-red-400"
+                >
+                  {t("settings.deleteAllConversations")}
+                </button>
+                {isStreaming && (
+                  <span id={deleteAllHintId} className="text-[12px] text-tertiary">
+                    {t("settings.deleteAllWhileAnswering")}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className={section !== "language" ? "hidden" : ""}>

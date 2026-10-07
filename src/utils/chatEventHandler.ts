@@ -56,12 +56,23 @@ export function handleChatEvent(parsed: ChatEvent) {
       );
       break;
 
+    case "memory_lost":
+      if (isStale) break;
+      ensureAssistantMessage();
+      // Its own message: "done" replaces the text of the last one.
+      store.setAssistantText(i18next.t("chat.memoryLost"));
+      store.startAssistantMessage();
+      break;
+
     case "done":
       if (!isStale && parsed.response) {
         ensureAssistantMessage();
         store.setAssistantText(parsed.response as string);
       }
-      store.finishResponse((parsed.sessionId as string) ?? "");
+      // A stale answer belongs to another conversation: its session must not land here.
+      store.finishResponse(
+        isStale ? (store.sessionId ?? "") : ((parsed.sessionId as string) ?? ""),
+      );
       break;
 
     case "error": {
@@ -92,7 +103,9 @@ export function handleChatEvent(parsed: ChatEvent) {
           );
         }
       }
-      store.finishResponse("");
+      // An error ends the turn, not the conversation: dropping the session here
+      // would make the next message start over without the agent's memory.
+      store.finishResponse(store.sessionId ?? "");
       break;
     }
   }

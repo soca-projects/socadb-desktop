@@ -1,7 +1,13 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { join } from "@tauri-apps/api/path";
-import { getSocadbDir, queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import {
+  deleteConversationFiles,
+  listConversations,
+  migrateLegacyConversations,
+  pruneClaudeSessions,
+  writeConversation,
+} from "./conversationFiles";
 import { useChatStore } from "../stores/chatStore";
 import type { Conversation, LoginType, Provider, ProviderId } from "../types/chat";
 import { makeProvider, PROVIDER_IDS } from "../types/chat";
@@ -29,63 +35,63 @@ interface ConfigFile {
   apiKey?: string;
 }
 
-interface ConversationsFile {
-  conversations: Conversation[];
+const saved = new Map<string, Conversation>();
+const pendingWrites = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleWrite(conversation: Conversation) {
+  clearTimeout(pendingWrites.get(conversation.id));
+  pendingWrites.set(
+    conversation.id,
+    setTimeout(() => {
+      pendingWrites.delete(conversation.id);
+      writeConversation(conversation).catch((err) =>
+        console.warn("[chatPersistence] failed to save a conversation:", err),
+      );
+    }, 300),
+  );
 }
 
-async function conversationsPath(): Promise<string> {
-  return await join(await getSocadbDir(), "conversations.json");
-}
-
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
-
-async function writeConversationsToDisk() {
-  try {
-    const { conversations } = useChatStore.getState();
-    const data: ConversationsFile = { conversations };
-    await invoke("atomic_write", {
-      path: await conversationsPath(),
-      content: JSON.stringify(data),
-    });
-  } catch (err) {
-    console.warn("[chatPersistence] failed to persist conversations:", err);
+function persistChanges(conversations: Conversation[]) {
+  const current = new Map(conversations.map((c) => [c.id, c]));
+  for (const [id, previous] of saved) {
+    if (current.has(id)) continue;
+    clearTimeout(pendingWrites.get(id));
+    pendingWrites.delete(id);
+    saved.delete(id);
+    deleteConversationFiles(previous).catch((err) =>
+      console.warn("[chatPersistence] failed to delete a conversation:", err),
+    );
   }
-}
-
-function saveConversations() {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => void writeConversationsToDisk(), 150);
+  for (const conversation of conversations) {
+    if (
+      conversation.messages.length === 0 ||
+      saved.get(conversation.id) === conversation
+    ) {
+      continue;
+    }
+    saved.set(conversation.id, conversation);
+    scheduleWrite(conversation);
+  }
 }
 
 async function loadConversations() {
-  const path = await conversationsPath();
-  let content: string | null = null;
   try {
-    content = await readTextFile(path);
-  } catch {
-    // File doesn't exist — first launch
+    await migrateLegacyConversations();
+    const conversations = await listConversations();
+    for (const c of conversations) saved.set(c.id, c);
+    if (conversations.length > 0) useChatStore.getState().setConversations(conversations);
+    pruneClaudeSessions(conversations).catch((err) =>
+      console.warn("[chatPersistence] failed to prune Claude sessions:", err),
+    );
+  } catch (err) {
+    console.warn("[chatPersistence] failed to load conversations:", err);
   }
-
-  if (content !== null) {
-    try {
-      const data = JSON.parse(content) as ConversationsFile;
-      if (data.conversations?.length > 0) {
-        useChatStore.getState().setConversations(data.conversations);
-      }
-    } catch {
-      // Corrupt JSON: back up the original before any rewrite overwrites it.
-      const backup = `${path}.corrupt-${Date.now()}`;
-      try {
-        await invoke("atomic_write", { path: backup, content });
-      } catch {
-        // Backup failed — nothing else we can safely do here
-      }
-    }
-  }
-
   if (useChatStore.getState().conversations.length === 0) {
     useChatStore.getState().newConversation();
   }
+  useChatStore.subscribe((state, prev) => {
+    if (state.conversations !== prev.conversations) persistChanges(state.conversations);
+  });
 }
 
 async function loadConfigFile(): Promise<ConfigFile | null> {
@@ -286,6 +292,4 @@ export function initChatPersistence() {
       useChatStore.getState().setProvider(id, makeProvider(id, loginType, apiKeyStored));
     }
   });
-
-  useChatStore.subscribe(saveConversations);
 }
