@@ -98,6 +98,10 @@ export function getAvailableModels(): SupportedModel[] {
   return PROVIDER_IDS.flatMap((id) => PROVIDERS[id].models);
 }
 
+export function getModelDisplayName(id: string): string | undefined {
+  return getAvailableModels().find((m) => m.id === id)?.displayName;
+}
+
 export const DEFAULT_MODEL = "claude-sonnet-5";
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderId, string> = {

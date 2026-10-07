@@ -15,6 +15,7 @@ import { useSchemaStore } from "../../stores/schemaStore";
 import { serializeRelation } from "../../utils/schemaQueries";
 import {
   getAvailableModels,
+  getModelDisplayName,
   getProviderFromModel,
   PROVIDERS,
   resolveEffort,
@@ -222,8 +223,7 @@ export function ChatPanel() {
   if (focusMode) return null;
 
   const activeConv = conversations.find((c) => c.id === activeConversationId);
-  const modelName = (id: string) =>
-    availableModels.find((m) => m.id === id)?.displayName ?? id;
+  const modelName = (id: string) => getModelDisplayName(id) ?? id;
 
   const pickers = (
     <>

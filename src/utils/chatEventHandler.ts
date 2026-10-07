@@ -3,7 +3,7 @@ import type { ChatEvent, ProviderId } from "../types/chat";
 import { PROVIDERS } from "../types/chat";
 import { ChatErrorZ } from "./zodSchemas";
 import { resetAgent } from "./chatCommands";
-import { authErrorText } from "./chatErrors";
+import { authErrorText, modelUnavailableText } from "./chatErrors";
 import i18next from "../i18n";
 
 function ensureAssistantMessage() {
@@ -87,6 +87,10 @@ export function handleChatEvent(parsed: ChatEvent) {
         if (errorParse.success && errorParse.data.code === "auth") {
           store.appendAssistantText(
             authErrorText(providerId, store.providers[providerId]),
+          );
+        } else if (errorParse.success && errorParse.data.code === "model_unavailable") {
+          store.appendAssistantText(
+            modelUnavailableText(errorParse.data.model ?? store.selectedModel),
           );
         } else if (lower.includes("credit balance")) {
           store.appendAssistantText(

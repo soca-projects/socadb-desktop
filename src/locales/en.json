@@ -219,7 +219,8 @@
     "apiKeyRejected": "{{name}} rejected the API key. Check or replace it in Settings, under Agents.",
     "apiKeyMissing": "No {{name}} API key is saved. Add one in Settings, under Agents, or switch to your subscription.",
     "keyringUnavailable": "SocaDB couldn't read your {{name}} API key from the system keychain. Allow access if your system asks, or save the key again in Settings, under Agents.",
-    "creditBalance": "Error: {{message}}\n\nAdd credits on the [{{consoleName}}]({{consoleUrl}}), then try again. If it still fails, reconnect your API key in Settings."
+    "creditBalance": "Error: {{message}}\n\nAdd credits on the [{{consoleName}}]({{consoleUrl}}), then try again. If it still fails, reconnect your API key in Settings.",
+    "modelUnavailable": "{{model}} isn't available with your ChatGPT plan. Pick another model under the message box, or use an OpenAI API key in Settings, under Agents."
   },
   "toast": {
     "exportSqlFailed": "Failed to export SQL: {{error}}",

@@ -1,5 +1,10 @@
 import i18next from "../i18n";
-import { PROVIDERS, type Provider, type ProviderId } from "../types/chat";
+import {
+  getModelDisplayName,
+  PROVIDERS,
+  type Provider,
+  type ProviderId,
+} from "../types/chat";
 
 export function authErrorText(
   providerId: ProviderId,
@@ -14,6 +19,12 @@ export function authErrorText(
   return i18next.t("chatError.notSignedIn", {
     cli: meta.cliName,
     command: meta.loginCommand,
+  });
+}
+
+export function modelUnavailableText(modelId: string): string {
+  return i18next.t("chatError.modelUnavailable", {
+    model: getModelDisplayName(modelId) ?? modelId,
   });
 }
 

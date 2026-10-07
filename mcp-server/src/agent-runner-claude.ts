@@ -140,7 +140,7 @@ async function runTurn(
       emitError(
         "claude",
         `API Error: ${message.error_status ?? 401} authentication failed`,
-        true,
+        "auth",
       );
       return;
     }
