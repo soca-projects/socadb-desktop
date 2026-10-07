@@ -65,8 +65,11 @@ async function handleSend(cmd: ChatSendCommand) {
       },
       abortController: controller,
       maxTurns: 500,
+      // The agent reads the web, so a page can steer it: without file or shell
+      // tools it can't reach the user's machine, and anything else is refused.
+      tools: ["WebSearch", "WebFetch"],
       allowedTools: ["mcp__socadb", "WebSearch", "WebFetch"],
-      permissionMode: "bypassPermissions" as const,
+      permissionMode: "dontAsk",
       // Keep the user's own Claude Code setup (hooks, plugins, MCP servers,
       // CLAUDE.md) out of SocaDB's agent.
       settingSources: [],
