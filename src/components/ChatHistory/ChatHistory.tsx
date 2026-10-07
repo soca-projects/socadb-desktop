@@ -7,7 +7,7 @@ import {
   TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
-import { getAvailableModels, type Conversation } from "../../types/chat";
+import { getModelDisplayName, type Conversation } from "../../types/chat";
 import { groupConversations, historyGroup } from "../../utils/conversationHistory";
 
 interface ChatHistoryProps {
@@ -65,7 +65,6 @@ export function ChatHistory({ onOpen }: ChatHistoryProps) {
     () => groupConversations(conversations, query, new Date()),
     [conversations, query],
   );
-  const models = useMemo(() => getAvailableModels(), []);
 
   const open = (conversation: Conversation) => {
     if (isStreaming && conversation.id !== activeId) return;
@@ -156,7 +155,7 @@ export function ChatHistory({ onOpen }: ChatHistoryProps) {
             <ul role="list" className="flex flex-col gap-0.5">
               {items.map((c) => {
                 const isActive = c.id === activeId;
-                const model = models.find((m) => m.id === c.model)?.displayName;
+                const model = c.model && getModelDisplayName(c.model);
                 const when = formatWhen(c.updatedAt, now, i18n.language, t);
                 const meta = model ? `${model} · ${when}` : when;
                 const confirmTextId = `${idPrefix}-confirm-${c.id}`;

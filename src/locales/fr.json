@@ -219,7 +219,8 @@
     "apiKeyRejected": "{{name}} a refusé la clé API. Vérifiez-la ou remplacez-la dans les paramètres, section Agents.",
     "apiKeyMissing": "Aucune clé API {{name}} n'est enregistrée. Ajoutez-la dans les paramètres, section Agents, ou passez en mode abonnement.",
     "keyringUnavailable": "SocaDB n'a pas pu lire votre clé API {{name}} dans le trousseau du système. Autorisez l'accès si le système le demande, ou enregistrez à nouveau la clé dans les paramètres, section Agents.",
-    "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres."
+    "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres.",
+    "modelUnavailable": "{{model}} n'est pas disponible avec votre forfait ChatGPT. Choisissez un autre modèle sous le champ de saisie, ou utilisez une clé API OpenAI dans les paramètres, section Agents."
   },
   "toast": {
     "exportSqlFailed": "Échec de l'export SQL : {{error}}",

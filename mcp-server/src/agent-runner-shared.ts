@@ -3,6 +3,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { existsSync, mkdirSync } from "fs";
 import { platform, arch, homedir } from "os";
+import { z } from "zod";
 
 // Mirror of EffortLevel in src/types/chat.ts. Kept in sync manually because
 // mcp-server cannot import from the frontend tree. A test in
@@ -120,20 +121,70 @@ export function emit(event: Record<string, unknown>) {
 }
 
 const AUTH_ERROR_PATTERN =
-  /not logged in|please run \/login|authentication_error|invalid api key|api key is invalid|401 unauthorized|could not be refreshed|sign in again/i;
+  /not logged in|please run \/login|authentication_error|invalid api key|api key is invalid|401 unauthorized|unauthorized \(401\)|could not be refreshed|sign in again/i;
 
 export function isAuthErrorMessage(message: string): boolean {
   return AUTH_ERROR_PATTERN.test(message);
 }
 
-export function emitError(providerId: string, message: string, auth = isAuthErrorMessage(message)) {
+export function isReconnectNotice(message: string): boolean {
+  return /^Reconnecting\.\.\. \d+\/\d+/.test(message);
+}
+
+const ApiErrorBodyZ = z.object({ error: z.object({ message: z.string() }) });
+
+// Codex passes some API failures through as their raw JSON body, and the SDK
+// appends all of codex's stderr, log lines included, to a failed exec. Keep the
+// sentence a user can act on.
+export function codexErrorText(message: string): string {
+  if (message.startsWith("{")) {
+    try {
+      return ApiErrorBodyZ.safeParse(JSON.parse(message)).data?.error.message ?? message;
+    } catch {
+      return message;
+    }
+  }
+  if (!message.startsWith("Codex Exec exited with")) return message;
+  const cause = message
+    .split("\n")
+    .map((line) => line.trim())
+    .reverse()
+    .find((line) => line.startsWith("Error: "));
+  return cause ? cause.slice("Error: ".length) : message;
+}
+
+export type ChatErrorCode = "auth" | "model_unavailable";
+
+export function codexErrorCode(message: string): ChatErrorCode | undefined {
+  if (isAuthErrorMessage(message)) return "auth";
+  if (/is not supported when using Codex with a ChatGPT account/i.test(message)) {
+    return "model_unavailable";
+  }
+  return undefined;
+}
+
+export function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function emitError(
+  providerId: string,
+  message: string,
+  code: ChatErrorCode | undefined = isAuthErrorMessage(message) ? "auth" : undefined,
+  model?: string,
+) {
   emit({
     type: "chat_event",
     event: "error",
     message,
     providerId,
-    ...(auth ? { code: "auth" } : {}),
+    ...(code ? { code } : {}),
+    ...(model ? { model } : {}),
   });
+}
+
+export function emitDone(response: string, sessionId: string | null | undefined) {
+  emit({ type: "chat_event", event: "done", response, sessionId });
 }
 
 export interface RunnerHandlers {

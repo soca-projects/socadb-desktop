@@ -14,6 +14,7 @@ import {
   EFFORT_LEVELS_BY_PROVIDER,
   PROVIDER_IDS,
   getProviderFromModel,
+  isEmptyMessage,
   makeProvider,
 } from "../types/chat";
 import { genId } from "../utils/id";
@@ -370,12 +371,20 @@ export const useChatStore = create<ChatState>()((set) => ({
     }),
 
   finishResponse: (sessionId) =>
-    set((state) => ({
-      isStreaming: false,
-      streamingConversationId: null,
-      sessionId,
-      ...syncToConversation({ ...state, sessionId }),
-    })),
+    set((state) => {
+      const last = state.messages.at(-1);
+      const messages =
+        last?.role === "assistant" && isEmptyMessage(last)
+          ? state.messages.slice(0, -1)
+          : state.messages;
+      return {
+        isStreaming: false,
+        streamingConversationId: null,
+        sessionId,
+        messages,
+        ...syncToConversation({ ...state, messages, sessionId }),
+      };
+    }),
 
   togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
 

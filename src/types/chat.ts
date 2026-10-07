@@ -98,6 +98,10 @@ export function getAvailableModels(): SupportedModel[] {
   return PROVIDER_IDS.flatMap((id) => PROVIDERS[id].models);
 }
 
+export function getModelDisplayName(id: string): string | undefined {
+  return getAvailableModels().find((m) => m.id === id)?.displayName;
+}
+
 export const DEFAULT_MODEL = "claude-sonnet-5";
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderId, string> = {
@@ -171,6 +175,10 @@ export interface ChatMessage {
   content: string;
   toolCalls: ToolCallInfo[];
   timestamp: string;
+}
+
+export function isEmptyMessage(message: ChatMessage): boolean {
+  return !message.content.trim() && message.toolCalls.length === 0;
 }
 
 export interface Conversation {
