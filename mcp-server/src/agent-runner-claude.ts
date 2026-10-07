@@ -10,10 +10,12 @@ import { FileSessionStore } from "./claude-session-store.ts";
 import {
   CLAUDE_EFFORTS,
   emit,
+  emitDone,
   emitError,
   getAgentWorkDir,
   getClaudeCodeBinaryPath,
   getClaudeSdkOptions,
+  errorText,
   getClaudeSessionsDir,
   getMcpBinaryPath,
   getModuleDir,
@@ -29,10 +31,18 @@ const sessionStore = new FileSessionStore(getClaudeSessionsDir());
 
 let currentQuery: Query | undefined;
 let abortController: AbortController | undefined;
-let currentSessionId: string | undefined;
+
+interface TurnState {
+  started: boolean;
+  sessionId?: string;
+}
 
 async function handleSend(cmd: ChatSendCommand) {
-  abortController = new AbortController();
+  const controller = new AbortController();
+  abortController = controller;
+  // One runner serves every conversation: a turn only reports its own session,
+  // even when it is stopped before the CLI announces one.
+  const turn: TurnState = { started: false, sessionId: cmd.sessionId };
 
   try {
     const effort =
@@ -53,7 +63,7 @@ async function handleSend(cmd: ChatSendCommand) {
         // The append carries the live schema; a recorded prompt would go stale on resume.
         snapshot: false,
       },
-      abortController,
+      abortController: controller,
       maxTurns: 500,
       allowedTools: ["mcp__socadb", "WebSearch", "WebFetch"],
       permissionMode: "bypassPermissions" as const,
@@ -80,19 +90,22 @@ async function handleSend(cmd: ChatSendCommand) {
       else emit({ type: "chat_event", event: "memory_lost" });
     }
 
-    const turn = { started: false };
     try {
-      await runTurn(cmd.message, options, abortController, turn);
+      await runTurn(cmd.message, options, controller, turn);
     } catch (error) {
       // A session the CLI can't load fails before it starts. Keeping it would fail
       // every later message of the conversation, so start over without it.
-      if (!options.resume || turn.started || abortController.signal.aborted) throw error;
+      if (!options.resume || turn.started || controller.signal.aborted) throw error;
       console.error("[agent] resume failed:", errorText(error));
       emit({ type: "chat_event", event: "memory_lost" });
       delete options.resume;
-      await runTurn(cmd.message, options, abortController, turn);
+      await runTurn(cmd.message, options, controller, turn);
     }
   } catch (error) {
+    if (controller.signal.aborted) {
+      emitDone("", turn.sessionId);
+      return;
+    }
     const errorMessage = errorText(error);
     console.error("[agent] error:", errorMessage);
     emitError("claude", errorMessage);
@@ -100,10 +113,6 @@ async function handleSend(cmd: ChatSendCommand) {
     currentQuery = undefined;
     abortController = undefined;
   }
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 async function canResume(sessionId: string): Promise<boolean> {
@@ -123,7 +132,7 @@ async function runTurn(
   prompt: string,
   options: Options,
   controller: AbortController,
-  turn: { started: boolean },
+  turn: TurnState,
 ) {
   currentQuery = query({ prompt, options });
 
@@ -147,11 +156,11 @@ async function runTurn(
 
     if (message.type === "system" && message.subtype === "init") {
       turn.started = true;
-      currentSessionId = (message as Record<string, unknown>).session_id as string;
+      turn.sessionId = (message as Record<string, unknown>).session_id as string;
       emit({
         type: "chat_event",
         event: "session_init",
-        sessionId: currentSessionId,
+        sessionId: turn.sessionId,
       });
     }
 
@@ -200,12 +209,7 @@ async function runTurn(
     }
   }
 
-  emit({
-    type: "chat_event",
-    event: "done",
-    response: finalResponse,
-    sessionId: currentSessionId,
-  });
+  emitDone(finalResponse, turn.sessionId);
 }
 
 function handleStop() {

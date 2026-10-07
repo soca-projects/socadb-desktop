@@ -177,6 +177,10 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export function isEmptyMessage(message: ChatMessage): boolean {
+  return !message.content.trim() && message.toolCalls.length === 0;
+}
+
 export interface Conversation {
   id: string;
   name: string;

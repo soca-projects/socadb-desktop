@@ -381,8 +381,12 @@ export function ChatPanel() {
           </div>
         ) : (
           <div className="flex flex-col gap-3 px-4 py-3">
-            {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
+            {messages.map((msg, i) => (
+              <ChatMessage
+                key={msg.id}
+                message={msg}
+                thinking={isStreaming && i === messages.length - 1}
+              />
             ))}
             <div ref={messagesEndRef} />
           </div>

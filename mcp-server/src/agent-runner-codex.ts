@@ -89,6 +89,10 @@ async function handleSend(cmd: ChatSendCommand) {
       await runTurn(cmd, controller, turn);
     }
   } catch (error) {
+    if (controller.signal.aborted) {
+      emitDone("", turn?.thread.id);
+      return;
+    }
     const raw = turn?.lastError ?? errorText(error);
     console.error("[codex-agent] error:", raw);
     reportError(raw, cmd.model);

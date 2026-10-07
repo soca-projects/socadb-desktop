@@ -64,16 +64,18 @@ export function handleChatEvent(parsed: ChatEvent) {
       store.startAssistantMessage();
       break;
 
-    case "done":
+    case "done": {
       if (!isStale && parsed.response) {
         ensureAssistantMessage();
         store.setAssistantText(parsed.response as string);
       }
-      // A stale answer belongs to another conversation: its session must not land here.
-      store.finishResponse(
-        isStale ? (store.sessionId ?? "") : ((parsed.sessionId as string) ?? ""),
-      );
+      // A stale answer belongs to another conversation, and a turn stopped before
+      // its session started reports none: keep the conversation's own session then.
+      const reported =
+        !isStale && typeof parsed.sessionId === "string" ? parsed.sessionId : "";
+      store.finishResponse(reported || (store.sessionId ?? ""));
       break;
+    }
 
     case "error": {
       if (!isStale) {
