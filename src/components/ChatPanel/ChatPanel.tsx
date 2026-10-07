@@ -336,7 +336,7 @@ export function ChatPanel() {
       </div>
 
       <div
-        key={`${view}-${activeConversationId}`}
+        key={view === "chat" ? `chat-${activeConversationId}` : "history"}
         ref={view === "chat" ? scrollToEnd : undefined}
         className="flex-1 overflow-y-auto"
       >
