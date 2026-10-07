@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../Modal/Modal";
 import {
@@ -320,6 +320,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const { t, i18n } = useTranslation();
   const providers = useChatStore((s) => s.providers);
   const isStreaming = useChatStore((s) => s.isStreaming);
+  const deleteAllHintId = useId();
 
   const [section, setSection] = useState<Section>("agents");
 
@@ -394,15 +395,22 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               <p className="text-[12.5px] text-tertiary">
                 {t("settings.deleteAllDescription")}
               </p>
-              <button
-                type="button"
-                onClick={handleDeleteAllConversations}
-                disabled={isStreaming}
-                title={isStreaming ? t("chat.deleteWhileAnswering") : undefined}
-                className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50 disabled:hover:bg-transparent dark:text-red-400"
-              >
-                {t("settings.deleteAllConversations")}
-              </button>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <button
+                  type="button"
+                  onClick={handleDeleteAllConversations}
+                  disabled={isStreaming}
+                  aria-describedby={isStreaming ? deleteAllHintId : undefined}
+                  className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50 disabled:hover:bg-transparent dark:text-red-400"
+                >
+                  {t("settings.deleteAllConversations")}
+                </button>
+                {isStreaming && (
+                  <span id={deleteAllHintId} className="text-[12px] text-tertiary">
+                    {t("settings.deleteAllWhileAnswering")}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

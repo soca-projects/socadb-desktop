@@ -110,6 +110,7 @@
     "deleteAllConversations": "Delete all conversations",
     "deleteAllConfirm": "Delete all conversations? This can't be undone.",
     "deleteAll": "Delete all",
+    "deleteAllWhileAnswering": "Available once the agent has answered.",
     "cancel": "Cancel"
   },
   "agent": {
@@ -154,8 +155,7 @@
     "delete": "Delete",
     "deleteConfirm": "Delete “{{name}}”? The conversation and the agent's memory of it will be erased.",
     "cancel": "Cancel",
-    "deleteWhileAnswering": "Can't delete while it's answering",
-    "openConversation": "Open conversation",
+    "lockedWhileAnswering": "Until the agent has answered, other conversations can't be opened and the current one can't be deleted.",
     "providerSwitched": "New conversation: {{model}} can't continue a conversation started with {{previous}}.",
     "model": "Model",
     "groups": {

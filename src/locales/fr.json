@@ -110,6 +110,7 @@
     "deleteAllConversations": "Supprimer toutes les conversations",
     "deleteAllConfirm": "Supprimer toutes les conversations ? C'est définitif.",
     "deleteAll": "Tout supprimer",
+    "deleteAllWhileAnswering": "Disponible une fois la réponse de l'agent terminée.",
     "cancel": "Annuler"
   },
   "agent": {
@@ -154,8 +155,7 @@
     "delete": "Supprimer",
     "deleteConfirm": "Supprimer « {{name}} » ? La conversation et la mémoire de l'agent seront effacées.",
     "cancel": "Annuler",
-    "deleteWhileAnswering": "Impossible pendant une réponse",
-    "openConversation": "Conversation ouverte",
+    "lockedWhileAnswering": "Tant que l'agent répond, impossible d'ouvrir une autre conversation ou de supprimer celle en cours.",
     "providerSwitched": "Nouvelle conversation : {{model}} ne peut pas reprendre une conversation commencée avec {{previous}}.",
     "model": "Modèle",
     "groups": {
