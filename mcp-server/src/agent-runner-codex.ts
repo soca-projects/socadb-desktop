@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import type { Thread } from "@openai/codex-sdk";
+import { CODEX_DISABLED_FEATURES, runCodexExec } from "./codex-exec.ts";
 import {
   CODEX_EFFORTS,
   codexErrorCode,
@@ -22,9 +22,43 @@ const __dirname = getModuleDir(import.meta.url);
 let abortController: AbortController | undefined;
 
 interface TurnState {
-  thread: Thread;
+  threadId?: string;
   started: boolean;
   lastError?: string;
+}
+
+function codexArgs(cmd: ChatSendCommand, threadId: string | undefined): string[] {
+  const effort: CodexEffort =
+    cmd.effort && CODEX_EFFORTS.includes(cmd.effort as CodexEffort)
+      ? (cmd.effort as CodexEffort)
+      : "medium";
+  return [
+    "--config",
+    `developer_instructions=${JSON.stringify(cmd.systemPrompt)}`,
+    "--config",
+    `mcp_servers.socadb.command=${JSON.stringify(getMcpBinaryPath(__dirname))}`,
+    "--config",
+    "mcp_servers.socadb.args=[]",
+    "--config",
+    "mcp_servers.socadb.env={}",
+    // SocaDB's own tools are the agent's job; under a read-only sandbox codex would
+    // otherwise ask for an approval nobody can give.
+    "--config",
+    'mcp_servers.socadb.default_tools_approval_mode="approve"',
+    "--model",
+    cmd.model ?? "gpt-6-sol",
+    "--sandbox",
+    "read-only",
+    "--skip-git-repo-check",
+    "--config",
+    `model_reasoning_effort="${effort}"`,
+    "--config",
+    'web_search="live"',
+    "--config",
+    'approval_policy="never"',
+    ...CODEX_DISABLED_FEATURES.flatMap((feature) => ["--disable", feature]),
+    ...(threadId ? ["resume", threadId] : []),
+  ];
 }
 
 function reportError(raw: string, model: string | undefined) {
@@ -34,43 +68,9 @@ function reportError(raw: string, model: string | undefined) {
 async function handleSend(cmd: ChatSendCommand) {
   const controller = new AbortController();
   abortController = controller;
-  let turn: TurnState | undefined;
+  const turn: TurnState = { threadId: cmd.sessionId, started: false };
 
   try {
-    const { Codex } = await import("@openai/codex-sdk");
-    const effort: CodexEffort =
-      cmd.effort && CODEX_EFFORTS.includes(cmd.effort as CodexEffort)
-        ? (cmd.effort as CodexEffort)
-        : "medium";
-
-    const codex = new Codex({
-      config: {
-        developer_instructions: cmd.systemPrompt,
-        mcp_servers: {
-          socadb: {
-            command: getMcpBinaryPath(__dirname),
-            args: [],
-            env: {},
-          },
-        },
-      },
-    });
-
-    const threadOptions = {
-      model: cmd.model ?? "gpt-6-sol",
-      skipGitRepoCheck: true,
-      webSearchEnabled: true,
-      sandboxMode: "danger-full-access" as const,
-      approvalPolicy: "never" as const,
-      modelReasoningEffort: effort,
-    };
-
-    turn = {
-      thread: cmd.sessionId
-        ? codex.resumeThread(cmd.sessionId, threadOptions)
-        : codex.startThread(threadOptions),
-      started: false,
-    };
     try {
       await runTurn(cmd, controller, turn);
     } catch (error) {
@@ -85,15 +85,16 @@ async function handleSend(cmd: ChatSendCommand) {
       if (!resumeFailed) throw error;
       console.error("[codex-agent] resume failed:", codexErrorText(raw));
       emit({ type: "chat_event", event: "memory_lost" });
-      turn = { thread: codex.startThread(threadOptions), started: false };
+      turn.threadId = undefined;
+      turn.lastError = undefined;
       await runTurn(cmd, controller, turn);
     }
   } catch (error) {
     if (controller.signal.aborted) {
-      emitDone("", turn?.thread.id);
+      emitDone("", turn.threadId);
       return;
     }
-    const raw = turn?.lastError ?? errorText(error);
+    const raw = turn.lastError ?? errorText(error);
     console.error("[codex-agent] error:", raw);
     reportError(raw, cmd.model);
   } finally {
@@ -106,9 +107,11 @@ async function runTurn(
   controller: AbortController,
   turn: TurnState,
 ) {
-  const { events } = await turn.thread.runStreamed(cmd.message, {
-    signal: controller.signal,
-  });
+  const events = runCodexExec(
+    codexArgs(cmd, turn.threadId),
+    cmd.message,
+    controller.signal,
+  );
 
   let finalResponse = "";
 
@@ -116,6 +119,7 @@ async function runTurn(
     switch (event.type) {
       case "thread.started":
         turn.started = true;
+        turn.threadId = event.thread_id;
         emit({
           type: "chat_event",
           event: "session_init",
@@ -179,7 +183,7 @@ async function runTurn(
     }
   }
 
-  emitDone(finalResponse, turn.thread.id);
+  emitDone(finalResponse, turn.threadId);
 }
 
 function handleStop() {
