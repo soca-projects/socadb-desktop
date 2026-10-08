@@ -28,6 +28,12 @@ tauri-plugin-process = "2"
 keyring = { version = "3", features = ["apple-native", "windows-native"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSAlert", "NSApplication", "NSResponder", "NSRunningApplication"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSEnumerator", "NSError", "NSFileManager", "NSLocale", "NSString", "NSURL"] }
+plist = "1"
+semver = "1"
 tauri-plugin-sparkle-updater = { git = "https://github.com/Cassidy321/tauri-plugin-sparkle-updater", rev = "61f040d092581ff706590e7d25bd5128a0290d4c" }
 
 [profile.dev]
