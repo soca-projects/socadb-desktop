@@ -1,5 +1,7 @@
 mod chat;
 mod conversations;
+#[cfg(target_os = "macos")]
+mod install_location;
 mod ws;
 
 use std::process::Command;
@@ -180,6 +182,9 @@ fn configure_sparkle(app: &tauri::App) {
 }
 
 pub fn run() {
+    #[cfg(target_os = "macos")]
+    install_location::ensure_installed();
+
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

@@ -116,3 +116,39 @@ jobs:
       - name: Audit Rust dependencies
         working-directory: src-tauri
         run: cargo audit
+
+  rust-macos:
+    name: Rust checks (macOS)
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: src-tauri
+
+      # The Sparkle plugin's build.rs links against it, so cargo fails without it.
+      - name: Download Sparkle.framework
+        run: ./scripts/macos/download-sparkle.sh
+
+      - name: Create MCP placeholders for Tauri resource globs
+        run: |
+          mkdir -p mcp-server/dist mcp-server/dist/runtime
+          touch mcp-server/dist/socadb-mcp-darwin-arm64
+          touch mcp-server/dist/runtime/.placeholder
+
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      # The test binary finds Sparkle through an rpath that only resolves inside
+      # the app bundle.
+      - name: Test
+        working-directory: src-tauri
+        run: DYLD_FRAMEWORK_PATH="$PWD" cargo test --lib
