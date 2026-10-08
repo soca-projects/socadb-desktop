@@ -81,6 +81,7 @@ for (const file of [
   "agent-runner-codex.ts",
   "agent-runner-shared.ts",
   "claude-session-store.ts",
+  "codex-exec.ts",
 ]) {
   cpSync(join("src", file), join(runtimeDir, file));
 }

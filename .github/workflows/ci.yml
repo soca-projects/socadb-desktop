@@ -66,6 +66,10 @@ jobs:
         working-directory: mcp-server
         run: bunx tsc --noEmit
 
+      - name: Check the bundled Codex CLI
+        working-directory: mcp-server
+        run: bun run check:codex
+
   rust:
     name: Rust checks
     runs-on: ubuntu-24.04
