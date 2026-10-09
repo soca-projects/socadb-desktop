@@ -22,6 +22,8 @@ import { EmptyCanvas } from "../EmptyCanvas/EmptyCanvas";
 import { ExportModal } from "../ExportModal/ExportModal";
 import { ImportModal } from "../ImportModal/ImportModal";
 import { listen } from "@tauri-apps/api/event";
+import { Trans } from "react-i18next";
+import { formatShortcut } from "../../utils/platform";
 import { NARROW_WINDOW_QUERY } from "../../utils/layout";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
@@ -360,11 +362,15 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
               onClick={toggleFocusMode}
               className="absolute bottom-4 right-4 z-10 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-tertiary shadow-soft transition-colors hover:bg-surface-muted hover:text-secondary"
             >
-              Press{" "}
-              <kbd className="mx-0.5 rounded border border-border-light bg-surface-muted px-1 py-0.5 font-mono text-[10px]">
-                {"\u2318\u21E7"}F
-              </kbd>{" "}
-              to exit focus mode
+              <Trans
+                i18nKey="canvas.exitFocusMode"
+                values={{ shortcut: formatShortcut(["Mod", "Shift", "F"]) }}
+                components={{
+                  kbd: (
+                    <kbd className="mx-0.5 rounded border border-border-light bg-surface-muted px-1 py-0.5 font-mono text-[10px]" />
+                  ),
+                }}
+              />
             </button>
           )}
         </div>
