@@ -7,6 +7,7 @@ import {
   CaretDownIcon as CaretDown,
   TerminalWindowIcon as TerminalWindow,
   RobotIcon as Robot,
+  ChatsCircleIcon as ChatsCircle,
   GlobeIcon as Globe,
   PlugsConnectedIcon as PlugsConnected,
 } from "@phosphor-icons/react";
@@ -35,7 +36,7 @@ import { toast } from "sonner";
 import { CopyableCommand } from "./CopyableCommand";
 import { IntegrationsSection } from "./IntegrationsSection";
 
-type Section = "agents" | "integrations" | "language";
+type Section = "agents" | "conversations" | "integrations" | "language";
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -322,7 +323,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   }, [t]);
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-2xl">
+    <Modal onClose={onClose} maxWidth="max-w-3xl">
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <h2 className="text-[15px] font-semibold text-primary">{t("settings.title")}</h2>
         <button
@@ -334,7 +335,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         </button>
       </div>
 
-      <div className="flex">
+      <div className="flex h-[min(34rem,calc(100vh-10rem))]">
         <div className="w-44 shrink-0 space-y-0.5 border-r border-border p-3">
           <SidebarItem
             active={section === "agents"}
@@ -342,6 +343,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             icon={<Robot size={15} />}
           >
             {t("settings.agents")}
+          </SidebarItem>
+          <SidebarItem
+            active={section === "conversations"}
+            onClick={() => setSection("conversations")}
+            icon={<ChatsCircle size={15} />}
+          >
+            {t("settings.conversations")}
           </SidebarItem>
           <SidebarItem
             active={section === "integrations"}
@@ -359,7 +367,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </SidebarItem>
         </div>
 
-        <div className="min-h-[280px] flex-1 p-6">
+        <div className="min-w-0 flex-1 overflow-y-auto p-6">
           <div className={section !== "agents" ? "hidden" : "space-y-4"}>
             {PROVIDER_IDS.map((id) => {
               const provider = providers[id] ?? makeProvider(id);
@@ -372,29 +380,27 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 />
               );
             })}
-            <div className="space-y-2 border-t border-border pt-4">
-              <h3 className="text-[13px] font-medium text-primary">
-                {t("settings.conversations")}
-              </h3>
-              <p className="text-[12.5px] text-tertiary">
-                {t("settings.deleteAllDescription")}
-              </p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <button
-                  type="button"
-                  onClick={handleDeleteAllConversations}
-                  disabled={isStreaming}
-                  aria-describedby={isStreaming ? deleteAllHintId : undefined}
-                  className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50 disabled:hover:bg-transparent dark:text-red-400"
-                >
-                  {t("settings.deleteAllConversations")}
-                </button>
-                {isStreaming && (
-                  <span id={deleteAllHintId} className="text-[12px] text-tertiary">
-                    {t("settings.deleteAllWhileAnswering")}
-                  </span>
-                )}
-              </div>
+          </div>
+
+          <div className={section !== "conversations" ? "hidden" : ""}>
+            <p className="mb-4 text-[13px] text-tertiary">
+              {t("settings.deleteAllDescription")}
+            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button
+                type="button"
+                onClick={handleDeleteAllConversations}
+                disabled={isStreaming}
+                aria-describedby={isStreaming ? deleteAllHintId : undefined}
+                className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50 disabled:hover:bg-transparent dark:text-red-400"
+              >
+                {t("settings.deleteAllConversations")}
+              </button>
+              {isStreaming && (
+                <span id={deleteAllHintId} className="text-[12px] text-tertiary">
+                  {t("settings.deleteAllWhileAnswering")}
+                </span>
+              )}
             </div>
           </div>
 
