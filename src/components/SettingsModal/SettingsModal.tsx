@@ -70,7 +70,7 @@ function SubscriptionGuidance({ providerId }: { providerId: ProviderId }) {
         <div className="mt-2 space-y-3 rounded-md bg-surface-muted px-3 py-3">
           <button
             onClick={() => void invoke("open_terminal")}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-primary/90 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
+            className="inline-flex items-center gap-2 rounded-md bg-stone-800 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-stone-700 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
           >
             <TerminalWindow size={13} />
             {t("agent.openTerminal")}
@@ -182,7 +182,7 @@ function ApiKeyPanel({
         <button
           onClick={() => void save()}
           disabled={input.trim().length < meta.apiKeyMinLength || saving}
-          className="rounded-md bg-primary px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
+          className="rounded-md bg-stone-800 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-50 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-stone-300"
         >
           {saving
             ? t("agent.saving")

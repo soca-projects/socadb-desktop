@@ -16,6 +16,7 @@ import { useChatStream } from "./hooks/useChatStream";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
 import { syncIntegrations } from "./utils/mcpRegistration";
+import { useThemeStore } from "./stores/themeStore";
 import { initSessionPersistence } from "./utils/sessionPersistence";
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
@@ -37,6 +38,7 @@ function App() {
 
   const { isOpen, isFirstLaunch, handleCreate, handleClose } = useNewSchemaModal();
   const unsavedGuard = useUnsavedChangesGuard();
+  const theme = useThemeStore((s) => s.theme);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
@@ -64,7 +66,7 @@ function App() {
           onSave={unsavedGuard.handleSave}
         />
       )}
-      <Toaster position="bottom-center" richColors />
+      <Toaster theme={theme} position="bottom-center" richColors />
     </ErrorBoundary>
   );
 }
