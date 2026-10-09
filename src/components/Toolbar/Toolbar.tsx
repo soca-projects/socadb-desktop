@@ -8,8 +8,12 @@ import {
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
+import { IS_MAC } from "../../utils/platform";
 
-const TRAFFIC_LIGHTS_WIDTH = 70;
+// trafficLightPosition in tauri.conf.json centers the lights on this bar,
+// 20 px from the left edge, and ends them at 80 px; this keeps the gap they
+// have between them. The right-hand icons end 20 px from the other edge.
+const TRAFFIC_LIGHTS_WIDTH = 82;
 
 interface ToolbarProps {
   isSidePanelOpen: boolean;
@@ -58,11 +62,11 @@ export function Toolbar({
   return (
     <div
       data-tauri-drag-region
-      className="flex h-10 items-center border-b border-border bg-surface pr-4"
+      className="flex h-10 items-center border-b border-border bg-surface pr-[13px]"
     >
       <div
         className="flex items-center"
-        style={{ paddingLeft: isFullscreen ? 16 : TRAFFIC_LIGHTS_WIDTH }}
+        style={{ paddingLeft: IS_MAC && !isFullscreen ? TRAFFIC_LIGHTS_WIDTH : 16 }}
       >
         <button
           onClick={onToggleSidePanel}

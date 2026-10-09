@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   TrashIcon as Trash,
@@ -6,6 +6,8 @@ import {
   CopyIcon as Copy,
 } from "@phosphor-icons/react";
 import { useClickOutside } from "../../hooks/useClickOutside";
+
+const MARGIN_PX = 8;
 
 interface ContextMenuProps {
   x: number;
@@ -27,6 +29,15 @@ export function ContextMenu({
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, onClose);
+
+  // Opened at the pointer, the menu would run off the window near its edges.
+  useLayoutEffect(() => {
+    const menu = ref.current;
+    if (!menu) return;
+    const { width, height } = menu.getBoundingClientRect();
+    menu.style.left = `${Math.max(MARGIN_PX, Math.min(x, window.innerWidth - width - MARGIN_PX))}px`;
+    menu.style.top = `${Math.max(MARGIN_PX, Math.min(y, window.innerHeight - height - MARGIN_PX))}px`;
+  }, [x, y]);
 
   return (
     <div

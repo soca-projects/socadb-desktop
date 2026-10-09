@@ -20,7 +20,6 @@ export function useUpdateReadyToast() {
         id: TOAST_ID,
         duration: Infinity,
         dismissible: false,
-        position: "bottom-center",
         unstyled: true,
       });
     } else {

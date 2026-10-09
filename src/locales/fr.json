@@ -35,7 +35,8 @@
     "undo": "Annuler",
     "redo": "Rétablir",
     "autoLayout": "Réorganiser",
-    "deleteRelation": "Supprimer la relation"
+    "deleteRelation": "Supprimer la relation",
+    "exitFocusMode": "Appuyez sur <kbd>{{shortcut}}</kbd> pour quitter le mode focus"
   },
   "contextMenu": {
     "rename": "Renommer",

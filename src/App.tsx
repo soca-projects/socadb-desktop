@@ -14,6 +14,9 @@ import { useUpdateReadyToast } from "./hooks/useUpdateReadyToast";
 import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useChatStream } from "./hooks/useChatStream";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
+import { useMediaQuery } from "./hooks/useMediaQuery";
+import { NARROW_WINDOW_QUERY, TOOLBAR_HEIGHT } from "./utils/layout";
+import { useThemeStore } from "./stores/themeStore";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
 import { syncIntegrations } from "./utils/mcpRegistration";
 import { initSessionPersistence } from "./utils/sessionPersistence";
@@ -37,6 +40,8 @@ function App() {
 
   const { isOpen, isFirstLaunch, handleCreate, handleClose } = useNewSchemaModal();
   const unsavedGuard = useUnsavedChangesGuard();
+  const narrowWindow = useMediaQuery(NARROW_WINDOW_QUERY);
+  const theme = useThemeStore((s) => s.theme);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
@@ -64,7 +69,13 @@ function App() {
           onSave={unsavedGuard.handleSave}
         />
       )}
-      <Toaster position="bottom-center" richColors />
+      {/* On a narrow window the chat box sits where bottom toasts would land. */}
+      <Toaster
+        theme={theme}
+        position={narrowWindow ? "top-center" : "bottom-center"}
+        offset={narrowWindow ? { top: TOOLBAR_HEIGHT + 12 } : undefined}
+        richColors
+      />
     </ErrorBoundary>
   );
 }

@@ -35,7 +35,8 @@
     "undo": "Undo",
     "redo": "Redo",
     "autoLayout": "Auto layout",
-    "deleteRelation": "Delete relation"
+    "deleteRelation": "Delete relation",
+    "exitFocusMode": "Press <kbd>{{shortcut}}</kbd> to exit focus mode"
   },
   "contextMenu": {
     "rename": "Rename",

@@ -22,6 +22,9 @@ import { EmptyCanvas } from "../EmptyCanvas/EmptyCanvas";
 import { ExportModal } from "../ExportModal/ExportModal";
 import { ImportModal } from "../ImportModal/ImportModal";
 import { listen } from "@tauri-apps/api/event";
+import { Trans } from "react-i18next";
+import { formatShortcut } from "../../utils/platform";
+import { NARROW_WINDOW_QUERY } from "../../utils/layout";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
 import type { Table, Relation } from "../../types/schema";
@@ -122,14 +125,47 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   const focusMode = useFocusStore((s) => s.focusMode);
   const toggleFocusMode = useFocusStore((s) => s.toggleFocusMode);
 
-  const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [sidePanelOpen, setSidePanelOpen] = useState(
+    () => !window.matchMedia(NARROW_WINDOW_QUERY).matches,
+  );
+  const sidePanelOpenRef = useRef(sidePanelOpen);
+  const foldedForWidth = useRef(!sidePanelOpen);
+
+  useEffect(() => {
+    sidePanelOpenRef.current = sidePanelOpen;
+  }, [sidePanelOpen]);
+
+  useEffect(() => {
+    const query = window.matchMedia(NARROW_WINDOW_QUERY);
+    const fit = (narrow: boolean) => {
+      if (narrow && sidePanelOpenRef.current) {
+        foldedForWidth.current = true;
+        setSidePanelOpen(false);
+      } else if (!narrow && foldedForWidth.current) {
+        foldedForWidth.current = false;
+        setSidePanelOpen(true);
+      }
+    };
+    const onChange = (event: MediaQueryListEvent) => fit(event.matches);
+    query.addEventListener("change", onChange);
+    // The first render can run before the window has its final size, and a
+    // change landing before the listener was added would never be reported.
+    const frame = requestAnimationFrame(() => fit(query.matches));
+    return () => {
+      cancelAnimationFrame(frame);
+      query.removeEventListener("change", onChange);
+    };
+  }, []);
+
+  const toggleSidePanel = useCallback(() => {
+    foldedForWidth.current = false;
+    setSidePanelOpen((open) => !open);
+  }, []);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
-    const unlistenSidebar = listen("toggle-sidebar", () => {
-      setSidePanelOpen((prev) => !prev);
-    });
+    const unlistenSidebar = listen("toggle-sidebar", toggleSidePanel);
     const unlistenFocus = listen("toggle-focus-mode", () => {
       toggleFocusMode();
     });
@@ -145,7 +181,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
       void unlistenExport.then((fn) => fn());
       void unlistenImport.then((fn) => fn());
     };
-  }, [toggleFocusMode]);
+  }, [toggleFocusMode, toggleSidePanel]);
   const [openTableId, setOpenTableId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -274,7 +310,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
       {!focusMode && (
         <Toolbar
           isSidePanelOpen={sidePanelOpen}
-          onToggleSidePanel={() => setSidePanelOpen(!sidePanelOpen)}
+          onToggleSidePanel={toggleSidePanel}
           onToggleFocusMode={toggleFocusMode}
           onOpenSettings={onOpenSettings}
         />
@@ -324,13 +360,17 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
           {focusMode && (
             <button
               onClick={toggleFocusMode}
-              className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-tertiary shadow-soft transition-colors hover:bg-surface-muted hover:text-secondary"
+              className="absolute bottom-4 right-4 z-10 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-tertiary shadow-soft transition-colors hover:bg-surface-muted hover:text-secondary"
             >
-              Press{" "}
-              <kbd className="mx-0.5 rounded border border-border-light bg-surface-muted px-1 py-0.5 font-mono text-[10px]">
-                {"\u2318\u21E7"}F
-              </kbd>{" "}
-              to exit focus mode
+              <Trans
+                i18nKey="canvas.exitFocusMode"
+                values={{ shortcut: formatShortcut(["Mod", "Shift", "F"]) }}
+                components={{
+                  kbd: (
+                    <kbd className="mx-0.5 rounded border border-border-light bg-surface-muted px-1 py-0.5 font-mono text-[10px]" />
+                  ),
+                }}
+              />
             </button>
           )}
         </div>
@@ -341,6 +381,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
           x={contextMenu.x}
           y={contextMenu.y}
           onRename={() => {
+            foldedForWidth.current = false;
             setSidePanelOpen(true);
             setOpenTableId(contextMenu.tableId);
             setContextMenu(null);

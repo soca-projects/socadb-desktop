@@ -75,8 +75,11 @@ function useResize(initial: { width: number; height: number }) {
       e.preventDefault();
       const startX = e.clientX;
       const startY = e.clientY;
-      const startW = size.width;
-      const startH = size.height;
+      // A small window caps the panel below its saved size: starting from what
+      // is shown keeps the edge under the pointer instead of jumping.
+      const shown = e.currentTarget.parentElement?.getBoundingClientRect();
+      const startW = shown?.width ?? size.width;
+      const startH = shown?.height ?? size.height;
 
       const cursorMap: Record<ResizeAxis, string> = {
         both: "nwse-resize",
@@ -283,7 +286,7 @@ export function ChatPanel() {
   return (
     <div
       ref={panelRef}
-      className="fixed bottom-4 right-4 z-50 flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-float animate-fade-in"
+      className="fixed bottom-4 right-4 z-50 flex max-h-[calc(100vh-4rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-float animate-fade-in"
       style={{ width: size.width, height: size.height }}
     >
       <div

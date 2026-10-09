@@ -64,11 +64,13 @@ import CoreGraphics
 let pid = Int32(CommandLine.arguments[1])!
 let windows = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: Any]]
 let own = windows.filter { ($0[kCGWindowOwnerPID as String] as? Int32) == pid && (0...8).contains($0[kCGWindowLayer as String] as? Int ?? -1) }
+// WebKit keeps hidden windows that can be larger than a small app window.
+let visible = own.filter { ($0[kCGWindowIsOnscreen as String] as? Bool) == true }
 let area = { (w: [String: Any]) -> Double in
   let b = w[kCGWindowBounds as String] as! [String: Double]
   return b["Width"]! * b["Height"]!
 }
-if let main = own.max(by: { area($0) < area($1) }) { print(main[kCGWindowNumber as String]!) }
+if let main = (visible.isEmpty ? own : visible).max(by: { area($0) < area($1) }) { print(main[kCGWindowNumber as String]!) }
 `;
 
 function windowId(): string {
@@ -78,7 +80,7 @@ function windowId(): string {
     .stdout.trim()
     .split("\n")[0];
   if (!pid) throw new Error("No process is listening on the bridge port");
-  const helper = join(tmpdir(), "socadb-devctl-window-id-v3");
+  const helper = join(tmpdir(), "socadb-devctl-window-id-v4");
   if (!existsSync(helper)) {
     const source = `${helper}.swift`;
     writeFileSync(source, WINDOW_ID_SWIFT);
