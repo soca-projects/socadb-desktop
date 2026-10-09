@@ -166,6 +166,19 @@ export const McpServerEntryZ = z.looseObject({
   command: z.string().optional(),
 });
 
+export const IntegrationChoiceZ = z.enum(["on", "off", "removed"]);
+
+export const IntegrationChoicesZ = z.looseObject({
+  claudeCode: IntegrationChoiceZ.optional(),
+  claudeDesktop: IntegrationChoiceZ.optional(),
+  codex: IntegrationChoiceZ.optional(),
+});
+
+export const CodexMcpEntryZ = z.object({
+  installed: z.boolean(),
+  command: z.string().nullable(),
+});
+
 const ToolCallInfoZ = z.object({
   id: z.string(),
   name: z.string(),

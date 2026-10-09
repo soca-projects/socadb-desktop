@@ -1,4 +1,5 @@
 mod chat;
+mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
 mod install_location;
@@ -209,6 +210,8 @@ pub fn run() {
             chat::chat_send,
             chat::chat_stop,
             chat::chat_reset,
+            codex_config::codex_mcp_entry,
+            codex_config::codex_mcp_set,
             conversations::conversation_list,
             conversations::conversation_write,
             conversations::conversation_delete,

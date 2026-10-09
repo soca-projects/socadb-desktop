@@ -15,7 +15,7 @@ import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useChatStream } from "./hooks/useChatStream";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
-import { registerMcpServers } from "./utils/mcpRegistration";
+import { syncIntegrations } from "./utils/mcpRegistration";
 import { initSessionPersistence } from "./utils/sessionPersistence";
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
@@ -42,7 +42,7 @@ function App() {
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
   useEffect(() => {
-    void registerMcpServers();
+    void syncIntegrations();
   }, []);
 
   return (
