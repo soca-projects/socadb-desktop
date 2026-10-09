@@ -5,11 +5,10 @@ import {
   XIcon as X,
   CheckCircleIcon as CheckCircle,
   CaretDownIcon as CaretDown,
-  CopyIcon as Copy,
-  CheckIcon as Check,
   TerminalWindowIcon as TerminalWindow,
   RobotIcon as Robot,
   GlobeIcon as Globe,
+  PlugsConnectedIcon as PlugsConnected,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
@@ -33,35 +32,13 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
+import { CopyableCommand } from "./CopyableCommand";
+import { IntegrationsSection } from "./IntegrationsSection";
 
-type Section = "agents" | "language";
+type Section = "agents" | "integrations" | "language";
 
 interface SettingsModalProps {
   onClose: () => void;
-}
-
-function CopyableCommand({ children }: { children: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = useCallback(() => {
-    void navigator.clipboard.writeText(children);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [children]);
-
-  return (
-    <button
-      onClick={copy}
-      className="flex w-full items-center justify-between rounded-md bg-surface px-3 py-2 text-left font-mono text-[11px] text-tertiary transition-colors hover:bg-surface-muted dark:bg-stone-700 dark:text-stone-300 dark:hover:bg-stone-600/70"
-    >
-      <span>{children}</span>
-      {copied ? (
-        <Check size={12} className="shrink-0 text-emerald-500" />
-      ) : (
-        <Copy size={12} className="shrink-0" />
-      )}
-    </button>
-  );
 }
 
 const PROVIDER_ICONS: Record<ProviderId, typeof ClaudeIcon> = {
@@ -367,6 +344,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             {t("settings.agents")}
           </SidebarItem>
           <SidebarItem
+            active={section === "integrations"}
+            onClick={() => setSection("integrations")}
+            icon={<PlugsConnected size={15} />}
+          >
+            {t("settings.integrations")}
+          </SidebarItem>
+          <SidebarItem
             active={section === "language"}
             onClick={() => setSection("language")}
             icon={<Globe size={15} />}
@@ -413,6 +397,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               </div>
             </div>
           </div>
+
+          {section === "integrations" && <IntegrationsSection />}
 
           <div className={section !== "language" ? "hidden" : ""}>
             <p className="mb-4 text-[13px] text-tertiary">

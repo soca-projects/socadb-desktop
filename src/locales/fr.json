@@ -102,6 +102,7 @@
   "settings": {
     "title": "Paramètres",
     "agents": "Agents",
+    "integrations": "Intégrations",
     "language": "Langue",
     "languageDescription": "Choisissez la langue de l'application.",
     "close": "Fermer",
@@ -112,6 +113,26 @@
     "deleteAll": "Tout supprimer",
     "deleteAllWhileAnswering": "Disponible une fois la réponse de l'agent terminée.",
     "cancel": "Annuler"
+  },
+  "integrations": {
+    "title": "Utiliser SocaDB depuis d'autres apps",
+    "description": "Les apps activées ici peuvent lire et modifier le schéma ouvert dans SocaDB. Elles n'y ont accès que pendant que SocaDB est ouverte, et vous demandent la permission avant d'utiliser ses outils.",
+    "notInstalled": "Pas installé",
+    "unreadable": "SocaDB ne modifie pas sa config, qu'il n'arrive pas à lire.",
+    "removed": "Retiré à la main de la config de {{name}}. SocaDB ne s'y réinscrit plus, sauf si vous le réactivez ici.",
+    "restartToAdd": "Activé. Redémarrez {{name}} pour qu'il voie SocaDB.",
+    "restartToRemove": "Désactivé. Redémarrez {{name}} pour qu'il retire SocaDB.",
+    "off": "Désactivé",
+    "on": "Activé",
+    "availableInNewSessions": "Disponible dans les nouvelles sessions",
+    "failed": "Impossible de modifier la config de {{name}} : {{error}}",
+    "howTo": "Comment s'en servir",
+    "howToOpen": "Gardez SocaDB ouverte avec votre schéma.",
+    "howToAsk": "Dans Claude Code, Claude Desktop ou Codex, demandez ce que vous voulez faire avec le schéma. Par exemple :",
+    "howToExample": "Lis le schéma ouvert dans SocaDB et écris la migration SQL pour PostgreSQL.",
+    "howToAllow": "La première fois, l'app vous demande d'autoriser les outils SocaDB.",
+    "otherApp": "Une autre app compatible MCP ?",
+    "otherAppHint": "Ajoutez ce serveur dans la configuration MCP de l'app, sous le nom socadb :"
   },
   "agent": {
     "ownApiKey": "Votre propre clé API",
