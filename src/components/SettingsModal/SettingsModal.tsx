@@ -178,7 +178,7 @@ function ApiKeyPanel({
           onKeyDown={(e) => {
             if (e.key === "Enter") void save();
           }}
-          className="flex-1 rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-[11px] text-primary placeholder:text-tertiary/50 focus:border-accent focus:outline-none"
+          className="flex-1 rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-[11px] text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
         />
         <button
           onClick={() => void save()}
