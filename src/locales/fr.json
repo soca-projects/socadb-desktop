@@ -195,7 +195,16 @@
     "deleteAllConfirm": "Supprimer toutes les conversations ? C'est définitif.",
     "deleteAll": "Tout supprimer",
     "deleteAllWhileAnswering": "Disponible une fois la réponse de l'agent terminée.",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "general": "Général",
+    "startupTitle": "Au lancement, ouvrir",
+    "startupDescription": "Ce que SocaDB affiche quand vous l'ouvrez.",
+    "startup": {
+      "home": "La liste des schémas",
+      "homeHint": "L'accueil avec tous vos schémas. Un brouillon non enregistré apparaît en tête.",
+      "lastSchema": "Le dernier schéma",
+      "lastSchemaHint": "Reprend là où vous en étiez, brouillon compris."
+    }
   },
   "integrations": {
     "title": "Utiliser SocaDB depuis d'autres apps",

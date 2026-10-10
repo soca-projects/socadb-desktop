@@ -8,8 +8,8 @@ import {
   TerminalWindowIcon as TerminalWindow,
   RobotIcon as Robot,
   ChatsCircleIcon as ChatsCircle,
-  GlobeIcon as Globe,
   PlugsConnectedIcon as PlugsConnected,
+  SlidersHorizontalIcon as SlidersHorizontal,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
@@ -29,6 +29,10 @@ import {
   type Provider,
 } from "../../types/chat";
 import { SUPPORTED_LANGUAGES, type Language } from "../../i18n";
+import {
+  getStartupPreference,
+  setStartupPreference,
+} from "../../utils/startupPreference";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
@@ -36,7 +40,7 @@ import { toast } from "sonner";
 import { CopyableCommand } from "./CopyableCommand";
 import { IntegrationsSection } from "./IntegrationsSection";
 
-type Section = "agents" | "conversations" | "integrations" | "language";
+type Section = "agents" | "conversations" | "integrations" | "general";
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -301,6 +305,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const deleteAllHintId = useId();
 
   const [section, setSection] = useState<Section>("agents");
+  const [startup, setStartup] = useState(getStartupPreference);
 
   const handleLoginTypeChange = useCallback(
     (id: ProviderId, next: LoginType) => {
@@ -359,11 +364,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             {t("settings.integrations")}
           </SidebarItem>
           <SidebarItem
-            active={section === "language"}
-            onClick={() => setSection("language")}
-            icon={<Globe size={15} />}
+            active={section === "general"}
+            onClick={() => setSection("general")}
+            icon={<SlidersHorizontal size={15} />}
           >
-            {t("settings.language")}
+            {t("settings.general")}
           </SidebarItem>
         </div>
 
@@ -406,28 +411,84 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
           {section === "integrations" && <IntegrationsSection />}
 
-          <div className={section !== "language" ? "hidden" : ""}>
-            <p className="mb-4 text-[13px] text-tertiary">
-              {t("settings.languageDescription")}
-            </p>
-            <div className="space-y-2">
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => void i18n.changeLanguage(lang)}
-                  className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-[13px] font-medium transition-all ${
-                    i18n.resolvedLanguage === lang
-                      ? "border-accent bg-accent/[0.05] text-accent"
-                      : "border-border text-secondary hover:border-border-hover hover:bg-surface-muted"
-                  }`}
-                >
-                  {LANGUAGE_LABELS[lang]}
-                  {i18n.resolvedLanguage === lang && (
-                    <CheckCircle size={16} weight="fill" />
-                  )}
-                </button>
-              ))}
-            </div>
+          <div className={section !== "general" ? "hidden" : "space-y-7"}>
+            <section>
+              <h3 className="mb-1 text-[13px] font-semibold text-secondary">
+                {t("settings.startupTitle")}
+              </h3>
+              <p className="mb-4 text-[13px] text-tertiary">
+                {t("settings.startupDescription")}
+              </p>
+              <div
+                role="radiogroup"
+                aria-label={t("settings.startupTitle")}
+                className="space-y-2"
+              >
+                {(["home", "lastSchema"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={startup === value}
+                    onClick={() => {
+                      setStartup(value);
+                      void setStartupPreference(value);
+                    }}
+                    className={`flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-all ${
+                      startup === value
+                        ? "border-accent bg-accent/[0.05]"
+                        : "border-border hover:border-border-hover hover:bg-surface-muted"
+                    }`}
+                  >
+                    <span className="flex flex-col gap-0.5">
+                      <span
+                        className={`text-[13px] font-medium ${
+                          startup === value ? "text-accent" : "text-secondary"
+                        }`}
+                      >
+                        {t(`settings.startup.${value}`)}
+                      </span>
+                      <span className="text-[12px] text-tertiary">
+                        {t(`settings.startup.${value}Hint`)}
+                      </span>
+                    </span>
+                    {startup === value && (
+                      <CheckCircle
+                        size={16}
+                        weight="fill"
+                        className="shrink-0 text-accent"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
+            <section>
+              <h3 className="mb-1 text-[13px] font-semibold text-secondary">
+                {t("settings.language")}
+              </h3>
+              <p className="mb-4 text-[13px] text-tertiary">
+                {t("settings.languageDescription")}
+              </p>
+              <div className="space-y-2">
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => void i18n.changeLanguage(lang)}
+                    className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-[13px] font-medium transition-all ${
+                      i18n.resolvedLanguage === lang
+                        ? "border-accent bg-accent/[0.05] text-accent"
+                        : "border-border text-secondary hover:border-border-hover hover:bg-surface-muted"
+                    }`}
+                  >
+                    {LANGUAGE_LABELS[lang]}
+                    {i18n.resolvedLanguage === lang && (
+                      <CheckCircle size={16} weight="fill" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
       </div>

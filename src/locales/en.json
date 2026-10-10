@@ -195,7 +195,16 @@
     "deleteAllConfirm": "Delete all conversations? This can't be undone.",
     "deleteAll": "Delete all",
     "deleteAllWhileAnswering": "Available once the agent has answered.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "general": "General",
+    "startupTitle": "On launch, open",
+    "startupDescription": "What SocaDB shows when you open it.",
+    "startup": {
+      "home": "The schema list",
+      "homeHint": "The home with all your schemas. An unsaved draft shows at the top.",
+      "lastSchema": "The last schema",
+      "lastSchemaHint": "Picks up where you left off, draft included."
+    }
   },
   "integrations": {
     "title": "Use SocaDB from other apps",
