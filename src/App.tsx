@@ -19,12 +19,21 @@ import { NARROW_WINDOW_QUERY, TOOLBAR_HEIGHT } from "./utils/layout";
 import { useThemeStore } from "./stores/themeStore";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
 import { syncIntegrations } from "./utils/mcpRegistration";
-import { initSessionPersistence } from "./utils/sessionPersistence";
+import { initSessionPersistence, restoreLastSession } from "./utils/sessionPersistence";
+import { useViewStore } from "./stores/viewStore";
+import {
+  getStartupPreference,
+  initialView,
+  loadStartupPreference,
+} from "./utils/startupPreference";
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
 
+const restored = restoreLastSession();
+useViewStore.setState({ view: initialView(restored, getStartupPreference()) });
 initSessionPersistence();
+void loadStartupPreference();
 initChatPersistence();
 initThemePersistence();
 initLanguagePersistence();
@@ -38,7 +47,7 @@ function App() {
   useMcpBridge();
   useChatStream();
 
-  const { isOpen, isFirstLaunch, handleCreate, handleClose } = useNewSchemaModal();
+  const { isOpen, handleCreate, handleClose } = useNewSchemaModal();
   const unsavedGuard = useUnsavedChangesGuard();
   const narrowWindow = useMediaQuery(NARROW_WINDOW_QUERY);
   const theme = useThemeStore((s) => s.theme);
@@ -55,13 +64,7 @@ function App() {
       <Canvas onOpenSettings={openSettings} />
       <ChatPanel />
       {settingsOpen && <SettingsModal onClose={closeSettings} />}
-      {isOpen && (
-        <NewSchemaModal
-          isFirstLaunch={isFirstLaunch}
-          onClose={handleClose}
-          onCreate={handleCreate}
-        />
-      )}
+      {isOpen && <NewSchemaModal onClose={handleClose} onCreate={handleCreate} />}
       {unsavedGuard.isOpen && (
         <UnsavedChangesModal
           onCancel={unsavedGuard.handleCancel}
