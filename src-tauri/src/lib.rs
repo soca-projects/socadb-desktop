@@ -79,7 +79,7 @@ fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
         .map(|s| s.to_owned())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn read_schema_file(path: String) -> Result<String, String> {
     let p = std::path::Path::new(&path);
     let canonical = p

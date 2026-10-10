@@ -220,3 +220,9 @@ export const LastSessionZ = z.object({
   filePath: z.string().nullable().optional(),
   savedAt: z.string().nullable().optional(),
 });
+
+export const SchemaFileInfoZ = z.object({
+  path: z.string(),
+  exists: z.boolean(),
+  modifiedMs: z.number().nullable(),
+});

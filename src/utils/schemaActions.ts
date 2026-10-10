@@ -1,4 +1,5 @@
-import { useSchemaStore } from "../stores/schemaStore";
+import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
+import { useViewStore } from "../stores/viewStore";
 import { genId } from "./id";
 import { createDefaultIdColumn } from "./columnDefaults";
 import { computeAutoLayout } from "./autoLayout";
@@ -68,4 +69,12 @@ export function duplicateTable(tableId: string): string | null {
     columns: source.columns.map((col) => ({ ...col, id: genId(), isForeignKey: false })),
   });
   return newId;
+}
+
+export function closeSchema() {
+  const store = useSchemaStore.getState();
+  store.setSchema(createEmptySchema());
+  store.setFilePath(null);
+  useSchemaStore.temporal.getState().clear();
+  useViewStore.getState().showHome();
 }
