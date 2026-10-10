@@ -60,8 +60,11 @@
       "deleteDraft": "Supprimer le brouillon",
       "deleteDraftHint": "Il ne pourra pas être récupéré"
     },
-    "deleteDraftConfirm": "Supprimer le brouillon « {{name}} » ? Il n'a jamais été enregistré : il ne pourra pas être récupéré.",
-    "deleteDraftOk": "Supprimer",
+    "deleteDraft": {
+      "title": "Supprimer ce brouillon ?",
+      "description": "« {{name}} » n'a jamais été enregistré : il ne pourra pas être récupéré.",
+      "confirm": "Supprimer"
+    },
     "cancel": "Annuler",
     "copySuffix": "copie",
     "revealFailed": "Impossible d'afficher le fichier : {{error}}",

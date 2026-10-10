@@ -60,8 +60,11 @@
       "deleteDraft": "Delete draft",
       "deleteDraftHint": "It can't be recovered"
     },
-    "deleteDraftConfirm": "Delete the draft “{{name}}”? It was never saved, so it can't be recovered.",
-    "deleteDraftOk": "Delete",
+    "deleteDraft": {
+      "title": "Delete this draft?",
+      "description": "“{{name}}” was never saved, so it can't be recovered.",
+      "confirm": "Delete"
+    },
     "cancel": "Cancel",
     "copySuffix": "copy",
     "revealFailed": "Couldn't show the file: {{error}}",

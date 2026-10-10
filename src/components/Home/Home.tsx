@@ -15,6 +15,7 @@ import type { HomeMenuItem } from "./HomeCardMenu";
 import { HomeEmpty } from "./HomeEmpty";
 import { MissingFiles } from "./MissingFiles";
 import { RenameSchemaModal } from "./RenameSchemaModal";
+import { DeleteDraftModal } from "./DeleteDraftModal";
 import { useHomeEntries } from "../../hooks/useHomeEntries";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { useViewStore } from "../../stores/viewStore";
@@ -29,7 +30,6 @@ import {
   type HomeEntry,
 } from "../../utils/homeList";
 import {
-  deleteDraft,
   duplicateHomeEntry,
   getHomeSort,
   locateHomeEntry,
@@ -47,6 +47,7 @@ import {
   handleSaveAs,
 } from "../../utils/menuActions";
 import { IS_MAC, IS_WINDOWS } from "../../utils/platform";
+import { closeSchema } from "../../utils/schemaActions";
 import { isWorthResuming } from "../../utils/schemaQueries";
 import { HomeSortZ } from "../../utils/zodSchemas";
 
@@ -90,6 +91,7 @@ export function Home({ onOpenSettings }: HomeProps) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState(getHomeSort);
   const [renaming, setRenaming] = useState<HomeEntry | null>(null);
+  const [deletingDraft, setDeletingDraft] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const closeImport = useViewStore((s) => s.closeImport);
 
@@ -316,7 +318,7 @@ export function Home({ onOpenSettings }: HomeProps) {
                           hint: t("home.action.deleteDraftHint"),
                           danger: true,
                           separatorBefore: true,
-                          onSelect: () => void deleteDraft(schema.name),
+                          onSelect: () => setDeletingDraft(true),
                         },
                       ]
                 }
@@ -364,6 +366,16 @@ export function Home({ onOpenSettings }: HomeProps) {
         )}
       </div>
 
+      {deletingDraft && (
+        <DeleteDraftModal
+          name={schema.name}
+          onClose={() => setDeletingDraft(false)}
+          onDelete={() => {
+            setDeletingDraft(false);
+            closeSchema();
+          }}
+        />
+      )}
       {renaming && (
         <RenameSchemaModal
           initialName={renaming.name}

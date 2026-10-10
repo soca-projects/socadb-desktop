@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ask, open } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import i18next from "../i18n";
@@ -9,7 +9,6 @@ import { getSocaFilter } from "./fileOperations";
 import type { HomeSort } from "./homeList";
 import { handleOpenRecent } from "./menuActions";
 import { addRecentFile, removeRecentFiles, replaceRecentFile } from "./recentFiles";
-import { closeSchema } from "./schemaActions";
 import { HomeSortZ } from "./zodSchemas";
 
 const SORT_KEY = "socadb_home_sort";
@@ -83,13 +82,4 @@ export async function locateHomeEntry(path: string) {
 
 export function removeHomeEntries(paths: readonly string[]) {
   removeRecentFiles(paths);
-}
-
-export async function deleteDraft(name: string) {
-  const confirmed = await ask(i18next.t("home.deleteDraftConfirm", { name }), {
-    kind: "warning",
-    okLabel: i18next.t("home.deleteDraftOk"),
-    cancelLabel: i18next.t("home.cancel"),
-  });
-  if (confirmed) closeSchema();
 }
