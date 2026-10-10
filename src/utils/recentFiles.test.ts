@@ -20,6 +20,8 @@ vi.mock("@tauri-apps/api/event", () => ({
 import { invoke } from "@tauri-apps/api/core";
 import {
   addRecentFile,
+  areRecentFilesLoaded,
+  loadRecentFiles,
   getRecentFiles,
   clearRecentFiles,
   removeRecentFile,
@@ -126,5 +128,15 @@ describe("recentFiles", () => {
         content: expect.stringContaining('"path":"/p/a.soca"'),
       }),
     );
+  });
+
+  it("tells when the list has been read from disk", async () => {
+    expect(areRecentFilesLoaded()).toBe(false);
+    const listener = vi.fn();
+    const unsubscribe = subscribeRecentFiles(listener);
+    await loadRecentFiles();
+    expect(areRecentFilesLoaded()).toBe(true);
+    expect(listener).toHaveBeenCalled();
+    unsubscribe();
   });
 });

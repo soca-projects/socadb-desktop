@@ -22,11 +22,16 @@ export interface RecentEntry {
 }
 
 let recentList: readonly RecentEntry[] = [];
+let loaded = false;
 const listeners = new Set<() => void>();
 
 // No defensive copy: useSyncExternalStore re-renders forever if each call returns a new array.
 export function getRecentFiles(): readonly RecentEntry[] {
   return recentList;
+}
+
+export function areRecentFilesLoaded(): boolean {
+  return loaded;
 }
 
 export function subscribeRecentFiles(listener: () => void): () => void {
@@ -110,5 +115,6 @@ export async function loadRecentFiles() {
     // No recent.json yet (first launch or never persisted) — start with empty list.
     recentList = [];
   }
+  loaded = true;
   notify();
 }

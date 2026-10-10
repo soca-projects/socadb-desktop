@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useRecentFiles } from "./useRecentFiles";
+import { useRecentFiles, useRecentFilesLoaded } from "./useRecentFiles";
 import { loadHomeEntries } from "../utils/homeEntries";
 import type { HomeEntry } from "../utils/homeList";
 
 export function useHomeEntries(): HomeEntry[] | null {
   const recents = useRecentFiles();
+  const recentsLoaded = useRecentFilesLoaded();
   const [entries, setEntries] = useState<HomeEntry[] | null>(null);
   const [focusCount, setFocusCount] = useState(0);
 
@@ -15,6 +16,8 @@ export function useHomeEntries(): HomeEntry[] | null {
   }, []);
 
   useEffect(() => {
+    // Until the list is read from disk, an empty one would show the empty home.
+    if (!recentsLoaded) return;
     let cancelled = false;
     loadHomeEntries(recents)
       .then((next) => {
@@ -27,7 +30,7 @@ export function useHomeEntries(): HomeEntry[] | null {
     return () => {
       cancelled = true;
     };
-  }, [recents, focusCount]);
+  }, [recents, recentsLoaded, focusCount]);
 
   return entries;
 }
