@@ -3,6 +3,7 @@ mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
 mod install_location;
+mod schema_files;
 mod ws;
 
 use std::process::Command;
@@ -200,6 +201,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             read_schema_file,
+            schema_files::schema_files_info,
+            schema_files::rename_schema_file,
+            schema_files::duplicate_schema_file,
             mcp_respond,
             atomic_write,
             open_terminal,
