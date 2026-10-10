@@ -6,7 +6,7 @@ import { getRecentFiles, clearRecentFiles, loadRecentFiles } from "../utils/rece
 import { handleOpenRecent, MENU_SHORTCUTS } from "../utils/menuActions";
 import { handleUpdateMenuAction, updateMenuItemState } from "../utils/updater";
 import { useUpdateStore } from "../stores/updateStore";
-import { IS_MAC, IS_LINUX } from "../utils/platform";
+import { IS_MAC } from "../utils/platform";
 import i18next from "../i18n";
 
 const MENU_RECENT_LIMIT = 10;
@@ -77,8 +77,7 @@ async function syncUpdateMenuItem() {
 
 // IS_MAC drives both the macOS-only "SocaDB" submenu (Hide/HideOthers/ShowAll/
 // Quit are PredefinedMenuItem variants that only render on macOS) and the
-// attach method (setAsAppMenu vs setAsWindowMenu). IS_LINUX skips predefined
-// items muda flags as "Linux: Unsupported" (CloseWindow, Hide).
+// attach method (setAsAppMenu vs setAsWindowMenu).
 
 async function buildAppSubmenu(updateItem: MenuItem): Promise<Submenu> {
   const t = i18next.t.bind(i18next);
@@ -131,6 +130,25 @@ async function setupMenu() {
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await buildRecentSubmenu(),
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      await MenuItem.new({
+        id: "home",
+        text: t("menu.home"),
+        accelerator: MENU_SHORTCUTS.home.accelerator,
+        action: () => void MENU_SHORTCUTS.home.run(),
+      }),
+      await MenuItem.new({
+        id: "find_schema",
+        text: t("menu.findSchema"),
+        accelerator: MENU_SHORTCUTS.findSchema.accelerator,
+        action: () => void MENU_SHORTCUTS.findSchema.run(),
+      }),
+      await MenuItem.new({
+        id: "close_schema",
+        text: t("menu.closeSchema"),
+        accelerator: MENU_SHORTCUTS.closeSchema.accelerator,
+        action: () => void MENU_SHORTCUTS.closeSchema.run(),
+      }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "save",
@@ -237,9 +255,14 @@ async function setupMenu() {
     text: t("menu.window"),
     items: [
       await PredefinedMenuItem.new({ item: "Minimize" }),
-      // CloseWindow is "Linux: Unsupported" per muda — skip on Linux to
-      // avoid a dead menu entry.
-      ...(IS_LINUX ? [] : [await PredefinedMenuItem.new({ item: "CloseWindow" })]),
+      // The predefined CloseWindow is hardwired to Cmd+W, which closes the
+      // schema here.
+      await MenuItem.new({
+        id: "close_window",
+        text: t("menu.closeWindow"),
+        accelerator: MENU_SHORTCUTS.closeWindow.accelerator,
+        action: () => void MENU_SHORTCUTS.closeWindow.run(),
+      }),
     ],
   });
 

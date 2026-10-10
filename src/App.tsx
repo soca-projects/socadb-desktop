@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Toaster } from "sonner";
 import { Canvas } from "./components/Canvas/Canvas";
+import { Home } from "./components/Home/Home";
 import { ChatPanel } from "./components/ChatPanel/ChatPanel";
 import { SettingsModal } from "./components/SettingsModal/SettingsModal";
 import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
@@ -51,6 +52,7 @@ function App() {
   const unsavedGuard = useUnsavedChangesGuard();
   const narrowWindow = useMediaQuery(NARROW_WINDOW_QUERY);
   const theme = useThemeStore((s) => s.theme);
+  const view = useViewStore((s) => s.view);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
@@ -61,8 +63,15 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Canvas onOpenSettings={openSettings} />
-      <ChatPanel />
+      {view === "home" ? (
+        <Home onOpenSettings={openSettings} />
+      ) : (
+        <Canvas onOpenSettings={openSettings} />
+      )}
+      {/* Kept mounted so a draft message survives a trip to the home. */}
+      <div hidden={view === "home"}>
+        <ChatPanel />
+      </div>
       {settingsOpen && <SettingsModal onClose={closeSettings} />}
       {isOpen && <NewSchemaModal onClose={handleClose} onCreate={handleCreate} />}
       {unsavedGuard.isOpen && (

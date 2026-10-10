@@ -15,7 +15,7 @@ export const SchemaPreview = memo(function SchemaPreview({ schema }: { schema: S
     <svg
       viewBox={preview.viewBox}
       preserveAspectRatio="xMidYMid meet"
-      className="absolute inset-0 h-full w-full"
+      className="absolute inset-0 h-full w-full pt-7"
       aria-hidden="true"
     >
       {preview.edges.map((d, i) => (
