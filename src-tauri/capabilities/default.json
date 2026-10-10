@@ -6,6 +6,8 @@
   "permissions": [
     "core:default",
     "core:menu:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
