@@ -1,4 +1,5 @@
-import { readTextFile, writeTextFile, mkdir, exists } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { join } from "@tauri-apps/api/path";
 import { emit } from "@tauri-apps/api/event";
 import { z } from "zod";
@@ -83,18 +84,14 @@ async function recentFilePath(): Promise<string> {
   return await join(await getSocadbDir(), "recent.json");
 }
 
-async function ensureSocadbDir() {
-  const dir = await getSocadbDir();
-  if (!(await exists(dir))) {
-    await mkdir(dir, { recursive: true });
-  }
-}
-
+// atomic_write rather than plugin-fs: the fs scope covers what is inside
+// ~/.socadb but not the folder itself, which plugin-fs can't check or create.
 async function persistRecent() {
   try {
-    await ensureSocadbDir();
-    const data = JSON.stringify({ files: recentList });
-    await writeTextFile(await recentFilePath(), data);
+    await invoke("atomic_write", {
+      path: await recentFilePath(),
+      content: JSON.stringify({ files: recentList }),
+    });
   } catch (err) {
     console.warn("[recentFiles] failed to persist:", err);
   }

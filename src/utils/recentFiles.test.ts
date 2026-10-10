@@ -1,18 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
-  writeTextFile: vi.fn(),
   readTextFile: vi.fn(),
 }));
 
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn(),
+}));
+
 vi.mock("@tauri-apps/api/path", () => ({
-  homeDir: vi.fn(() => Promise.resolve("/mock/home/")),
+  homeDir: vi.fn(() => Promise.resolve("/mock/home")),
+  join: vi.fn((...parts: string[]) => Promise.resolve(parts.join("/"))),
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
   emit: vi.fn(),
 }));
 
+import { invoke } from "@tauri-apps/api/core";
 import {
   addRecentFile,
   getRecentFiles,
@@ -111,5 +116,15 @@ describe("recentFiles", () => {
   it("returns the same array while nothing changes", () => {
     addRecentFile("/p/a.soca");
     expect(getRecentFiles()).toBe(getRecentFiles());
+  });
+
+  it("saves the list with an atomic write", async () => {
+    addRecentFile("/p/a.soca");
+    await vi.waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("atomic_write", {
+        path: "/mock/home/.socadb/recent.json",
+        content: expect.stringContaining('"path":"/p/a.soca"'),
+      }),
+    );
   });
 });
