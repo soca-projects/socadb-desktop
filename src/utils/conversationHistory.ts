@@ -18,7 +18,7 @@ export function historyGroup(updatedAt: string, now: Date): HistoryGroup {
   return "older";
 }
 
-function fold(text: string): string {
+export function fold(text: string): string {
   return text
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
