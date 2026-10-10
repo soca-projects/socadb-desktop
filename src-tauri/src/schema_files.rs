@@ -4,11 +4,19 @@ use std::path::{Path, PathBuf};
 
 const EXTENSION: &str = "soca";
 
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum FileState {
+    Present,
+    Missing,
+    Unavailable,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SchemaFileInfo {
     path: String,
-    exists: bool,
+    state: FileState,
     modified_ms: Option<u64>,
 }
 
@@ -20,18 +28,31 @@ fn is_schema_path(path: &Path) -> bool {
 
 fn file_info(path: &str) -> SchemaFileInfo {
     let p = Path::new(path);
-    let metadata = std::fs::metadata(p)
-        .ok()
-        .filter(|meta| meta.is_file() && is_schema_path(p));
-    let modified_ms = metadata
-        .as_ref()
-        .and_then(|meta| meta.modified().ok())
-        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
-        .map(|age| age.as_millis() as u64);
+    let (state, modified_ms) = match std::fs::metadata(p) {
+        Ok(meta) if meta.is_file() && is_schema_path(p) => (
+            FileState::Present,
+            meta.modified()
+                .ok()
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|age| age.as_millis() as u64),
+        ),
+        // The home offers to forget missing files: a refused access (macOS
+        // privacy prompt denied, permissions) must not pass for a deleted file.
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => (FileState::Unavailable, None),
+        _ => (FileState::Missing, None),
+    };
     SchemaFileInfo {
         path: path.to_owned(),
-        exists: metadata.is_some(),
+        state,
         modified_ms,
+    }
+}
+
+pub(crate) fn read_error(e: std::io::Error) -> String {
+    match e.kind() {
+        std::io::ErrorKind::NotFound => "not_found".into(),
+        std::io::ErrorKind::PermissionDenied => "permission_denied".into(),
+        _ => format!("Failed to read file: {e}"),
     }
 }
 
@@ -164,10 +185,42 @@ mod tests {
             path_string(&dir.join("gone.soca")),
             path_string(&other),
         ]);
-        assert!(infos[0].exists && infos[0].modified_ms.is_some());
-        assert!(!infos[1].exists && infos[1].modified_ms.is_none());
-        assert!(!infos[2].exists);
+        assert_eq!(infos[0].state, FileState::Present);
+        assert!(infos[0].modified_ms.is_some());
+        assert_eq!(infos[1].state, FileState::Missing);
+        assert!(infos[1].modified_ms.is_none());
+        assert_eq!(infos[2].state, FileState::Missing);
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn refused_access_is_not_missing() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp_dir("locked");
+        let locked = dir.join("locked");
+        std::fs::create_dir(&locked).unwrap();
+        let schema = locked.join("a.soca");
+        std::fs::write(&schema, "{}").unwrap();
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // Root ignores permissions, so there is nothing to check there.
+        if std::fs::metadata(&schema).is_err() {
+            let infos = schema_files_info(vec![path_string(&schema)]);
+            assert_eq!(infos[0].state, FileState::Unavailable);
+        }
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn read_errors_are_codes_for_the_app() {
+        use std::io::{Error, ErrorKind};
+        assert_eq!(read_error(Error::from(ErrorKind::NotFound)), "not_found");
+        assert_eq!(
+            read_error(Error::from(ErrorKind::PermissionDenied)),
+            "permission_denied"
+        );
+        assert!(read_error(Error::from(ErrorKind::InvalidData)).starts_with("Failed to read file"));
     }
 
     #[test]

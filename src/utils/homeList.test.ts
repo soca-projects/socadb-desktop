@@ -38,7 +38,7 @@ function entry(
     ...splitSchemaPath(path),
     openedAt,
     modifiedAt,
-    exists: true,
+    state: "present",
     schema: schemaWith(tables),
   };
 }

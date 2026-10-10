@@ -39,7 +39,8 @@
       "draft": "Not saved",
       "modified": "Unsaved changes",
       "open": "Open",
-      "unreadable": "Unreadable"
+      "unreadable": "Unreadable",
+      "unavailable": "No access"
     },
     "card": {
       "open": "Open {{name}}",
@@ -392,7 +393,9 @@
     "failed": "Update install failed: {{error}}"
   },
   "recent": {
-    "fileNotFound": "File not found. It may have been moved or deleted."
+    "fileNotFound": "File not found. It may have been moved or deleted.",
+    "permissionDenied": "SocaDB isn't allowed to read this file.",
+    "permissionDeniedMac": "SocaDB isn't allowed to read this file. Allow it in System Settings › Privacy & Security › Files & Folders."
   },
   "toolCall": {
     "create_table": "created table",

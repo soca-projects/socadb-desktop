@@ -39,7 +39,8 @@
       "draft": "Non enregistré",
       "modified": "Modifié",
       "open": "Ouvert",
-      "unreadable": "Illisible"
+      "unreadable": "Illisible",
+      "unavailable": "Inaccessible"
     },
     "card": {
       "open": "Ouvrir {{name}}",
@@ -392,7 +393,9 @@
     "failed": "Échec de l'installation : {{error}}"
   },
   "recent": {
-    "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé."
+    "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé.",
+    "permissionDenied": "SocaDB n'a pas le droit de lire ce fichier.",
+    "permissionDeniedMac": "SocaDB n'a pas le droit de lire ce fichier. Autorisez-le dans Réglages Système › Confidentialité et sécurité › Fichiers et dossiers."
   },
   "toolCall": {
     "create_table": "table créée",

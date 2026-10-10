@@ -18,16 +18,23 @@ import { createEmptySchema } from "../stores/schemaStore";
 
 const mockInvoke = vi.mocked(invoke);
 const files = new Map<string, { content: string; modifiedMs: number }>();
+const locked = new Set<string>();
 
 beforeEach(() => {
   files.clear();
+  locked.clear();
   mockInvoke.mockReset();
   mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
     const { paths, path } = (args ?? {}) as { paths?: string[]; path?: string };
     if (cmd === "schema_files_info") {
       return (paths ?? []).map((p) => {
         const file = files.get(p);
-        return { path: p, exists: !!file, modifiedMs: file?.modifiedMs ?? null };
+        if (locked.has(p)) return { path: p, state: "unavailable", modifiedMs: null };
+        return {
+          path: p,
+          state: file ? "present" : "missing",
+          modifiedMs: file?.modifiedMs ?? null,
+        };
       });
     }
     if (cmd === "read_schema_file") return files.get(path ?? "")?.content;
@@ -48,7 +55,7 @@ describe("loadHomeEntries", () => {
     expect(first).toMatchObject({
       name: "a",
       folder: "shop",
-      exists: true,
+      state: "present",
       modifiedAt: 1,
     });
     expect(first.schema?.name).toBe("a");
@@ -66,13 +73,20 @@ describe("loadHomeEntries", () => {
 
   it("marks missing files", async () => {
     const [missing] = await loadHomeEntries([{ path: "/x/gone.soca", openedAt: opened }]);
-    expect(missing).toMatchObject({ exists: false, schema: null, modifiedAt: null });
+    expect(missing).toMatchObject({ state: "missing", schema: null, modifiedAt: null });
   });
 
   it("keeps unreadable files without a schema", async () => {
     files.set("/x/bad.soca", { content: "{nope", modifiedMs: 5 });
     const [bad] = await loadHomeEntries([{ path: "/x/bad.soca", openedAt: opened }]);
-    expect(bad).toMatchObject({ exists: true, schema: null });
+    expect(bad).toMatchObject({ state: "present", schema: null });
+  });
+
+  it("keeps files it may not read apart from missing ones", async () => {
+    locked.add("/x/locked.soca");
+    const [entry] = await loadHomeEntries([{ path: "/x/locked.soca", openedAt: opened }]);
+    expect(entry).toMatchObject({ state: "unavailable", schema: null });
+    expect(mockInvoke.mock.calls.some(([cmd]) => cmd === "read_schema_file")).toBe(false);
   });
 
   it("survives a corrupt opening date", async () => {

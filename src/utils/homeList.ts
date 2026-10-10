@@ -1,9 +1,10 @@
 import type { z } from "zod";
 import type { Schema } from "../types/schema";
 import { fold, historyGroup, type HistoryGroup } from "./conversationHistory";
-import type { HomeSortZ } from "./zodSchemas";
+import type { FileStateZ, HomeSortZ } from "./zodSchemas";
 
 export type HomeSort = z.infer<typeof HomeSortZ>;
+export type FileState = z.infer<typeof FileStateZ>;
 
 export interface HomeEntry {
   path: string;
@@ -11,7 +12,7 @@ export interface HomeEntry {
   folder: string;
   openedAt: number;
   modifiedAt: number | null;
-  exists: boolean;
+  state: FileState;
   schema: Schema | null;
 }
 

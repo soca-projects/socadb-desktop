@@ -221,8 +221,10 @@ export const LastSessionZ = z.object({
   savedAt: z.string().nullable().optional(),
 });
 
+export const FileStateZ = z.enum(["present", "missing", "unavailable"]);
+
 export const SchemaFileInfoZ = z.object({
   path: z.string(),
-  exists: z.boolean(),
+  state: FileStateZ,
   modifiedMs: z.number().nullable(),
 });

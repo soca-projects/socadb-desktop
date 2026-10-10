@@ -8,6 +8,7 @@ import { useViewStore } from "../stores/viewStore";
 import { SchemaZ } from "./zodSchemas";
 import i18next from "../i18n";
 import { addRecentFile, removeRecentFile } from "./recentFiles";
+import { IS_MAC } from "./platform";
 
 export function migrateSchema(data: unknown) {
   if (!data || typeof data !== "object") return;
@@ -140,13 +141,13 @@ export async function openRecentFile(filePath: string): Promise<void> {
     useViewStore.getState().showEditor();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (
-      msg.includes("Failed to read file") ||
-      msg.includes("No such file") ||
-      msg.includes("cannot find")
-    ) {
+    if (msg === "not_found") {
       removeRecentFile(filePath);
       toast.error(i18next.t("recent.fileNotFound"));
+    } else if (msg === "permission_denied") {
+      toast.error(
+        i18next.t(IS_MAC ? "recent.permissionDeniedMac" : "recent.permissionDenied"),
+      );
     } else {
       toast.error(msg || i18next.t("toast.openFailed", { error: msg }));
     }

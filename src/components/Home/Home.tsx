@@ -118,11 +118,15 @@ export function Home({ onOpenSettings }: HomeProps) {
   const entryMenu = (entry: HomeEntry, isCurrent: boolean): HomeMenuItem[] => [
     { label: t("home.action.open"), onSelect: () => openHomeEntry(entry.path) },
     { label: t(REVEAL_KEY), onSelect: () => void revealHomeEntry(entry.path) },
-    { label: t("home.action.rename"), onSelect: () => setRenaming(entry) },
-    {
-      label: t("home.action.duplicate"),
-      onSelect: () => void duplicateHomeEntry(entry.path),
-    },
+    ...(entry.state === "present"
+      ? [
+          { label: t("home.action.rename"), onSelect: () => setRenaming(entry) },
+          {
+            label: t("home.action.duplicate"),
+            onSelect: () => void duplicateHomeEntry(entry.path),
+          },
+        ]
+      : []),
     ...(isCurrent
       ? []
       : [
@@ -144,7 +148,7 @@ export function Home({ onOpenSettings }: HomeProps) {
               ...splitSchemaPath(filePath),
               openedAt: Date.parse(schema.updatedAt),
               modifiedAt: null,
-              exists: true,
+              state: "present" as const,
               schema,
             })
           : null;
@@ -160,8 +164,8 @@ export function Home({ onOpenSettings }: HomeProps) {
     current !== null &&
     matchesEntry({ name: current.name, folder: current.folder, schema }, query);
 
-  const present = list.filter((e) => e.exists && e.path !== filePath);
-  const missing = list.filter((e) => !e.exists);
+  const present = list.filter((e) => e.state !== "missing" && e.path !== filePath);
+  const missing = list.filter((e) => e.state === "missing");
   const groups = groupEntries(
     sortEntries(
       present.filter((e) => matchesEntry(e, query)),
@@ -186,7 +190,13 @@ export function Home({ onOpenSettings }: HomeProps) {
       )}
       schema={entry.schema}
       dbType={entry.schema?.dbType ?? null}
-      badge={entry.schema ? null : { label: t("home.badge.unreadable"), tone: "muted" }}
+      badge={
+        entry.state === "unavailable"
+          ? { label: t("home.badge.unavailable"), tone: "muted" }
+          : entry.schema
+            ? null
+            : { label: t("home.badge.unreadable"), tone: "muted" }
+      }
       openLabel={t("home.card.open", { name: entry.name })}
       menuLabel={t("home.card.actions", { name: entry.name })}
       menuItems={entryMenu(entry, false)}

@@ -34,16 +34,17 @@ export async function loadHomeEntries(
   return Promise.all(
     recents.map(async (recent) => {
       const info = byPath.get(recent.path);
-      const exists = info?.exists ?? false;
-      const modifiedAt = exists ? (info?.modifiedMs ?? null) : null;
+      const state = info?.state ?? "missing";
+      const modifiedAt = state === "present" ? (info?.modifiedMs ?? null) : null;
       const openedAt = Date.parse(recent.openedAt);
       return {
         path: recent.path,
         ...splitSchemaPath(recent.path),
         openedAt: Number.isFinite(openedAt) ? openedAt : 0,
         modifiedAt,
-        exists,
-        schema: exists ? await readSchema(recent.path, modifiedAt ?? -1) : null,
+        state,
+        schema:
+          state === "present" ? await readSchema(recent.path, modifiedAt ?? -1) : null,
       };
     }),
   );
