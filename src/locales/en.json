@@ -10,7 +10,93 @@
     "settings": "Settings",
     "untitled": "Untitled",
     "mysql": "MySQL",
-    "postgresql": "PostgreSQL"
+    "postgresql": "PostgreSQL",
+    "home": "Home"
+  },
+  "home": {
+    "title": "Schemas",
+    "new": "New schema",
+    "open": "Open…",
+    "import": "Import…",
+    "searchLabel": "Search schemas",
+    "searchPlaceholder": "Search a schema, a folder or a table…",
+    "clearSearch": "Clear search",
+    "sortLabel": "Sort by",
+    "sort": {
+      "opened": "Last opened",
+      "modified": "Last modified",
+      "name": "Name"
+    },
+    "resume": "Resume",
+    "allSchemas": "All schemas",
+    "tables_one": "{{count}} table",
+    "tables_other": "{{count}} tables",
+    "opened": "opened {{when}}",
+    "modified": "modified {{when}}",
+    "justNow": "just now",
+    "neverSaved": "Never saved",
+    "badge": {
+      "draft": "Not saved",
+      "modified": "Unsaved changes",
+      "open": "Open",
+      "unreadable": "Unreadable",
+      "unavailable": "No access"
+    },
+    "card": {
+      "open": "Open {{name}}",
+      "resume": "Resume {{name}}",
+      "actions": "Actions for {{name}}"
+    },
+    "action": {
+      "open": "Open",
+      "revealMac": "Show in Finder",
+      "revealWindows": "Show in Explorer",
+      "revealLinux": "Show in file manager",
+      "rename": "Rename…",
+      "duplicate": "Duplicate",
+      "remove": "Remove from home",
+      "removeHint": "The file stays on disk",
+      "resume": "Resume",
+      "saveAs": "Save as…",
+      "deleteDraft": "Delete draft",
+      "deleteDraftHint": "It can't be recovered"
+    },
+    "deleteDraft": {
+      "title": "Delete this draft?",
+      "description": "“{{name}}” was never saved, so it can't be recovered.",
+      "confirm": "Delete"
+    },
+    "cancel": "Cancel",
+    "copySuffix": "copy",
+    "revealFailed": "Couldn't show the file: {{error}}",
+    "duplicateFailed": "Couldn't duplicate the file: {{error}}",
+    "noResults": "No schema matches “{{query}}”",
+    "noResultsHint": "Search looks at file names, folders and table names.",
+    "missing_one": "{{count}} schema can't be found",
+    "missing_other": "{{count}} schemas can't be found",
+    "missingShow": "Show",
+    "missingHide": "Hide",
+    "missingExplain": "These files were moved, renamed or deleted outside SocaDB, or they are on a disk that isn't connected.",
+    "locate": "Locate…",
+    "remove": "Remove",
+    "removeAll": "Remove all",
+    "empty": {
+      "title": "No schemas yet",
+      "description": "SocaDB designs MySQL and PostgreSQL schemas, by hand or with AI. Start in one of these three ways.",
+      "newHint": "Start from a blank page, by hand or with AI",
+      "open": "Open a file",
+      "openHint": "A .soca file already on your computer",
+      "import": "Import",
+      "importHint": "A SQL file exported from a database or another tool"
+    },
+    "rename": {
+      "title": "Rename schema",
+      "label": "File name",
+      "confirm": "Rename",
+      "exists": "A file with this name already exists in this folder.",
+      "invalid": "Use a name without /, \\ or :.",
+      "failed": "Couldn't rename the file: {{error}}"
+    }
   },
   "theme": {
     "switchToDark": "Switch to dark mode",
@@ -113,7 +199,16 @@
     "deleteAllConfirm": "Delete all conversations? This can't be undone.",
     "deleteAll": "Delete all",
     "deleteAllWhileAnswering": "Available once the agent has answered.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "general": "General",
+    "startupTitle": "On launch, open",
+    "startupDescription": "What SocaDB shows when you open it.",
+    "startup": {
+      "home": "The schema list",
+      "homeHint": "The home with all your schemas. An unsaved draft shows at the top.",
+      "lastSchema": "The last schema",
+      "lastSchemaHint": "Picks up where you left off, draft included."
+    }
   },
   "integrations": {
     "title": "Use SocaDB from other apps",
@@ -218,6 +313,10 @@
     "saveAs": "Save As...",
     "import": "Import...",
     "export": "Export...",
+    "home": "Home",
+    "findSchema": "Find a Schema",
+    "closeSchema": "Close Schema",
+    "closeWindow": "Close Window",
     "edit": "Edit",
     "undo": "Undo",
     "redo": "Redo",
@@ -294,7 +393,9 @@
     "failed": "Update install failed: {{error}}"
   },
   "recent": {
-    "fileNotFound": "File not found. It may have been moved or deleted."
+    "fileNotFound": "File not found. It may have been moved or deleted.",
+    "permissionDenied": "SocaDB isn't allowed to read this file.",
+    "permissionDeniedMac": "SocaDB isn't allowed to read this file. Allow it in System Settings › Privacy & Security › Files & Folders."
   },
   "toolCall": {
     "create_table": "created table",

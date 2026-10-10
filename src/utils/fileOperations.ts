@@ -4,9 +4,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import type { Schema } from "../types/schema";
 import { useSchemaStore } from "../stores/schemaStore";
+import { useViewStore } from "../stores/viewStore";
 import { SchemaZ } from "./zodSchemas";
 import i18next from "../i18n";
 import { addRecentFile, removeRecentFile } from "./recentFiles";
+import { IS_MAC } from "./platform";
 
 export function migrateSchema(data: unknown) {
   if (!data || typeof data !== "object") return;
@@ -28,11 +30,11 @@ export function migrateSchema(data: unknown) {
   }
 }
 
-function getSocaFilter() {
+export function getSocaFilter() {
   return { name: i18next.t("fileFilter.soca"), extensions: ["soca"] };
 }
 
-function parseSchemaContent(content: string): Schema {
+export function parseSchemaContent(content: string): Schema {
   let raw: unknown;
   try {
     raw = JSON.parse(content);
@@ -117,6 +119,7 @@ export async function openAndApplySchema(): Promise<void> {
       setSchema(result.schema);
       setFilePath(result.path);
       addRecentFile(result.path);
+      useViewStore.getState().showEditor();
     }
   } catch (e) {
     toast.error(
@@ -135,15 +138,16 @@ export async function openRecentFile(filePath: string): Promise<void> {
     setSchema(schema);
     setFilePath(filePath);
     addRecentFile(filePath);
+    useViewStore.getState().showEditor();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (
-      msg.includes("Failed to read file") ||
-      msg.includes("No such file") ||
-      msg.includes("cannot find")
-    ) {
+    if (msg === "not_found") {
       removeRecentFile(filePath);
       toast.error(i18next.t("recent.fileNotFound"));
+    } else if (msg === "permission_denied") {
+      toast.error(
+        i18next.t(IS_MAC ? "recent.permissionDeniedMac" : "recent.permissionDenied"),
+      );
     } else {
       toast.error(msg || i18next.t("toast.openFailed", { error: msg }));
     }

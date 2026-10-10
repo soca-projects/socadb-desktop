@@ -10,7 +10,93 @@
     "settings": "Paramètres",
     "untitled": "Sans titre",
     "mysql": "MySQL",
-    "postgresql": "PostgreSQL"
+    "postgresql": "PostgreSQL",
+    "home": "Accueil"
+  },
+  "home": {
+    "title": "Schémas",
+    "new": "Nouveau schéma",
+    "open": "Ouvrir…",
+    "import": "Importer…",
+    "searchLabel": "Rechercher un schéma",
+    "searchPlaceholder": "Rechercher un schéma, un dossier ou une table…",
+    "clearSearch": "Effacer la recherche",
+    "sortLabel": "Trier par",
+    "sort": {
+      "opened": "Dernière ouverture",
+      "modified": "Dernière modification",
+      "name": "Nom"
+    },
+    "resume": "Reprendre",
+    "allSchemas": "Tous les schémas",
+    "tables_one": "{{count}} table",
+    "tables_other": "{{count}} tables",
+    "opened": "ouvert {{when}}",
+    "modified": "modifié {{when}}",
+    "justNow": "à l'instant",
+    "neverSaved": "Jamais enregistré",
+    "badge": {
+      "draft": "Non enregistré",
+      "modified": "Modifié",
+      "open": "Ouvert",
+      "unreadable": "Illisible",
+      "unavailable": "Inaccessible"
+    },
+    "card": {
+      "open": "Ouvrir {{name}}",
+      "resume": "Reprendre {{name}}",
+      "actions": "Actions pour {{name}}"
+    },
+    "action": {
+      "open": "Ouvrir",
+      "revealMac": "Afficher dans le Finder",
+      "revealWindows": "Afficher dans l'Explorateur",
+      "revealLinux": "Afficher dans le gestionnaire de fichiers",
+      "rename": "Renommer…",
+      "duplicate": "Dupliquer",
+      "remove": "Retirer de l'accueil",
+      "removeHint": "Le fichier reste sur le disque",
+      "resume": "Reprendre",
+      "saveAs": "Enregistrer sous…",
+      "deleteDraft": "Supprimer le brouillon",
+      "deleteDraftHint": "Il ne pourra pas être récupéré"
+    },
+    "deleteDraft": {
+      "title": "Supprimer ce brouillon ?",
+      "description": "« {{name}} » n'a jamais été enregistré : il ne pourra pas être récupéré.",
+      "confirm": "Supprimer"
+    },
+    "cancel": "Annuler",
+    "copySuffix": "copie",
+    "revealFailed": "Impossible d'afficher le fichier : {{error}}",
+    "duplicateFailed": "Impossible de dupliquer le fichier : {{error}}",
+    "noResults": "Aucun schéma ne correspond à « {{query}} »",
+    "noResultsHint": "La recherche porte sur le nom du fichier, son dossier et les noms de tables.",
+    "missing_one": "{{count}} schéma introuvable",
+    "missing_other": "{{count}} schémas introuvables",
+    "missingShow": "Afficher",
+    "missingHide": "Masquer",
+    "missingExplain": "Ces fichiers ont été déplacés, renommés ou supprimés en dehors de SocaDB, ou ils sont sur un disque non connecté.",
+    "locate": "Le retrouver…",
+    "remove": "Retirer",
+    "removeAll": "Tout retirer",
+    "empty": {
+      "title": "Aucun schéma pour l'instant",
+      "description": "SocaDB conçoit des schémas de bases MySQL et PostgreSQL, à la main ou avec l'IA. Commencez de l'une de ces trois façons.",
+      "newHint": "Partir d'une page blanche, à la main ou avec l'IA",
+      "open": "Ouvrir un fichier",
+      "openHint": "Un fichier .soca déjà sur votre ordinateur",
+      "import": "Importer",
+      "importHint": "Un fichier SQL exporté d'une base ou d'un autre outil"
+    },
+    "rename": {
+      "title": "Renommer le schéma",
+      "label": "Nom du fichier",
+      "confirm": "Renommer",
+      "exists": "Un fichier porte déjà ce nom dans ce dossier.",
+      "invalid": "Utilisez un nom sans /, \\ ni :.",
+      "failed": "Impossible de renommer le fichier : {{error}}"
+    }
   },
   "theme": {
     "switchToDark": "Passer en mode sombre",
@@ -113,7 +199,16 @@
     "deleteAllConfirm": "Supprimer toutes les conversations ? C'est définitif.",
     "deleteAll": "Tout supprimer",
     "deleteAllWhileAnswering": "Disponible une fois la réponse de l'agent terminée.",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "general": "Général",
+    "startupTitle": "Au lancement, ouvrir",
+    "startupDescription": "Ce que SocaDB affiche quand vous l'ouvrez.",
+    "startup": {
+      "home": "La liste des schémas",
+      "homeHint": "L'accueil avec tous vos schémas. Un brouillon non enregistré apparaît en tête.",
+      "lastSchema": "Le dernier schéma",
+      "lastSchemaHint": "Reprend là où vous en étiez, brouillon compris."
+    }
   },
   "integrations": {
     "title": "Utiliser SocaDB depuis d'autres apps",
@@ -218,6 +313,10 @@
     "saveAs": "Enregistrer sous...",
     "import": "Importer...",
     "export": "Exporter...",
+    "home": "Accueil",
+    "findSchema": "Rechercher un schéma",
+    "closeSchema": "Fermer le schéma",
+    "closeWindow": "Fermer la fenêtre",
     "edit": "Édition",
     "undo": "Annuler",
     "redo": "Rétablir",
@@ -294,7 +393,9 @@
     "failed": "Échec de l'installation : {{error}}"
   },
   "recent": {
-    "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé."
+    "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé.",
+    "permissionDenied": "SocaDB n'a pas le droit de lire ce fichier.",
+    "permissionDeniedMac": "SocaDB n'a pas le droit de lire ce fichier. Autorisez-le dans Réglages Système › Confidentialité et sécurité › Fichiers et dossiers."
   },
   "toolCall": {
     "create_table": "table créée",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { useSchemaStore } from "../stores/schemaStore";
 import { useChatStore } from "../stores/chatStore";
+import { useViewStore } from "../stores/viewStore";
 import type { McpResult } from "./mcpActions";
 
 const INTERACTIVE = [
@@ -321,6 +322,7 @@ function state() {
   const { schema } = useSchemaStore.getState();
   const chat = useChatStore.getState();
   return {
+    view: useViewStore.getState().view,
     schema: {
       name: schema.name,
       dbType: schema.dbType,

@@ -3,6 +3,7 @@ mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
 mod install_location;
+mod schema_files;
 mod ws;
 
 use std::process::Command;
@@ -78,12 +79,10 @@ fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
         .map(|s| s.to_owned())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn read_schema_file(path: String) -> Result<String, String> {
     let p = std::path::Path::new(&path);
-    let canonical = p
-        .canonicalize()
-        .map_err(|e| format!("Failed to read file: {e}"))?;
+    let canonical = p.canonicalize().map_err(schema_files::read_error)?;
     if !canonical
         .to_string_lossy()
         .to_lowercase()
@@ -91,7 +90,7 @@ fn read_schema_file(path: String) -> Result<String, String> {
     {
         return Err("Only .soca files are allowed".into());
     }
-    std::fs::read_to_string(&canonical).map_err(|e| format!("Failed to read file: {e}"))
+    std::fs::read_to_string(&canonical).map_err(schema_files::read_error)
 }
 
 #[tauri::command]
@@ -200,6 +199,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             read_schema_file,
+            schema_files::schema_files_info,
+            schema_files::rename_schema_file,
+            schema_files::duplicate_schema_file,
             mcp_respond,
             atomic_write,
             open_terminal,

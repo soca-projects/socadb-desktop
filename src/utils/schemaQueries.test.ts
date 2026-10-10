@@ -7,8 +7,10 @@ import {
   getRelationsFromTable,
   serializeColumn,
   serializeRelation,
+  isWorthResuming,
 } from "./schemaQueries";
 import type { Schema, Table, Column, Relation } from "../types/schema";
+import { createEmptySchema } from "../stores/schemaStore";
 
 const col1: Column = {
   id: "c1",
@@ -158,5 +160,18 @@ describe("serializeRelation", () => {
     const serialized = serializeRelation(schema, badRelation);
     expect(serialized.from.table).toBeUndefined();
     expect(serialized.from.column).toBeUndefined();
+  });
+});
+
+describe("isWorthResuming", () => {
+  it("skips an empty schema that was never saved", () => {
+    const empty = createEmptySchema();
+    expect(isWorthResuming(empty, null)).toBe(false);
+    expect(isWorthResuming(empty, "/x/a.soca")).toBe(true);
+    const withTable = {
+      ...empty,
+      tables: [{ id: "t", name: "users", position: { x: 0, y: 0 }, columns: [] }],
+    };
+    expect(isWorthResuming(withTable, null)).toBe(true);
   });
 });

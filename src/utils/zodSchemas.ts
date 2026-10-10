@@ -210,3 +210,21 @@ export const ConversationZ = z.object({
 export const ConversationFileZ = ConversationZ.extend({ version: z.literal(1) });
 
 export const LegacyConversationsZ = z.object({ conversations: z.array(z.unknown()) });
+
+export const HomeSortZ = z.enum(["opened", "modified", "name"]);
+
+export const StartupPreferenceZ = z.enum(["home", "lastSchema"]);
+
+export const LastSessionZ = z.object({
+  schema: z.unknown(),
+  filePath: z.string().nullable().optional(),
+  savedAt: z.string().nullable().optional(),
+});
+
+export const FileStateZ = z.enum(["present", "missing", "unavailable"]);
+
+export const SchemaFileInfoZ = z.object({
+  path: z.string(),
+  state: FileStateZ,
+  modifiedMs: z.number().nullable(),
+});
