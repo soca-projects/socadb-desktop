@@ -32,7 +32,7 @@ export function HomeCardMenu({ x, y, label, items, onClose }: HomeCardMenuProps)
   }, [x, y]);
 
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    ref.current?.focus();
   }, []);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -47,8 +47,13 @@ export function HomeCardMenu({ x, y, label, items, onClose }: HomeCardMenuProps)
       e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
     );
     const index = buttons.findIndex((b) => b === document.activeElement);
+    const step = e.key === "ArrowDown" ? 1 : -1;
     const next =
-      (index + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+      index === -1
+        ? step === 1
+          ? 0
+          : buttons.length - 1
+        : (index + step + buttons.length) % buttons.length;
     buttons[next]?.focus();
   };
 
@@ -57,24 +62,33 @@ export function HomeCardMenu({ x, y, label, items, onClose }: HomeCardMenuProps)
       ref={ref}
       role="menu"
       aria-label={label}
+      tabIndex={-1}
       onKeyDown={onKeyDown}
       style={{ position: "fixed", left: x, top: y }}
-      className="z-50 w-56 rounded-[10px] border border-border bg-surface p-1 shadow-float"
+      className="z-50 w-56 rounded-[10px] border border-border bg-surface p-1 shadow-float outline-none"
     >
       {items.map((item) => (
         <div key={item.label}>
           {item.separatorBefore && (
             <div role="separator" className="mx-1.5 my-1 h-px bg-border-light" />
           )}
+          {/* The pointer moves the focus, so one item is highlighted at a time;
+              the background is the highlight, without the global focus ring. */}
           <button
             type="button"
             role="menuitem"
+            onMouseMove={(e) => {
+              if (document.activeElement !== e.currentTarget) e.currentTarget.focus();
+            }}
+            onMouseLeave={() => ref.current?.focus()}
             onClick={() => {
               onClose();
               item.onSelect();
             }}
-            className={`flex w-full flex-col gap-px rounded-md px-2.5 py-[7px] text-left text-[13px] outline-none transition-colors hover:bg-surface-muted focus-visible:bg-surface-muted ${
-              item.danger ? "text-red-600 dark:text-red-400" : "text-secondary"
+            className={`flex w-full flex-col gap-px rounded-md px-2.5 py-[7px] text-left text-[13px] outline-none focus:!shadow-none ${
+              item.danger
+                ? "text-red-600 focus:bg-red-500/10 dark:text-red-400"
+                : "text-secondary focus:bg-surface-muted"
             }`}
           >
             <span>{item.label}</span>
