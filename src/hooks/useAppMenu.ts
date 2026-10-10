@@ -9,9 +9,11 @@ import { useUpdateStore } from "../stores/updateStore";
 import { IS_MAC, IS_LINUX } from "../utils/platform";
 import i18next from "../i18n";
 
+const MENU_RECENT_LIMIT = 10;
+
 async function buildRecentSubmenu(): Promise<Submenu> {
   const t = i18next.t.bind(i18next);
-  const recentFiles = getRecentFiles();
+  const recentFiles = getRecentFiles().slice(0, MENU_RECENT_LIMIT);
 
   const items: (MenuItem | PredefinedMenuItem)[] = [];
 
