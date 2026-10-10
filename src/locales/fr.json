@@ -76,7 +76,7 @@
     "missing_other": "{{count}} schémas introuvables",
     "missingShow": "Afficher",
     "missingHide": "Masquer",
-    "missingExplain": "Ces fichiers ont été déplacés, renommés ou supprimés en dehors de SocaDB.",
+    "missingExplain": "Ces fichiers ont été déplacés, renommés ou supprimés en dehors de SocaDB, ou ils sont sur un disque non connecté.",
     "locate": "Le retrouver…",
     "remove": "Retirer",
     "removeAll": "Tout retirer",

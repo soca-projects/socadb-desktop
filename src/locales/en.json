@@ -76,7 +76,7 @@
     "missing_other": "{{count}} schemas can't be found",
     "missingShow": "Show",
     "missingHide": "Hide",
-    "missingExplain": "These files were moved, renamed or deleted outside SocaDB.",
+    "missingExplain": "These files were moved, renamed or deleted outside SocaDB, or they are on a disk that isn't connected.",
     "locate": "Locate…",
     "remove": "Remove",
     "removeAll": "Remove all",
