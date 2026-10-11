@@ -1,5 +1,7 @@
 import { homeDir, join } from "@tauri-apps/api/path";
 import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
+import { logWarn } from "./log";
 import { z } from "zod";
 
 const ConfigObjectZ = z.record(z.string(), z.unknown());
@@ -17,14 +19,35 @@ export async function socadbConfigPath(): Promise<string> {
   return await join(await getSocadbDir(), "config.json");
 }
 
-// For read-modify-write cycles: a missing file starts empty, but one that can't
-// be read or parsed throws, since rewriting it with one key would silently drop
-// every other setting.
+// For read-modify-write cycles. A missing file starts empty. One that can't be
+// read throws: rewriting it would drop every other setting. One that doesn't
+// parse is copied to config.invalid.json first, so its settings can still be
+// recovered while new ones are saved again.
 export async function readConfigForUpdate(
   path: string,
 ): Promise<Record<string, unknown>> {
   if (!(await exists(path))) return {};
-  return ConfigObjectZ.parse(JSON.parse(await readTextFile(path)));
+  const content = await readTextFile(path);
+  const parsed = parseConfig(content);
+  if (parsed) return parsed;
+  await invoke("atomic_write", {
+    path: path.replace(/config\.json$/, "config.invalid.json"),
+    content,
+  });
+  logWarn(
+    "config.invalid",
+    "config.json didn't parse; it was copied to config.invalid.json",
+  );
+  return {};
+}
+
+export function parseConfig(content: string): Record<string, unknown> | null {
+  try {
+    const parsed = ConfigObjectZ.safeParse(JSON.parse(content));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 // Serializes all read-modify-write cycles on ~/.socadb/config.json. Multiple

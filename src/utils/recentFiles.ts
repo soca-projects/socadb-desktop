@@ -118,9 +118,23 @@ export async function loadRecentFiles() {
       logError("recent.load.failed", e);
     }
   }
-  recentList = content === null ? [] : parseRecentFile(content);
+  const parsed = content === null ? [] : parseRecentFile(content);
+  if (parsed === null && content !== null) await setAside(path, content);
+  recentList = parsed ?? [];
   loaded = true;
   notify();
+}
+
+// An unreadable list would be overwritten by the next opened file: keep a copy
+// next to it so the history can still be recovered by hand.
+async function setAside(path: string, content: string) {
+  const copy = path.replace(/recent\.json$/, "recent.invalid.json");
+  try {
+    await invoke("atomic_write", { path: copy, content });
+  } catch (e) {
+    persistBlocked = true;
+    logError("recent.persist.failed", e, { setAside: true });
+  }
 }
 
 async function fileMayExist(path: string): Promise<boolean> {
@@ -131,7 +145,7 @@ async function fileMayExist(path: string): Promise<boolean> {
   }
 }
 
-function parseRecentFile(content: string): readonly RecentEntry[] {
+function parseRecentFile(content: string): readonly RecentEntry[] | null {
   try {
     const parsed = RecentFileZ.safeParse(JSON.parse(content));
     if (parsed.success) return parsed.data.files.slice(0, MAX_RECENT);
@@ -139,5 +153,5 @@ function parseRecentFile(content: string): readonly RecentEntry[] {
   } catch (e) {
     logWarn("recent.load.invalid", e);
   }
-  return [];
+  return null;
 }

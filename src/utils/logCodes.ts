@@ -160,6 +160,19 @@ export const LOG_CODES = {
     meaning: "A conversation file could not be read and was skipped.",
     check: "ctx.file in ~/.socadb/conversations; permissions or a half-written file.",
   },
+  "config.invalid": {
+    level: "warn",
+    meaning:
+      "config.json wasn't valid JSON; it was copied to config.invalid.json and settings start fresh.",
+    check:
+      "~/.socadb/config.invalid.json holds the old settings (provider choices, integrations) to recover by hand.",
+  },
+  "mcp.registration.skipped": {
+    level: "warn",
+    meaning: "config.json couldn't be read at launch, so AI apps were left as they were.",
+    check:
+      "Look for config.invalid or a settings.*.persist_failed line; the next setting saved repairs config.json.",
+  },
   "ui.start": {
     level: "info",
     meaning: "The interface loaded; ctx has language, theme, view and launch preference.",
@@ -319,7 +332,8 @@ export const LOG_CODES = {
   "recent.load.invalid": {
     level: "warn",
     meaning: "recent.json exists but doesn't parse; the list starts empty.",
-    check: "The message names the bad field; the next change overwrites the file.",
+    check:
+      "The message names the bad field; the old list was copied to ~/.socadb/recent.invalid.json.",
   },
   "settings.startup.persist_failed": {
     level: "error",

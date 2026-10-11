@@ -9,7 +9,12 @@ import {
   McpServerEntryZ,
   type IntegrationChoiceZ,
 } from "./zodSchemas";
-import { queueConfigWrite, readConfigForUpdate, socadbConfigPath } from "./socadbDir";
+import {
+  parseConfig,
+  queueConfigWrite,
+  readConfigForUpdate,
+  socadbConfigPath,
+} from "./socadbDir";
 import { logError, logWarn } from "./log";
 
 export const INTEGRATION_IDS = ["claudeCode", "claudeDesktop", "codex"] as const;
@@ -165,18 +170,20 @@ const CLIENTS: Record<IntegrationId, Client> = {
   },
 };
 
-async function readChoices(): Promise<IntegrationChoices> {
+// null when config.json exists but can't be read: its choices are unknown, and
+// assuming none would re-register SocaDB where the user removed it.
+async function readChoices(): Promise<IntegrationChoices | null> {
+  const path = await socadbConfigPath();
+  if (!(await exists(path))) return {};
+  let config: Record<string, unknown> | null;
   try {
-    const config: unknown = JSON.parse(await readTextFile(await socadbConfigPath()));
-    const choices = IntegrationChoicesZ.safeParse(
-      typeof config === "object" && config !== null && "integrations" in config
-        ? config.integrations
-        : undefined,
-    );
-    return choices.success ? choices.data : {};
+    config = parseConfig(await readTextFile(path));
   } catch {
-    return {};
+    return null;
   }
+  if (!config) return null;
+  const choices = IntegrationChoicesZ.safeParse(config.integrations);
+  return choices.success ? choices.data : {};
 }
 
 async function saveChoice(id: IntegrationId, choice: IntegrationChoice) {
@@ -223,6 +230,13 @@ export async function syncIntegrations() {
       return;
     }
     const choices = await readChoices();
+    if (choices === null) {
+      logWarn(
+        "mcp.registration.skipped",
+        "config.json can't be read; integrations left as they are",
+      );
+      return;
+    }
     for (const id of INTEGRATION_IDS) {
       try {
         const plan = planLaunch(choices[id], await CLIENTS[id].read(), ours);
@@ -237,7 +251,7 @@ export async function syncIntegrations() {
 }
 
 export async function getIntegrationStatuses(): Promise<IntegrationStatus[]> {
-  const choices = await readChoices();
+  const choices = (await readChoices()) ?? {};
   return Promise.all(
     INTEGRATION_IDS.map(async (id) => {
       try {
