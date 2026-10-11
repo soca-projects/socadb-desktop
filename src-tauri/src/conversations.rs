@@ -66,7 +66,18 @@ pub fn conversation_list() -> Result<Vec<String>, String> {
         .flatten()
         .map(|entry| entry.path())
         .filter(|path| path.extension().is_some_and(|ext| ext == "json"))
-        .filter_map(|path| std::fs::read_to_string(path).ok())
+        .filter_map(|path| match std::fs::read_to_string(&path) {
+            Ok(content) => Some(content),
+            Err(e) => {
+                crate::log_event!(
+                    log::Level::Warn,
+                    "chat.conversation.unreadable",
+                    e,
+                    "file" => path.file_name().map(|n| n.to_string_lossy().into_owned()),
+                );
+                None
+            }
+        })
         .collect())
 }
 

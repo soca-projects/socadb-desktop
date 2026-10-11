@@ -186,10 +186,10 @@ fn configure_sparkle(app: &tauri::App) {
         "x64"
     };
     if let Err(e) = updater.set_allowed_channels(Some(vec![channel.to_string()])) {
-        eprintln!("Failed to set Sparkle update channel: {e}");
+        log_event!(log::Level::Warn, "updater.sparkle.config_failed", e, "step" => "channel");
     }
     if let Err(e) = updater.set_handles_install_on_quit(true) {
-        eprintln!("Failed to take over Sparkle's install prompt: {e}");
+        log_event!(log::Level::Warn, "updater.sparkle.config_failed", e, "step" => "install_on_quit");
     }
 }
 
@@ -243,12 +243,8 @@ pub fn run() {
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                match ws::start_ws_server(handle).await {
-                    Ok(_port) => {
-                        #[cfg(debug_assertions)]
-                        eprintln!("SocaDB MCP WebSocket server on port {_port}");
-                    }
-                    Err(e) => eprintln!("Failed to start WebSocket server: {e}"),
+                if let Err(e) = ws::start_ws_server(handle).await {
+                    log_event!(log::Level::Error, "mcp.ws.start_failed", e);
                 }
             });
             Ok(())
