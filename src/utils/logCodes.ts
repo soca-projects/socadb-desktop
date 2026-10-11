@@ -451,6 +451,54 @@ export const LOG_CODES = {
     check:
       "The message; the app may be on a read-only volume (see app.start ctx.install).",
   },
+  "mcp.server.start": {
+    level: "info",
+    meaning: "The MCP server binary connected to SocaDB and is serving tools.",
+    check: "One per agent run or AI app session; ctx-free.",
+  },
+  "mcp.server.start_failed": {
+    level: "error",
+    meaning: "The MCP server binary could not start; the AI app sees no SocaDB tools.",
+    check: "The message; usually mcp.server.app_not_running just before.",
+  },
+  "mcp.server.app_not_running": {
+    level: "error",
+    meaning: "The MCP server found no ~/.socadb/.port, so SocaDB wasn't running.",
+    check:
+      "Open SocaDB first; if it is open, look for mcp.port_file.write_failed in socadb.log.",
+  },
+  "mcp.server.port_invalid": {
+    level: "error",
+    meaning: "~/.socadb/.port holds no valid port.",
+    check: "ctx.content; a half-written or foreign file.",
+  },
+  "mcp.server.connected": {
+    level: "info",
+    meaning: "The MCP server connected to SocaDB's bridge.",
+    check: "ctx.port must match the app's mcp.ws.listening.",
+  },
+  "mcp.server.socket_error": {
+    level: "error",
+    meaning: "The MCP server's connection to SocaDB failed.",
+    check: "The message; the app may have quit or the port may be stale.",
+  },
+  "mcp.server.disconnected": {
+    level: "warn",
+    meaning: "SocaDB closed the MCP connection.",
+    check:
+      "ctx.pending > 0 means tool calls were lost; the app probably quit or restarted.",
+  },
+  "mcp.server.request_timeout": {
+    level: "warn",
+    meaning: "SocaDB didn't answer an MCP tool call within 10 s.",
+    check:
+      "msg is the action; look for mcp.tool or ui.* errors in socadb.log at that time.",
+  },
+  "mcp.server.request_failed": {
+    level: "warn",
+    meaning: "SocaDB answered an MCP tool call with an error.",
+    check: "ctx.action; the msg is what the agent saw.",
+  },
 } satisfies Record<string, LogCodeInfo>;
 
 export type LogCode = keyof typeof LOG_CODES;
