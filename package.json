@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "devctl": "bun scripts/devctl.ts",
+    "release:rc": "bun scripts/release-rc.ts",
     "prepare": "husky"
   },
   "dependencies": {
