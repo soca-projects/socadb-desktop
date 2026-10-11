@@ -3,6 +3,7 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
 import i18next from "../i18n";
+import { logError } from "./log";
 import type { Schema, Table, Column } from "../types/schema";
 import { findTableById, findColumnById, getRelationsFromTable } from "./schemaQueries";
 
@@ -163,6 +164,7 @@ export async function exportSql() {
 
     await writeTextFile(path, ddl);
   } catch (e) {
+    logError("export.sql.failed", e);
     toast.error(i18next.t("toast.exportSqlFailed", { error: String(e) }));
   }
 }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import i18next from "../i18n";
 import { useUpdateStore, type UpdateStatus } from "../stores/updateStore";
 import { toMessage } from "./errorMessage";
+import { logError, logInfo } from "./log";
 import { IS_MAC } from "./platform";
 import {
   sparkleCheckInBackground,
@@ -69,7 +70,7 @@ async function sparkleCheck() {
       store.setStatus("idle");
       return;
     }
-    console.error("[updater] sparkle check failed:", message);
+    logError("updater.sparkle.check_failed", message);
     store.setError(message);
     if (takeUserRequest()) notifyCheckFailed(message);
   }
@@ -87,6 +88,7 @@ async function tauriCheckAndDownload() {
     }
 
     store.setUpdateAvailable(update.version, update);
+    logInfo("updater.available", update.version);
 
     let downloaded = 0;
     let total: number | null = null;
@@ -104,13 +106,14 @@ async function tauriCheckAndDownload() {
     useUpdateStore.getState().setStatus("ready");
   } catch (error) {
     const message = toMessage(error);
-    console.error("[updater] check/download failed:", message);
+    logError("updater.check.failed", error);
     useUpdateStore.getState().setError(message);
     if (takeUserRequest()) notifyCheckFailed(message);
   }
 }
 
 export function handleSparkleUpdateFound(version: string) {
+  logInfo("updater.available", version);
   useUpdateStore.getState().setUpdateAvailable(version, null);
 }
 
@@ -126,7 +129,7 @@ export function handleSparkleCycleFinished(error: SparkleCycleError | null) {
   const hadStagedUpdate = store.status === "ready" || store.status === "installing";
 
   if (error && !error.noUpdate) {
-    console.error("[updater] sparkle update failed:", error.message);
+    logError("updater.sparkle.update_failed", error.message);
     store.setError(error.message);
     if (hadStagedUpdate) {
       toast.error(i18next.t("updater.failed", { error: error.message }), {
@@ -158,7 +161,7 @@ export async function installAndRelaunch() {
     await relaunch();
   } catch (error) {
     const message = toMessage(error);
-    console.error("[updater] install failed:", message);
+    logError("updater.install.failed", error);
     setError(message);
     toast.error(i18next.t("updater.failed", { error: message }), {
       duration: Infinity,

@@ -5,6 +5,7 @@ import { createDefaultIdColumn } from "./columnDefaults";
 import { computeAutoLayout } from "./autoLayout";
 import { getNextTableColor } from "./tableColors";
 import { findTableById, findTableByName } from "./schemaQueries";
+import { logError } from "./log";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import type { Column, Schema } from "../types/schema";
@@ -23,6 +24,7 @@ export async function handleAutoLayout() {
     const positions = await computeAutoLayout(schema.tables, schema.relations);
     updateTablePositions(positions);
   } catch (e) {
+    logError("layout.auto.failed", e);
     toast.error(i18next.t("toast.autoLayoutFailed", { error: String(e) }));
   }
 }

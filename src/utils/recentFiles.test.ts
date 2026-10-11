@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
   readTextFile: vi.fn(),
+  exists: vi.fn(() => Promise.resolve(true)),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -18,6 +19,7 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 import { invoke } from "@tauri-apps/api/core";
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import {
   addRecentFile,
   areRecentFilesLoaded,
@@ -138,5 +140,14 @@ describe("recentFiles", () => {
     expect(areRecentFilesLoaded()).toBe(true);
     expect(listener).toHaveBeenCalled();
     unsubscribe();
+  });
+
+  it("never overwrites a recents file it couldn't read", async () => {
+    vi.mocked(readTextFile).mockRejectedValueOnce(new Error("Operation not permitted"));
+    await loadRecentFiles();
+    vi.mocked(invoke).mockClear();
+    addRecentFile("/p/new.soca");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(invoke).not.toHaveBeenCalledWith("atomic_write", expect.anything());
   });
 });

@@ -21,10 +21,28 @@ fn read_config(path: &std::path::Path) -> Result<String, String> {
     }
 }
 
-fn socadb_command(content: &str) -> Result<Option<String>, String> {
-    let doc: DocumentMut = content
+// TomlError's text quotes the failing line, and Codex configs hold tokens
+// (MCP env, bearer headers): keep only where it failed.
+fn parse_error(content: &str, error: &toml_edit::TomlError) -> String {
+    match error.span() {
+        Some(span) => {
+            let before = content.get(..span.start).unwrap_or("");
+            let line = before.matches('\n').count() + 1;
+            let column = before.len() - before.rfind('\n').map_or(0, |i| i + 1) + 1;
+            format!("~/.codex/config.toml doesn't parse (line {line}, column {column})")
+        }
+        None => "~/.codex/config.toml doesn't parse".into(),
+    }
+}
+
+fn parse(content: &str) -> Result<DocumentMut, String> {
+    content
         .parse()
-        .map_err(|e: toml_edit::TomlError| e.to_string())?;
+        .map_err(|e: toml_edit::TomlError| parse_error(content, &e))
+}
+
+fn socadb_command(content: &str) -> Result<Option<String>, String> {
+    let doc = parse(content)?;
     Ok(doc
         .get("mcp_servers")
         .and_then(|servers| servers.get("socadb"))
@@ -34,9 +52,7 @@ fn socadb_command(content: &str) -> Result<Option<String>, String> {
 }
 
 fn with_socadb_server(content: &str, command: Option<&str>) -> Result<String, String> {
-    let mut doc: DocumentMut = content
-        .parse()
-        .map_err(|e: toml_edit::TomlError| e.to_string())?;
+    let mut doc = parse(content)?;
     match command {
         Some(command) => {
             let servers = doc
@@ -101,6 +117,18 @@ mod tests {
     use super::*;
 
     const OURS: &str = "/Applications/SocaDB.app/Contents/Resources/socadb-mcp-darwin-arm64";
+
+    #[test]
+    fn parse_errors_never_quote_the_config() {
+        let config =
+            "[mcp_servers.github.env]\nGITHUB_TOKEN = ghp_abcdefghijklmnopqrstuvwxyz012345\n";
+        let error = socadb_command(config).unwrap_err();
+        assert!(!error.contains("ghp_"), "{error}");
+        assert!(error.contains("line 2"), "{error}");
+        assert!(with_socadb_server(config, Some(OURS))
+            .unwrap_err()
+            .contains("line 2"));
+    }
 
     #[test]
     fn adds_the_server_to_an_empty_config() {

@@ -330,6 +330,7 @@
     "checkingForUpdates": "Checking for Updates...",
     "downloadingUpdate": "Downloading Update...",
     "help": "Help",
+    "showLogs": "Show Logs",
     "hideSocaDB": "Hide SocaDB",
     "quitSocaDB": "Quit SocaDB",
     "exit": "Exit"

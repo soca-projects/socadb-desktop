@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
 import { useThemeStore } from "../stores/themeStore";
 import i18next from "../i18n";
+import { logError } from "./log";
 
 export async function exportCanvasSvg() {
   try {
@@ -29,6 +30,7 @@ export async function exportCanvasSvg() {
 
     await writeTextFile(path, svg);
   } catch (e) {
+    logError("export.svg.failed", e);
     toast.error(i18next.t("toast.exportSvgFailed", { error: String(e) }));
   }
 }

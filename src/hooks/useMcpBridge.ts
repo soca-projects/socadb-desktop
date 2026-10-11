@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { dispatchMcpAction } from "../utils/mcpActions";
+import { logDebug, logError, logInfo, logWarn } from "../utils/log";
+import { maskQuoted } from "../utils/logPrivacy";
 
 export function useMcpBridge() {
   useEffect(() => {
@@ -20,19 +22,30 @@ export function useMcpBridge() {
         connectionId = envelope.connectionId;
         requestId = envelope.data.id;
         const { action, payload } = envelope.data;
+        const started = performance.now();
         const result = await dispatchMcpAction(action, payload ?? {});
+        const ms = Math.round(performance.now() - started);
+        if (!result.ok) {
+          logWarn("mcp.tool.failed", action, { ms, error: maskQuoted(result.error) });
+        } else if (action.startsWith("dev_")) {
+          logDebug("mcp.tool", action, { ms });
+        } else {
+          logInfo("mcp.tool", action, { ms });
+        }
         const msg = result.ok
           ? { id: requestId, result: result.data }
           : { id: requestId, error: result.error };
-        void invoke("mcp_respond", { connectionId, response: JSON.stringify(msg) });
+        invoke("mcp_respond", { connectionId, response: JSON.stringify(msg) }).catch(
+          (e: unknown) => logError("mcp.respond.failed", e),
+        );
       } catch (e) {
-        console.error("Failed to handle MCP request:", e);
+        logError("mcp.request.failed", e);
         if (connectionId != null && requestId != null) {
           const errorMsg = e instanceof Error ? e.message : "Internal error";
-          void invoke("mcp_respond", {
+          invoke("mcp_respond", {
             connectionId,
             response: JSON.stringify({ id: requestId, error: errorMsg }),
-          });
+          }).catch((err: unknown) => logError("mcp.respond.failed", err));
         }
       }
     }).then((fn) => {

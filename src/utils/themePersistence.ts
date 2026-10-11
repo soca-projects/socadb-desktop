@@ -1,6 +1,7 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { queueConfigWrite, readConfigForUpdate, socadbConfigPath } from "./socadbDir";
+import { logError } from "./log";
 import { useThemeStore } from "../stores/themeStore";
 
 async function loadTheme() {
@@ -21,18 +22,12 @@ async function saveTheme() {
   try {
     await queueConfigWrite(async () => {
       const path = await socadbConfigPath();
-      let data: Record<string, unknown> = {};
-      try {
-        const content = await readTextFile(path);
-        data = JSON.parse(content) as Record<string, unknown>;
-      } catch {
-        // First save: file doesn't exist yet, start from empty object.
-      }
+      const data = await readConfigForUpdate(path);
       data.theme = useThemeStore.getState().theme;
       await invoke("atomic_write", { path, content: JSON.stringify(data) });
     });
   } catch (err) {
-    console.warn("[themePersistence] failed to persist theme:", err);
+    logError("settings.theme.persist_failed", err);
   }
 }
 

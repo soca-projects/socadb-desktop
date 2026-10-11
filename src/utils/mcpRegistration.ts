@@ -9,7 +9,14 @@ import {
   McpServerEntryZ,
   type IntegrationChoiceZ,
 } from "./zodSchemas";
-import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import {
+  INTEGRATIONS_UNKNOWN,
+  parseConfig,
+  queueConfigWrite,
+  readConfigForUpdate,
+  socadbConfigPath,
+} from "./socadbDir";
+import { logError, logWarn } from "./log";
 
 export const INTEGRATION_IDS = ["claudeCode", "claudeDesktop", "codex"] as const;
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
@@ -164,29 +171,55 @@ const CLIENTS: Record<IntegrationId, Client> = {
   },
 };
 
-async function readChoices(): Promise<IntegrationChoices> {
+interface StoredChoices {
+  choices: IntegrationChoices;
+  unknown: boolean;
+}
+
+// null when config.json exists but can't be read: its choices are unknown, and
+// assuming none would re-register SocaDB where the user removed it.
+async function readChoices(): Promise<StoredChoices | null> {
+  const path = await socadbConfigPath();
+  if (!(await exists(path))) return { choices: {}, unknown: false };
+  let config: Record<string, unknown> | null;
   try {
-    const config: unknown = JSON.parse(await readTextFile(await socadbConfigPath()));
-    const choices = IntegrationChoicesZ.safeParse(
-      typeof config === "object" && config !== null && "integrations" in config
-        ? config.integrations
-        : undefined,
-    );
-    return choices.success ? choices.data : {};
+    config = parseConfig(await readTextFile(path));
   } catch {
-    return {};
+    return null;
   }
+  if (!config) return null;
+  const choices = IntegrationChoicesZ.safeParse(config.integrations);
+  return {
+    choices: choices.success ? choices.data : {},
+    unknown: config[INTEGRATIONS_UNKNOWN] === true,
+  };
+}
+
+// While the choices are unknown, "on" keeps an existing entry up to date and
+// turns a missing one into "removed": SocaDB is never added back on its own.
+export function launchChoice(
+  choice: IntegrationChoice | undefined,
+  unknown: boolean,
+): IntegrationChoice | undefined {
+  return choice ?? (unknown ? "on" : undefined);
+}
+
+async function clearUnknownChoices() {
+  await queueConfigWrite(async () => {
+    const path = await socadbConfigPath();
+    const data = Object.fromEntries(
+      Object.entries(await readConfigForUpdate(path)).filter(
+        ([key]) => key !== INTEGRATIONS_UNKNOWN,
+      ),
+    );
+    await invoke("atomic_write", { path, content: JSON.stringify(data) });
+  });
 }
 
 async function saveChoice(id: IntegrationId, choice: IntegrationChoice) {
   await queueConfigWrite(async () => {
     const path = await socadbConfigPath();
-    let data: Record<string, unknown> = {};
-    try {
-      data = JSON.parse(await readTextFile(path)) as Record<string, unknown>;
-    } catch {
-      // First save: file doesn't exist yet, start from empty object.
-    }
+    const data = await readConfigForUpdate(path);
     const choices = IntegrationChoicesZ.safeParse(data.integrations);
     data.integrations = { ...(choices.success ? choices.data : {}), [id]: choice };
     await invoke("atomic_write", { path, content: JSON.stringify(data) });
@@ -204,6 +237,12 @@ function serialize<T>(work: () => Promise<T>): Promise<T> {
   return next;
 }
 
+// Parse errors of other apps' configs can quote the file (JSC's JSON errors
+// include the bad token), and those files hold tokens: log only the kind.
+export function configErrorForLog(error: unknown): unknown {
+  return error instanceof SyntaxError ? "Invalid JSON" : error;
+}
+
 export function getMcpServerPath(): Promise<string> {
   return invoke<string>("get_mcp_binary_path");
 }
@@ -213,28 +252,49 @@ export async function syncIntegrations() {
   // launch. Toggling in Settings still writes, since it's an explicit choice.
   if (import.meta.env.DEV) return;
   await serialize(async () => {
-    const ours = await getMcpServerPath();
-    const choices = await readChoices();
+    let ours: string;
+    try {
+      ours = await getMcpServerPath();
+    } catch (e) {
+      logError("mcp.registration.binary_missing", e);
+      return;
+    }
+    const stored = await readChoices();
+    if (stored === null) {
+      logWarn(
+        "mcp.registration.skipped",
+        "config.json can't be read; integrations left as they are",
+      );
+      return;
+    }
+    const { choices, unknown } = stored;
+    let settled = true;
     for (const id of INTEGRATION_IDS) {
       try {
-        const plan = planLaunch(choices[id], await CLIENTS[id].read(), ours);
+        const choice = launchChoice(choices[id], unknown);
+        const plan = planLaunch(choice, await CLIENTS[id].read(), ours);
         if (plan.register) await CLIENTS[id].write(ours);
         if (plan.choice && plan.choice !== choices[id]) await saveChoice(id, plan.choice);
       } catch (e) {
+        settled = false;
         // Never rewrite a file we couldn't parse: it holds the client's whole config.
-        console.warn(`MCP registration skipped for ${id}:`, e);
+        logWarn("mcp.registration.failed", configErrorForLog(e), { client: id });
       }
     }
+    if (unknown && settled) await clearUnknownChoices();
   });
 }
 
 export async function getIntegrationStatuses(): Promise<IntegrationStatus[]> {
-  const choices = await readChoices();
+  const choices = (await readChoices())?.choices ?? {};
   return Promise.all(
     INTEGRATION_IDS.map(async (id) => {
       try {
         return statusOf(id, choices[id], await CLIENTS[id].read());
-      } catch {
+      } catch (e) {
+        logWarn("mcp.registration.config_unreadable", configErrorForLog(e), {
+          client: id,
+        });
         return { id, installed: true, enabled: false, removed: false, unreadable: true };
       }
     }),

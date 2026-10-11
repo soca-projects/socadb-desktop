@@ -5,6 +5,8 @@ import { ChatErrorZ } from "./zodSchemas";
 import { resetAgent } from "./chatCommands";
 import { authErrorText, modelUnavailableText } from "./chatErrors";
 import i18next from "../i18n";
+import { maskQuoted } from "./logPrivacy";
+import { logWarn } from "./log";
 
 function ensureAssistantMessage() {
   const store = useChatStore.getState();
@@ -85,6 +87,12 @@ export function handleChatEvent(parsed: ChatEvent) {
         const lower = errorMsg.toLowerCase();
         const providerId = (parsed.providerId as ProviderId) ?? "claude";
         const meta = PROVIDERS[providerId];
+        // Runner errors can quote raw agent events (Codex dumps its output):
+        // the release log keeps their shape, not their content.
+        logWarn("agent.turn.error", maskQuoted(errorMsg).slice(0, 300), {
+          provider: providerId,
+          code: errorParse.success ? errorParse.data.code : undefined,
+        });
 
         if (errorParse.success && errorParse.data.code === "auth") {
           store.appendAssistantText(

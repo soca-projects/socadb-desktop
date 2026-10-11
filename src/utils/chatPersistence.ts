@@ -1,6 +1,7 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { queueConfigWrite, readConfigForUpdate, socadbConfigPath } from "./socadbDir";
+import { logError, logWarn } from "./log";
 import {
   deleteConversationFiles,
   listConversations,
@@ -45,7 +46,7 @@ function scheduleWrite(conversation: Conversation) {
     setTimeout(() => {
       pendingWrites.delete(conversation.id);
       writeConversation(conversation).catch((err) =>
-        console.warn("[chatPersistence] failed to save a conversation:", err),
+        logError("chat.conversation.save_failed", err),
       );
     }, 300),
   );
@@ -59,7 +60,7 @@ function persistChanges(conversations: Conversation[]) {
     pendingWrites.delete(id);
     saved.delete(id);
     deleteConversationFiles(previous).catch((err) =>
-      console.warn("[chatPersistence] failed to delete a conversation:", err),
+      logError("chat.conversation.delete_failed", err),
     );
   }
   for (const conversation of conversations) {
@@ -81,10 +82,10 @@ async function loadConversations() {
     for (const c of conversations) saved.set(c.id, c);
     if (conversations.length > 0) useChatStore.getState().setConversations(conversations);
     pruneClaudeSessions(conversations).catch((err) =>
-      console.warn("[chatPersistence] failed to prune Claude sessions:", err),
+      logWarn("chat.sessions.prune_failed", err),
     );
   } catch (err) {
-    console.warn("[chatPersistence] failed to load conversations:", err);
+    logError("chat.conversations.load_failed", err);
   }
   if (useChatStore.getState().conversations.length === 0) {
     useChatStore.getState().newConversation();
@@ -156,13 +157,7 @@ async function writeConfigToDisk(state: {
   apiKeys?: Record<string, string>;
 }) {
   const path = await socadbConfigPath();
-  let existing: Record<string, unknown> = {};
-  try {
-    const content = await readTextFile(path);
-    existing = JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    // No config.json yet — start from empty object.
-  }
+  const existing = await readConfigForUpdate(path);
 
   if (state.providers) {
     existing.providers = state.providers;
@@ -186,7 +181,8 @@ async function migrateApiKeysToKeyring(apiKeys: Record<string, string>) {
   for (const [id, key] of Object.entries(apiKeys)) {
     try {
       await invoke("keyring_set", { account: id, password: key });
-    } catch {
+    } catch (e) {
+      logError("keyring.save.failed", e, { provider: id, migration: true });
       remaining[id] = key;
     }
   }
@@ -198,7 +194,7 @@ async function migrateApiKeysToKeyring(apiKeys: Record<string, string>) {
       await writeConfigToDisk(migrated);
     });
   } catch (err) {
-    console.warn("[chatPersistence] failed to finish apiKey migration:", err);
+    logError("keyring.migration.failed", err);
   }
 }
 
@@ -215,7 +211,7 @@ export async function saveProviderConfig(id: ProviderId, provider: Provider) {
       await writeConfigToDisk(migrated);
     });
   } catch (err) {
-    console.warn("[chatPersistence] failed to persist provider config:", err);
+    logError("chat.provider.persist_failed", err);
   }
 }
 
@@ -238,14 +234,15 @@ async function clearPlaintextApiKey(id: ProviderId): Promise<void> {
       await writeConfigToDisk(migrated);
     });
   } catch (err) {
-    console.warn("[chatPersistence] failed to clear plaintext apiKey:", err);
+    logError("keyring.plaintext_clear.failed", err);
   }
 }
 
 export async function saveApiKey(id: ProviderId, apiKey: string): Promise<boolean> {
   try {
     await invoke("keyring_set", { account: id, password: apiKey });
-  } catch {
+  } catch (e) {
+    logError("keyring.save.failed", e, { provider: id });
     return false;
   }
   void clearPlaintextApiKey(id);
@@ -257,7 +254,8 @@ export async function clearApiKey(id: ProviderId): Promise<boolean> {
   try {
     await invoke("keyring_delete", { account: id });
     return true;
-  } catch {
+  } catch (e) {
+    logError("keyring.delete.failed", e, { provider: id });
     return false;
   }
 }
@@ -266,7 +264,8 @@ export async function isApiKeyStored(id: ProviderId): Promise<boolean> {
   try {
     const key = await invoke<string | null>("keyring_get", { account: id });
     return key !== null && key.length > 0;
-  } catch {
+  } catch (e) {
+    logWarn("keyring.read.failed", e, { provider: id });
     return false;
   }
 }

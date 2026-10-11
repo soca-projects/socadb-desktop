@@ -3,6 +3,7 @@ mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
 mod install_location;
+mod logging;
 mod schema_files;
 mod ws;
 
@@ -123,6 +124,17 @@ fn atomic_write(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn show_logs(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
+    let file = dir.join(format!("{}.log", logging::file_stem()));
+    let target = if file.exists() { file } else { dir };
+    app.opener()
+        .reveal_item_in_dir(target)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn open_terminal() {
     #[cfg(target_os = "macos")]
     {
@@ -174,10 +186,10 @@ fn configure_sparkle(app: &tauri::App) {
         "x64"
     };
     if let Err(e) = updater.set_allowed_channels(Some(vec![channel.to_string()])) {
-        eprintln!("Failed to set Sparkle update channel: {e}");
+        log_event!(log::Level::Warn, "updater.sparkle.config_failed", e, "step" => "channel");
     }
     if let Err(e) = updater.set_handles_install_on_quit(true) {
-        eprintln!("Failed to take over Sparkle's install prompt: {e}");
+        log_event!(log::Level::Warn, "updater.sparkle.config_failed", e, "step" => "install_on_quit");
     }
 }
 
@@ -205,6 +217,7 @@ pub fn run() {
             mcp_respond,
             atomic_write,
             open_terminal,
+            show_logs,
             keyring_get,
             keyring_set,
             keyring_delete,
@@ -221,17 +234,17 @@ pub fn run() {
             conversations::claude_sessions_prune,
         ])
         .setup(|app| {
+            logging::init(app.handle());
+            logging::install_panic_hook();
+            logging::log_start(app.handle());
+
             #[cfg(target_os = "macos")]
             configure_sparkle(app);
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                match ws::start_ws_server(handle).await {
-                    Ok(_port) => {
-                        #[cfg(debug_assertions)]
-                        eprintln!("SocaDB MCP WebSocket server on port {_port}");
-                    }
-                    Err(e) => eprintln!("Failed to start WebSocket server: {e}"),
+                if let Err(e) = ws::start_ws_server(handle).await {
+                    log_event!(log::Level::Error, "mcp.ws.start_failed", e);
                 }
             });
             Ok(())
@@ -242,6 +255,11 @@ pub fn run() {
                 ws::cleanup_port_file();
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                logging::log_stop();
+            }
+        });
 }

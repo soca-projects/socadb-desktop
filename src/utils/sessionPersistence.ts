@@ -2,15 +2,20 @@ import { useSchemaStore } from "../stores/schemaStore";
 import { migrateSchema } from "./fileOperations";
 import { isWorthResuming } from "./schemaQueries";
 import { LastSessionZ, SchemaZ } from "./zodSchemas";
+import { logError, logWarn } from "./log";
 
 const LAST_SESSION_KEY = "socadb_last_session";
+
+let saveFailureLogged = false;
 
 function saveLastSession() {
   try {
     const { schema, filePath, savedAt } = useSchemaStore.getState();
     localStorage.setItem(LAST_SESSION_KEY, JSON.stringify({ schema, filePath, savedAt }));
-  } catch {
-    // localStorage full or unavailable
+  } catch (e) {
+    // Runs on every store change: one line per launch is enough.
+    if (!saveFailureLogged) logError("session.save.failed", e);
+    saveFailureLogged = true;
   }
 }
 
@@ -43,7 +48,8 @@ export function restoreLastSession(): boolean {
     if (session.savedAt !== undefined)
       useSchemaStore.setState({ savedAt: session.savedAt });
     return isWorthResuming(schema, filePath);
-  } catch {
+  } catch (e) {
+    logWarn("session.restore.invalid", e);
     clearLastSession();
     return false;
   }

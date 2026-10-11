@@ -11,6 +11,7 @@ import { useSchemaStore } from "../../stores/schemaStore";
 import { useViewStore } from "../../stores/viewStore";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { formatShortcut, IS_MAC } from "../../utils/platform";
+import { logInfo } from "../../utils/log";
 
 // trafficLightPosition in tauri.conf.json centers the lights on this bar,
 // 20 px from the left edge, and ends them at 80 px; this keeps the gap they
@@ -76,7 +77,10 @@ export function Toolbar({
       >
         <button
           type="button"
-          onClick={showHome}
+          onClick={() => {
+            logInfo("ui.action", "toolbar.home");
+            showHome();
+          }}
           aria-current={isHome ? "page" : undefined}
           className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-secondary ${
             isHome ? "bg-surface-muted text-primary" : "text-tertiary"

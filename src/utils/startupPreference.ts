@@ -1,8 +1,9 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
-import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { queueConfigWrite, readConfigForUpdate, socadbConfigPath } from "./socadbDir";
 import { StartupPreferenceZ } from "./zodSchemas";
+import { logError } from "./log";
 import type { View } from "../stores/viewStore";
 
 export type StartupPreference = z.infer<typeof StartupPreferenceZ>;
@@ -47,19 +48,11 @@ export async function setStartupPreference(value: StartupPreference): Promise<vo
   try {
     await queueConfigWrite(async () => {
       const path = await socadbConfigPath();
-      let content: string | null = null;
-      try {
-        content = await readTextFile(path);
-      } catch {
-        // First save: config.json doesn't exist yet.
-      }
-      // A config.json that doesn't parse throws here: rewriting it with only
-      // this key would drop every other setting.
-      const data = content === null ? {} : ConfigZ.parse(JSON.parse(content));
+      const data = await readConfigForUpdate(path);
       data.startup = value;
       await invoke("atomic_write", { path, content: JSON.stringify(data) });
     });
   } catch (err) {
-    console.warn("[startupPreference] failed to persist:", err);
+    logError("settings.startup.persist_failed", err);
   }
 }

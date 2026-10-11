@@ -1,6 +1,7 @@
+use log::Level;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -64,6 +65,19 @@ fn get_agent() -> &'static Arc<Mutex<AgentState>> {
     })
 }
 
+const STDERR_TAIL: usize = 20;
+
+#[cfg(unix)]
+fn exit_signal(status: &std::process::ExitStatus) -> Option<i32> {
+    use std::os::unix::process::ExitStatusExt;
+    status.signal()
+}
+
+#[cfg(not(unix))]
+fn exit_signal(_: &std::process::ExitStatus) -> Option<i32> {
+    None
+}
+
 enum KeyringLookup {
     Found(String),
     Empty,
@@ -75,13 +89,14 @@ enum KeyringLookup {
 // hiccup (locked Gnome keyring, denied macOS prompt, DBus blip on Linux)
 // instead of killing it and respawning with no auth.
 fn read_keyring_api_key(provider_id: &str) -> KeyringLookup {
-    match keyring::Entry::new(KEYRING_SERVICE, provider_id) {
-        Err(_) => KeyringLookup::Error,
-        Ok(entry) => match entry.get_password() {
-            Ok(pw) => KeyringLookup::Found(pw),
-            Err(keyring::Error::NoEntry) => KeyringLookup::Empty,
-            Err(_) => KeyringLookup::Error,
-        },
+    let result = keyring::Entry::new(KEYRING_SERVICE, provider_id).and_then(|e| e.get_password());
+    match result {
+        Ok(pw) => KeyringLookup::Found(pw),
+        Err(keyring::Error::NoEntry) => KeyringLookup::Empty,
+        Err(e) => {
+            crate::log_event!(Level::Warn, "keyring.read.failed", e, "provider" => provider_id);
+            KeyringLookup::Error
+        }
     }
 }
 
@@ -126,7 +141,11 @@ pub fn cleanup_agents() {
             guard.processes.clear();
         }
         Err(_) => {
-            eprintln!("[chat] Could not acquire lock during cleanup, agent processes may linger");
+            crate::log_event!(
+                Level::Warn,
+                "agent.cleanup.locked",
+                "Could not lock the agents during cleanup; runner processes may linger"
+            );
         }
     }
 }
@@ -201,15 +220,19 @@ async fn spawn_agent(
     api_key: Option<&str>,
     spawned_auth: SpawnedAuth,
 ) -> Result<AgentProcess, String> {
-    let layout = resolve_runtime_layout(app)?;
+    let layout = resolve_runtime_layout(app).inspect_err(|e| {
+        crate::log_event!(Level::Error, "agent.runtime.missing", e, "provider" => provider_id);
+    })?;
     let runner = agent_runner_path(&layout, provider_id);
 
     if !runner.exists() {
-        return Err(format!(
+        let message = format!(
             "Agent runner not found: {} (runtime dir: {})",
             runner.display(),
             layout.dir.display()
-        ));
+        );
+        crate::log_event!(Level::Error, "agent.runtime.missing", message, "provider" => provider_id);
+        return Err(message);
     }
 
     let mut cmd = Command::new(&layout.bun);
@@ -235,11 +258,13 @@ async fn spawn_agent(
     }
 
     let mut child = cmd.spawn().map_err(|e| {
-        format!(
+        let message = format!(
             "Failed to spawn agent-runner-{provider_id}: {e} (bun: {}, runner: {})",
             layout.bun.display(),
             runner.display()
-        )
+        );
+        crate::log_event!(Level::Error, "agent.spawn.failed", message, "provider" => provider_id);
+        message
     })?;
 
     let child_pid = child.id();
@@ -247,9 +272,11 @@ async fn spawn_agent(
     let stdin = child.stdin.take().ok_or("Failed to capture stdin")?;
     let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
     let stderr = child.stderr.take();
+    let stderr_tail = Arc::new(std::sync::Mutex::new(VecDeque::with_capacity(STDERR_TAIL)));
 
     let app_clone = app.clone();
     let pid = provider_id.to_string();
+    let exit_tail = Arc::clone(&stderr_tail);
     tokio::spawn(async move {
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
@@ -274,10 +301,57 @@ async fn spawn_agent(
         guard.processes.remove(&pid);
         drop(guard);
 
+        let tail: Vec<String> = exit_tail
+            .lock()
+            .map(|t| t.iter().cloned().collect())
+            .unwrap_or_default();
+        let tail = if cfg!(debug_assertions) {
+            tail
+        } else {
+            crate::logging::release_tail(&tail)
+        };
         let exit_info = match status {
-            Ok(s) if s.success() => return,
-            Ok(s) => format!("Agent process exited with code {}", s.code().unwrap_or(-1)),
-            Err(e) => format!("Agent process error: {e}"),
+            Ok(s) if s.success() => {
+                crate::log_event!(
+                    Level::Warn,
+                    "agent.exit.unexpected",
+                    "Agent runner exited on its own",
+                    "provider" => pid,
+                    "stderr_tail" => tail,
+                );
+                return;
+            }
+            Ok(s) => match exit_signal(&s) {
+                Some(signal) => {
+                    let message = format!("Agent process killed by signal {signal}");
+                    crate::log_event!(
+                        Level::Error,
+                        "agent.exit.signal",
+                        message,
+                        "provider" => pid,
+                        "signal" => signal,
+                        "stderr_tail" => tail,
+                    );
+                    message
+                }
+                None => {
+                    let message =
+                        format!("Agent process exited with code {}", s.code().unwrap_or(-1));
+                    crate::log_event!(
+                        Level::Error,
+                        "agent.exit.nonzero",
+                        message,
+                        "provider" => pid,
+                        "code" => s.code(),
+                        "stderr_tail" => tail,
+                    );
+                    message
+                }
+            },
+            Err(e) => {
+                crate::log_event!(Level::Error, "agent.exit.wait_failed", e, "provider" => pid);
+                format!("Agent process error: {e}")
+            }
         };
 
         let event = serde_json::json!({
@@ -300,7 +374,16 @@ async fn spawn_agent(
             let reader = BufReader::new(stderr);
             let mut lines = reader.lines();
             while let Ok(Some(line)) = lines.next_line().await {
-                eprintln!("[agent-runner-{pid}] {line}");
+                let line = crate::logging::truncate(&line, crate::logging::MAX_STDERR_LINE);
+                if let Ok(mut tail) = stderr_tail.lock() {
+                    if tail.len() == STDERR_TAIL {
+                        tail.pop_front();
+                    }
+                    tail.push_back(line.clone());
+                }
+                // Runners can echo request text: the full stream stays out of
+                // release logs, which keep only the tail on a crash.
+                crate::log_event!(Level::Debug, "agent.stderr", line, "provider" => pid);
             }
         });
     }
@@ -391,11 +474,10 @@ async fn send_to_agent(
     login_type: LoginType,
     cmd: &serde_json::Value,
 ) -> Result<(), String> {
-    if send_to_agent_inner(provider_id, cmd).await.is_ok() {
+    let Err(error) = send_to_agent_inner(provider_id, cmd).await else {
         return Ok(());
-    }
-
-    eprintln!("[chat] Agent {provider_id} dead, restarting...");
+    };
+    crate::log_event!(Level::Warn, "agent.restart", error, "provider" => provider_id);
     ensure_agent(app, provider_id, login_type).await?;
     send_to_agent_inner(provider_id, cmd).await
 }

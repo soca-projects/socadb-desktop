@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   isOurCommand,
+  launchChoice,
   planLaunch,
   statusOf,
   withoutSocadbServer,
@@ -84,6 +85,21 @@ describe("isOurCommand", () => {
   it("leaves a server someone else named socadb alone", () => {
     expect(isOurCommand("npx")).toBe(false);
     expect(isOurCommand("/usr/local/bin/my-socadb")).toBe(false);
+  });
+});
+
+describe("launchChoice", () => {
+  it("never adds SocaDB back once the stored choices were lost", () => {
+    const absent = planLaunch(launchChoice(undefined, true), installed(null), OURS);
+    expect(absent).toEqual({ register: false, choice: "removed" });
+    const present = planLaunch(
+      launchChoice(undefined, true),
+      installed("/old/socadb-mcp"),
+      OURS,
+    );
+    expect(present.choice).toBe("on");
+    expect(launchChoice(undefined, false)).toBeUndefined();
+    expect(launchChoice("off", true)).toBe("off");
   });
 });
 
