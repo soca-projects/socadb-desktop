@@ -8,6 +8,7 @@ vi.mock("@tauri-apps/plugin-log", () => ({
 }));
 
 import { error, warn } from "@tauri-apps/plugin-log";
+import { z } from "zod";
 import { logError, logWarn } from "./log";
 
 beforeEach(() => {
@@ -25,6 +26,20 @@ describe("log", () => {
       ctx: { source: "App.tsx" },
     });
     expect(payload.ctx.stack).toContain("disk full");
+  });
+
+  it("sums up a validation error on one line", () => {
+    const result = z
+      .object({ files: z.array(z.object({ path: z.string() })) })
+      .safeParse({
+        files: [{ path: 42 }],
+      });
+    if (result.success) throw new Error("expected a failure");
+    logWarn("recent.load.invalid", result.error);
+    const payload = JSON.parse(vi.mocked(warn).mock.calls[0][0]);
+    expect(payload.msg).toBe(
+      "files.0.path: Invalid input: expected string, received number",
+    );
   });
 
   it("accepts plain values and never throws when the bridge is gone", () => {

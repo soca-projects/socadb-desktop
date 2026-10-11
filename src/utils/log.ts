@@ -1,4 +1,5 @@
 import { debug, error, info, warn } from "@tauri-apps/plugin-log";
+import { z } from "zod";
 import { toMessage } from "./errorMessage";
 import type { LogCode } from "./logCodes";
 
@@ -12,13 +13,23 @@ function write(fn: Write, code: LogCode, msg: string, ctx?: Context) {
   });
 }
 
+function describe(cause: unknown): string {
+  if (cause instanceof z.ZodError) {
+    return cause.issues
+      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+      .join("; ");
+  }
+  return toMessage(cause);
+}
+
 export function logError(code: LogCode, cause: unknown, ctx?: Context) {
-  const stack = cause instanceof Error ? cause.stack : undefined;
-  write(error, code, toMessage(cause), stack ? { ...ctx, stack } : ctx);
+  const stack =
+    cause instanceof Error && !(cause instanceof z.ZodError) ? cause.stack : undefined;
+  write(error, code, describe(cause), stack ? { ...ctx, stack } : ctx);
 }
 
 export function logWarn(code: LogCode, message: unknown, ctx?: Context) {
-  write(warn, code, toMessage(message), ctx);
+  write(warn, code, describe(message), ctx);
 }
 
 export function logInfo(code: LogCode, message: string, ctx?: Context) {

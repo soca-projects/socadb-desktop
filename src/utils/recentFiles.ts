@@ -119,7 +119,7 @@ function parseRecentFile(content: string): readonly RecentEntry[] {
   try {
     const parsed = RecentFileZ.safeParse(JSON.parse(content));
     if (parsed.success) return parsed.data.files.slice(0, MAX_RECENT);
-    logWarn("recent.load.invalid", parsed.error.message);
+    logWarn("recent.load.invalid", parsed.error);
   } catch (e) {
     logWarn("recent.load.invalid", e);
   }
