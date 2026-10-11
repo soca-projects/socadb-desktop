@@ -33,12 +33,12 @@ describe("readConfigForUpdate", () => {
     expect(await readConfigForUpdate(PATH)).toEqual({ theme: "dark", providers: {} });
   });
 
-  it("copies a config that doesn't parse aside before starting fresh", async () => {
+  it("copies a config that doesn't parse aside, then starts fresh with integrations unknown", async () => {
     vi.mocked(exists).mockResolvedValue(true);
     vi.mocked(readTextFile).mockResolvedValue('{"theme": BROKEN');
-    expect(await readConfigForUpdate(PATH)).toEqual({});
+    expect(await readConfigForUpdate(PATH)).toEqual({ integrationsUnknown: true });
     expect(invoke).toHaveBeenCalledWith("atomic_write", {
-      path: "/home/ana/.socadb/config.invalid.json",
+      path: expect.stringMatching(/^\/home\/ana\/\.socadb\/config\.invalid-\d+\.json$/),
       content: '{"theme": BROKEN',
     });
   });

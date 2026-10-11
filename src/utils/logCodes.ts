@@ -163,9 +163,9 @@ export const LOG_CODES = {
   "config.invalid": {
     level: "warn",
     meaning:
-      "config.json wasn't valid JSON; it was copied to config.invalid.json and settings start fresh.",
+      "config.json wasn't valid JSON; it was copied to config.invalid-<time>.json and settings start fresh.",
     check:
-      "~/.socadb/config.invalid.json holds the old settings (provider choices, integrations) to recover by hand.",
+      "~/.socadb/config.invalid-<time>.json holds the old settings to recover by hand; integrations stay as they are in each AI app until the next launch settles them.",
   },
   "mcp.registration.skipped": {
     level: "warn",
@@ -340,7 +340,7 @@ export const LOG_CODES = {
     level: "warn",
     meaning: "recent.json exists but doesn't parse; the list starts empty.",
     check:
-      "The message names the bad field; the old list was copied to ~/.socadb/recent.invalid.json.",
+      "The message names the bad field; the old list was copied to ~/.socadb/recent.invalid-<time>.json.",
   },
   "settings.startup.persist_failed": {
     level: "error",

@@ -6,6 +6,10 @@ import { z } from "zod";
 
 const ConfigObjectZ = z.record(z.string(), z.unknown());
 
+// Set when config.json had to start fresh: the integration choices it held are
+// lost, and a missing choice must not read as "never decided".
+export const INTEGRATIONS_UNKNOWN = "integrationsUnknown";
+
 let cached: string | null = null;
 
 export async function getSocadbDir(): Promise<string> {
@@ -31,14 +35,14 @@ export async function readConfigForUpdate(
   const parsed = parseConfig(content);
   if (parsed) return parsed;
   await invoke("atomic_write", {
-    path: path.replace(/config\.json$/, "config.invalid.json"),
+    path: path.replace(/config\.json$/, `config.invalid-${Date.now()}.json`),
     content,
   });
   logWarn(
     "config.invalid",
-    "config.json didn't parse; it was copied to config.invalid.json",
+    "config.json didn't parse; it was copied to config.invalid-<time>.json",
   );
-  return {};
+  return { [INTEGRATIONS_UNKNOWN]: true };
 }
 
 export function parseConfig(content: string): Record<string, unknown> | null {

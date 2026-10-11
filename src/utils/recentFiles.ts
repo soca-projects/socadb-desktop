@@ -128,7 +128,7 @@ export async function loadRecentFiles() {
 // An unreadable list would be overwritten by the next opened file: keep a copy
 // next to it so the history can still be recovered by hand.
 async function setAside(path: string, content: string) {
-  const copy = path.replace(/recent\.json$/, "recent.invalid.json");
+  const copy = path.replace(/recent\.json$/, `recent.invalid-${Date.now()}.json`);
   try {
     await invoke("atomic_write", { path: copy, content });
   } catch (e) {
