@@ -94,7 +94,13 @@ fn plugin<R: tauri::Runtime>(to_file: bool) -> tauri::plugin::TauriPlugin<R> {
         })
         // Our own events and the webview's; dependencies only from warn up.
         .filter(|m| {
-            m.target() == TARGET || m.target().starts_with("webview") || m.level() <= Level::Warn
+            if m.target() == TARGET || m.target().starts_with("webview") {
+                return true;
+            }
+            // Dependencies (tao, wry…) can log in a loop too; their summary
+            // comes from flush_suppressed, since logging from a filter recurses.
+            m.level() <= Level::Warn
+                && admit(&format!("dep:{}", m.target()), Instant::now()).admitted
         })
         .format(|out, message, record| {
             out.finish(format_args!(
@@ -225,7 +231,15 @@ fn mask_after(text: &str, prefix: &str, min: usize) -> String {
 
 // A loop that fails (a page probing the bridge port, EMFILE) would otherwise
 // rotate the whole history out within minutes.
-fn admit(code: &str, now: Instant) -> (bool, u32) {
+struct Admission {
+    admitted: bool,
+    // The first line over the quota: worth a note, since the summary may never
+    // be written if the app dies before the window ends.
+    first_drop: bool,
+    reported: u32,
+}
+
+fn admit(code: &str, now: Instant) -> Admission {
     let mut rates = RATES
         .get_or_init(|| Mutex::new(HashMap::new()))
         .lock()
@@ -247,9 +261,17 @@ fn admit(code: &str, now: Instant) -> (bool, u32) {
     rate.count += 1;
     if rate.count > RATE_LIMIT {
         rate.dropped += 1;
-        return (false, reported);
+        return Admission {
+            admitted: false,
+            first_drop: rate.dropped == 1,
+            reported,
+        };
     }
-    (true, reported)
+    Admission {
+        admitted: true,
+        first_drop: false,
+        reported,
+    }
 }
 
 // Counts dropped since the last summary, written before the app stops or
@@ -282,16 +304,24 @@ pub fn emit(level: Level, code: &str, msg: &str, ctx: Value) {
         return;
     }
     if !matches!(code, "app.panic" | "app.start" | "app.stop") {
-        let (admitted, dropped) = admit(code, Instant::now());
-        if dropped > 0 {
+        let admission = admit(code, Instant::now());
+        if admission.reported > 0 {
             write(
                 Level::Warn,
                 "log.suppressed",
                 "Repeated lines were dropped",
-                json!({ "code": code, "dropped": dropped }),
+                json!({ "code": code, "dropped": admission.reported }),
             );
         }
-        if !admitted {
+        if admission.first_drop {
+            write(
+                Level::Warn,
+                "log.suppressing",
+                "Over 20 lines a minute: further lines of this code are dropped",
+                json!({ "code": code }),
+            );
+        }
+        if !admission.admitted {
             return;
         }
     }
@@ -489,10 +519,16 @@ mod tests {
     #[test]
     fn a_flood_of_one_code_is_capped_then_counted() {
         let start = Instant::now();
-        let admitted = (0..30).filter(|_| admit("test.flood", start).0).count();
-        assert_eq!(admitted, RATE_LIMIT as usize);
-        assert_eq!(admit("test.flood", start + RATE_WINDOW), (true, 10));
-        assert!(admit("test.other", start).0);
+        let admissions: Vec<Admission> = (0..30).map(|_| admit("test.flood", start)).collect();
+        assert_eq!(
+            admissions.iter().filter(|a| a.admitted).count(),
+            RATE_LIMIT as usize
+        );
+        assert_eq!(admissions.iter().filter(|a| a.first_drop).count(), 1);
+        assert!(admissions[RATE_LIMIT as usize].first_drop);
+        let next = admit("test.flood", start + RATE_WINDOW);
+        assert!(next.admitted && next.reported == 10);
+        assert!(admit("test.other", start).admitted);
     }
 
     #[test]

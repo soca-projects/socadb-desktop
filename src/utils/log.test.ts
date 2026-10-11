@@ -38,9 +38,13 @@ describe("log", () => {
     vi.setSystemTime(new Date(2026, 9, 11, 12, 0));
     for (let i = 0; i < 25; i++) logError("ui.unhandled_rejection", new Error("loop"));
     expect(vi.mocked(error)).toHaveBeenCalledTimes(20);
+    expect(JSON.parse(vi.mocked(warn).mock.calls[0][0])).toMatchObject({
+      code: "log.suppressing",
+      ctx: { code: "ui.unhandled_rejection" },
+    });
     vi.setSystemTime(new Date(2026, 9, 11, 12, 1, 1));
     logError("ui.unhandled_rejection", new Error("loop"));
-    const summary = JSON.parse(vi.mocked(warn).mock.calls[0][0]);
+    const summary = JSON.parse(vi.mocked(warn).mock.calls[1][0]);
     expect(summary).toMatchObject({
       code: "log.suppressed",
       ctx: { code: "ui.unhandled_rejection", dropped: 5 },
@@ -51,13 +55,13 @@ describe("log", () => {
   it("reports dropped lines when the page goes away, before the window ends", () => {
     for (let i = 0; i < 23; i++) logError("ui.render_crash", new Error("loop"));
     flushSuppressed();
-    const summary = JSON.parse(vi.mocked(warn).mock.calls[0][0]);
+    const summary = JSON.parse(vi.mocked(warn).mock.calls[1][0]);
     expect(summary).toMatchObject({
       code: "log.suppressed",
       ctx: { code: "ui.render_crash", dropped: 3 },
     });
     flushSuppressed();
-    expect(vi.mocked(warn)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(warn)).toHaveBeenCalledTimes(2);
   });
 
   it("never copies a parser's quote of the input, nor V8's message line in the stack", () => {

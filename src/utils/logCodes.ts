@@ -194,6 +194,13 @@ export const LOG_CODES = {
     meaning: "A React render threw; the error screen replaced the app.",
     check: "ctx.componentStack names the component; ctx.stack the line.",
   },
+  "log.suppressing": {
+    level: "warn",
+    meaning:
+      "A code just went over 20 lines a minute; its next lines are dropped until the window ends.",
+    check:
+      "ctx.code is looping; a log.suppressed line later gives the count, unless the app stopped first.",
+  },
   "log.suppressed": {
     level: "warn",
     meaning: "More than 20 lines of one code in a minute; the extra ones were dropped.",

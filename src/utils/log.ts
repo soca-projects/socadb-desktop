@@ -15,7 +15,10 @@ const rates = new Map<LogCode, { since: number; count: number; dropped: number }
 
 // An error thrown in a render or event loop would otherwise rotate the whole
 // history out of the log within minutes.
-function admit(code: LogCode, now: number): { admitted: boolean; dropped: number } {
+function admit(
+  code: LogCode,
+  now: number,
+): { admitted: boolean; firstDrop: boolean; dropped: number } {
   let rate = rates.get(code);
   let dropped = 0;
   if (!rate || now - rate.since >= RATE_WINDOW_MS) {
@@ -26,9 +29,9 @@ function admit(code: LogCode, now: number): { admitted: boolean; dropped: number
   rate.count += 1;
   if (rate.count > RATE_LIMIT) {
     rate.dropped += 1;
-    return { admitted: false, dropped };
+    return { admitted: false, firstDrop: rate.dropped === 1, dropped };
   }
-  return { admitted: true, dropped };
+  return { admitted: true, firstDrop: false, dropped };
 }
 
 export function flushSuppressed() {
@@ -43,9 +46,15 @@ export function flushSuppressed() {
 }
 
 function write(fn: Write, code: LogCode, message: string, ctx?: Context) {
-  const { admitted, dropped } = admit(code, Date.now());
+  const { admitted, firstDrop, dropped } = admit(code, Date.now());
   if (dropped > 0) {
     send(warn, "log.suppressed", "Repeated lines were dropped", { code, dropped });
+  }
+  // The summary may never come if the app quits mid-loop: say it now.
+  if (firstDrop) {
+    send(warn, "log.suppressing", "Over 20 lines a minute: further lines are dropped", {
+      code,
+    });
   }
   if (admitted) send(fn, code, message, ctx);
 }
