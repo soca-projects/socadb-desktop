@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { listen } from "@tauri-apps/api/event";
 import { getRecentFiles, clearRecentFiles, loadRecentFiles } from "../utils/recentFiles";
-import { handleOpenRecent, MENU_SHORTCUTS } from "../utils/menuActions";
+import { handleOpenRecent, handleShowLogs, MENU_SHORTCUTS } from "../utils/menuActions";
 import { handleUpdateMenuAction, updateMenuItemState } from "../utils/updater";
 import { useUpdateStore } from "../stores/updateStore";
 import { IS_MAC } from "../utils/platform";
@@ -266,14 +266,33 @@ async function setupMenu() {
     ],
   });
 
+  const showLogsItem = await MenuItem.new({
+    id: "show_logs",
+    text: t("menu.showLogs"),
+    action: () => handleShowLogs(),
+  });
   const items = appSubmenu
-    ? [appSubmenu, fileSubmenu, editSubmenu, viewSubmenu, windowSubmenu]
+    ? [
+        appSubmenu,
+        fileSubmenu,
+        editSubmenu,
+        viewSubmenu,
+        windowSubmenu,
+        await Submenu.new({ text: t("menu.help"), items: [showLogsItem] }),
+      ]
     : [
         fileSubmenu,
         editSubmenu,
         viewSubmenu,
         windowSubmenu,
-        await Submenu.new({ text: t("menu.help"), items: [updateItem] }),
+        await Submenu.new({
+          text: t("menu.help"),
+          items: [
+            updateItem,
+            await PredefinedMenuItem.new({ item: "Separator" }),
+            showLogsItem,
+          ],
+        }),
       ];
   const menu = await Menu.new({ items });
 

@@ -1,4 +1,5 @@
 import { emit } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toast } from "sonner";
 import i18next from "../i18n";
@@ -115,6 +116,10 @@ export function handleOpenRecent(filePath: string) {
     return;
   }
   void openRecentFile(filePath);
+}
+
+export function handleShowLogs() {
+  invoke("show_logs").catch((e: unknown) => logError("app.show_logs.failed", e));
 }
 
 // Closing the window triggers WindowEvent::Destroyed which runs the agent +

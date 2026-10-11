@@ -24,6 +24,11 @@ export const LOG_CODES = {
     check:
       "ctx.location and ctx.backtrace point at the line; read the info lines just before it.",
   },
+  "app.show_logs.failed": {
+    level: "error",
+    meaning: "Help › Show Logs could not reveal the log file.",
+    check: "The message from the opener plugin; the log dir may not exist yet.",
+  },
   "agent.spawn.failed": {
     level: "error",
     meaning: "The agent runner process (bun) could not be started.",
