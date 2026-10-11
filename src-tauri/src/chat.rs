@@ -220,15 +220,19 @@ async fn spawn_agent(
     api_key: Option<&str>,
     spawned_auth: SpawnedAuth,
 ) -> Result<AgentProcess, String> {
-    let layout = resolve_runtime_layout(app)?;
+    let layout = resolve_runtime_layout(app).inspect_err(|e| {
+        crate::log_event!(Level::Error, "agent.runtime.missing", e, "provider" => provider_id);
+    })?;
     let runner = agent_runner_path(&layout, provider_id);
 
     if !runner.exists() {
-        return Err(format!(
+        let message = format!(
             "Agent runner not found: {} (runtime dir: {})",
             runner.display(),
             layout.dir.display()
-        ));
+        );
+        crate::log_event!(Level::Error, "agent.runtime.missing", message, "provider" => provider_id);
+        return Err(message);
     }
 
     let mut cmd = Command::new(&layout.bun);

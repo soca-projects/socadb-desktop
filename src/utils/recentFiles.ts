@@ -1,4 +1,4 @@
-import { readTextFile } from "@tauri-apps/plugin-fs";
+import { exists, readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { join } from "@tauri-apps/api/path";
 import { emit } from "@tauri-apps/api/event";
@@ -24,6 +24,9 @@ export interface RecentEntry {
 
 let recentList: readonly RecentEntry[] = [];
 let loaded = false;
+// Set when recent.json exists but can't be read: writing would replace the
+// user's whole history with what this session saw.
+let persistBlocked = false;
 const listeners = new Set<() => void>();
 
 // No defensive copy: useSyncExternalStore re-renders forever if each call returns a new array.
@@ -93,6 +96,7 @@ async function recentFilePath(): Promise<string> {
 // atomic_write rather than plugin-fs: the fs scope covers what is inside
 // ~/.socadb but not the folder itself, which plugin-fs can't check or create.
 async function persistRecent() {
+  if (persistBlocked) return;
   try {
     await invoke("atomic_write", {
       path: await recentFilePath(),
@@ -104,15 +108,27 @@ async function persistRecent() {
 }
 
 export async function loadRecentFiles() {
+  const path = await recentFilePath();
   let content: string | null = null;
   try {
-    content = await readTextFile(await recentFilePath());
-  } catch {
-    // No recent.json yet (first launch or never persisted) — start with empty list.
+    content = await readTextFile(path);
+  } catch (e) {
+    if (await fileMayExist(path)) {
+      persistBlocked = true;
+      logError("recent.load.failed", e);
+    }
   }
   recentList = content === null ? [] : parseRecentFile(content);
   loaded = true;
   notify();
+}
+
+async function fileMayExist(path: string): Promise<boolean> {
+  try {
+    return await exists(path);
+  } catch {
+    return true;
+  }
 }
 
 function parseRecentFile(content: string): readonly RecentEntry[] {

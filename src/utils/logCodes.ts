@@ -42,6 +42,18 @@ export const LOG_CODES = {
     check:
       "The message names the bun and runner paths: missing runtime in the bundle, or run `bun run build:mcp` in dev.",
   },
+  "agent.runtime.missing": {
+    level: "error",
+    meaning:
+      "The bundled agent runtime (bun or a runner script) wasn't found, so no agent can start.",
+    check: "A broken bundle; in dev run `bun run build:mcp` after switching branches.",
+  },
+  "agent.send.failed": {
+    level: "error",
+    meaning: "Sending a chat message to the agent failed before any reply.",
+    check:
+      "The message (api_key_missing, keyring_unavailable…) and the agent.* lines just before.",
+  },
   "agent.stderr": {
     level: "debug",
     meaning: "Dev builds only: a line the agent runner wrote to stderr (500 chars max).",
@@ -296,6 +308,13 @@ export const LOG_CODES = {
     meaning: "The recents list could not be written to ~/.socadb/recent.json.",
     check:
       "The message: permissions or disk on ~/.socadb; the home loses recent changes at restart.",
+  },
+  "recent.load.failed": {
+    level: "error",
+    meaning:
+      "recent.json exists but couldn't be read; recents won't be saved this session.",
+    check:
+      "Permissions on ~/.socadb/recent.json; nothing is written until a later launch can read it.",
   },
   "recent.load.invalid": {
     level: "warn",

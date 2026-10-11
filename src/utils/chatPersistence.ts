@@ -1,6 +1,6 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { queueConfigWrite, readConfigForUpdate, socadbConfigPath } from "./socadbDir";
 import { logError, logWarn } from "./log";
 import {
   deleteConversationFiles,
@@ -157,13 +157,7 @@ async function writeConfigToDisk(state: {
   apiKeys?: Record<string, string>;
 }) {
   const path = await socadbConfigPath();
-  let existing: Record<string, unknown> = {};
-  try {
-    const content = await readTextFile(path);
-    existing = JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    // No config.json yet — start from empty object.
-  }
+  const existing = await readConfigForUpdate(path);
 
   if (state.providers) {
     existing.providers = state.providers;

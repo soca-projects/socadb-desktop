@@ -25,6 +25,7 @@ import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
 import { ChatHistory } from "../ChatHistory/ChatHistory";
+import { logError } from "../../utils/log";
 import {
   CHAT_PANEL_MIN_WIDTH,
   CHAT_PANEL_MIN_HEIGHT,
@@ -199,6 +200,7 @@ export function ChatPanel() {
           effort: effortToSend,
         });
       } catch (e) {
+        logError("agent.send.failed", e, { provider: activeProviderId });
         const store = useChatStore.getState();
         store.appendAssistantText(chatSendErrorText(activeProviderId, e));
         store.finishResponse("");

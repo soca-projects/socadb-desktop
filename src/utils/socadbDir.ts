@@ -1,4 +1,8 @@
 import { homeDir, join } from "@tauri-apps/api/path";
+import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import { z } from "zod";
+
+const ConfigObjectZ = z.record(z.string(), z.unknown());
 
 let cached: string | null = null;
 
@@ -11,6 +15,16 @@ export async function getSocadbDir(): Promise<string> {
 
 export async function socadbConfigPath(): Promise<string> {
   return await join(await getSocadbDir(), "config.json");
+}
+
+// For read-modify-write cycles: a missing file starts empty, but one that can't
+// be read or parsed throws, since rewriting it with one key would silently drop
+// every other setting.
+export async function readConfigForUpdate(
+  path: string,
+): Promise<Record<string, unknown>> {
+  if (!(await exists(path))) return {};
+  return ConfigObjectZ.parse(JSON.parse(await readTextFile(path)));
 }
 
 // Serializes all read-modify-write cycles on ~/.socadb/config.json. Multiple

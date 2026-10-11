@@ -9,7 +9,7 @@ import {
   McpServerEntryZ,
   type IntegrationChoiceZ,
 } from "./zodSchemas";
-import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { queueConfigWrite, readConfigForUpdate, socadbConfigPath } from "./socadbDir";
 import { logError, logWarn } from "./log";
 
 export const INTEGRATION_IDS = ["claudeCode", "claudeDesktop", "codex"] as const;
@@ -182,12 +182,7 @@ async function readChoices(): Promise<IntegrationChoices> {
 async function saveChoice(id: IntegrationId, choice: IntegrationChoice) {
   await queueConfigWrite(async () => {
     const path = await socadbConfigPath();
-    let data: Record<string, unknown> = {};
-    try {
-      data = JSON.parse(await readTextFile(path)) as Record<string, unknown>;
-    } catch {
-      // First save: file doesn't exist yet, start from empty object.
-    }
+    const data = await readConfigForUpdate(path);
     const choices = IntegrationChoicesZ.safeParse(data.integrations);
     data.integrations = { ...(choices.success ? choices.data : {}), [id]: choice };
     await invoke("atomic_write", { path, content: JSON.stringify(data) });
