@@ -112,7 +112,7 @@ export const LOG_CODES = {
     check: "Many in a row usually mean too many open files.",
   },
   "mcp.ws.handshake_failed": {
-    level: "warn",
+    level: "debug",
     meaning: "A connection to the bridge failed the WebSocket handshake.",
     check:
       "A browser origin is refused on purpose; otherwise a client spoke the wrong protocol.",
@@ -168,6 +168,12 @@ export const LOG_CODES = {
     level: "error",
     meaning: "A React render threw; the error screen replaced the app.",
     check: "ctx.componentStack names the component; ctx.stack the line.",
+  },
+  "log.suppressed": {
+    level: "warn",
+    meaning: "More than 20 lines of one code in a minute; the extra ones were dropped.",
+    check:
+      "ctx.code repeated ctx.dropped more times: a failure loop worth fixing on its own.",
   },
   "menu.action": {
     level: "info",

@@ -19,6 +19,8 @@ type WsClients = Arc<Mutex<HashMap<u64, WsSink>>>;
 
 static WS_CLIENTS: std::sync::OnceLock<WsClients> = std::sync::OnceLock::new();
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
+const MIN_BACKOFF: std::time::Duration = std::time::Duration::from_millis(100);
+const MAX_BACKOFF: std::time::Duration = std::time::Duration::from_secs(5);
 
 fn get_clients() -> &'static WsClients {
     WS_CLIENTS.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
@@ -52,15 +54,18 @@ pub async fn start_ws_server(app: AppHandle) -> Result<u16, String> {
             }
             Err(e) => crate::log_event!(Level::Error, "mcp.port_file.write_failed", e),
         }
+        let mut backoff = MIN_BACKOFF;
         loop {
             match listener.accept().await {
                 Ok((stream, _)) => {
+                    backoff = MIN_BACKOFF;
                     tokio::spawn(handle_connection(stream, app.clone()));
                 }
                 // One failed accept (too many open files, a reset) must not end the bridge.
                 Err(e) => {
                     crate::log_event!(Level::Warn, "mcp.ws.accept_failed", e);
-                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    tokio::time::sleep(backoff).await;
+                    backoff = (backoff * 2).min(MAX_BACKOFF);
                 }
             }
         }
@@ -85,7 +90,7 @@ async fn handle_connection(stream: tokio::net::TcpStream, app: AppHandle) {
     let ws_stream = match accept_hdr_async(stream, reject_browser_origin).await {
         Ok(ws) => ws,
         Err(e) => {
-            crate::log_event!(Level::Warn, "mcp.ws.handshake_failed", e);
+            crate::log_event!(Level::Debug, "mcp.ws.handshake_failed", e);
             return;
         }
     };

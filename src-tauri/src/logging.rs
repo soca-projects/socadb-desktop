@@ -1,6 +1,8 @@
 use log::{Level, LevelFilter};
 use serde_json::{json, Map, Value};
-use std::sync::OnceLock;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
 pub const TARGET: &str = "socadb";
@@ -9,7 +11,17 @@ const ROTATED_FILES: usize = 4;
 const MAX_MESSAGE: usize = 2000;
 pub const MAX_STDERR_LINE: usize = 500;
 
+const RATE_WINDOW: Duration = Duration::from_secs(60);
+const RATE_LIMIT: u32 = 20;
+
 static LAUNCH_ID: OnceLock<String> = OnceLock::new();
+static RATES: OnceLock<Mutex<HashMap<String, Rate>>> = OnceLock::new();
+
+struct Rate {
+    since: Instant,
+    count: u32,
+    dropped: u32,
+}
 static HOMES: OnceLock<Vec<String>> = OnceLock::new();
 
 pub fn launch_id() -> &'static str {
@@ -211,7 +223,54 @@ fn mask_after(text: &str, prefix: &str, min: usize) -> String {
     out
 }
 
+// A loop that fails (a page probing the bridge port, EMFILE) would otherwise
+// rotate the whole history out within minutes.
+fn admit(code: &str, now: Instant) -> (bool, u32) {
+    let mut rates = RATES
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let rate = rates.entry(code.to_owned()).or_insert(Rate {
+        since: now,
+        count: 0,
+        dropped: 0,
+    });
+    let mut reported = 0;
+    if now.duration_since(rate.since) >= RATE_WINDOW {
+        reported = rate.dropped;
+        *rate = Rate {
+            since: now,
+            count: 0,
+            dropped: 0,
+        };
+    }
+    rate.count += 1;
+    if rate.count > RATE_LIMIT {
+        rate.dropped += 1;
+        return (false, reported);
+    }
+    (true, reported)
+}
+
 pub fn emit(level: Level, code: &str, msg: &str, ctx: Value) {
+    if !matches!(code, "app.panic" | "app.start" | "app.stop") {
+        let (admitted, dropped) = admit(code, Instant::now());
+        if dropped > 0 {
+            write(
+                Level::Warn,
+                "log.suppressed",
+                "Repeated lines were dropped",
+                json!({ "code": code, "dropped": dropped }),
+            );
+        }
+        if !admitted {
+            return;
+        }
+    }
+    write(level, code, msg, ctx);
+}
+
+fn write(level: Level, code: &str, msg: &str, ctx: Value) {
     let msg = truncate(msg, MAX_MESSAGE);
     let area = code.split('.').next().unwrap_or("app");
     let payload = json!({ "area": area, "code": code, "msg": msg, "ctx": ctx });
@@ -354,6 +413,15 @@ mod tests {
         assert!(line.starts_with(
             r#"{"ts":"2026-10-11T00:00:00.000Z","level":"error","launch":"L1","src":"rust""#
         ));
+    }
+
+    #[test]
+    fn a_flood_of_one_code_is_capped_then_counted() {
+        let start = Instant::now();
+        let admitted = (0..30).filter(|_| admit("test.flood", start).0).count();
+        assert_eq!(admitted, RATE_LIMIT as usize);
+        assert_eq!(admit("test.flood", start + RATE_WINDOW), (true, 10));
+        assert!(admit("test.other", start).0);
     }
 
     #[test]

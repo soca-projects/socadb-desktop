@@ -20,15 +20,15 @@ function codes(texts: string[], pattern: RegExp): string[] {
 
 const rustCodes = codes(
   sources("src-tauri/src", [".rs"]),
-  /(?:log_event!|emit)\(\s*[^,()]+,\s*"([a-z_.]+)"/g,
+  /(?:log_event!|emit|write)\(\s*[^,()]+,\s*"([a-z_]+\.[a-z_.]+)"/g,
 );
 const mcpCodes = codes(
   sources("mcp-server/src", [".ts"]),
-  /mcpLog\.\w+\(\s*"([a-z_.]+)"/g,
+  /mcpLog\.\w+\(\s*"([a-z_]+\.[a-z_.]+)"/g,
 );
 const uiCodes = codes(
   sources("src", [".ts", ".tsx"]),
-  /log(?:Error|Warn|Info|Debug)\(\s*"([a-z_.]+)"/g,
+  /(?:log(?:Error|Warn|Info|Debug)\(|send\(\s*\w+,)\s*"([a-z_]+\.[a-z_.]+)"/g,
 );
 
 describe("log code catalogue", () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@tauri-apps/plugin-log", () => ({
   error: vi.fn(() => Promise.resolve()),
@@ -15,6 +15,10 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("log", () => {
   it("writes one coded JSON payload with the error's stack", () => {
     logError("ui.uncaught", new Error("disk full"), { source: "App.tsx" });
@@ -26,6 +30,21 @@ describe("log", () => {
       ctx: { source: "App.tsx" },
     });
     expect(payload.ctx.stack).toContain("disk full");
+  });
+
+  it("caps a flood of one code, then reports how many lines it dropped", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 11, 12, 0));
+    for (let i = 0; i < 25; i++) logError("ui.unhandled_rejection", new Error("loop"));
+    expect(vi.mocked(error)).toHaveBeenCalledTimes(20);
+    vi.setSystemTime(new Date(2026, 9, 11, 12, 1, 1));
+    logError("ui.unhandled_rejection", new Error("loop"));
+    const summary = JSON.parse(vi.mocked(warn).mock.calls[0][0]);
+    expect(summary).toMatchObject({
+      code: "log.suppressed",
+      ctx: { code: "ui.unhandled_rejection", dropped: 5 },
+    });
+    expect(vi.mocked(error)).toHaveBeenCalledTimes(21);
   });
 
   it("sums up a validation error on one line", () => {
