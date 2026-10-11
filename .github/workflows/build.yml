@@ -11,6 +11,10 @@ on:
         description: 'Tag name to publish under (only used when publish=true)'
         type: string
         default: ''
+      version:
+        description: 'X.Y.Z written into the version files before building (only used when publish=true)'
+        type: string
+        default: ''
       release-body:
         description: 'GitHub release body (only used when publish=true)'
         type: string
@@ -91,6 +95,13 @@ jobs:
 
       - name: Install MCP server dependencies
         run: cd mcp-server && bun install --frozen-lockfile
+
+      - name: Write the release version
+        if: ${{ inputs.publish && inputs.version != '' }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: bun scripts/version.ts set "$VERSION"
 
       # Override createUpdaterArtifacts so tauri-build doesn't require
       # TAURI_SIGNING_PRIVATE_KEY in PR runs. Bundling is still validated;
