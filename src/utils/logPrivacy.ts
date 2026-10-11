@@ -41,19 +41,32 @@ export function pathForLog(path: string): PathForLog {
   };
 }
 
+// Escapes are skipped so `\"name\"` inside a JSON string can't flip the match;
+// a quote right after a letter is an apostrophe ("can't"), not an opening one.
+const DOUBLE_QUOTED = /"(?:[^"\\]|\\.)*"/g;
+const SINGLE_QUOTED = /(?<![\p{L}\p{N}])'(?:[^'\\]|\\.)*'/gu;
+
 export function maskQuoted(text: string): string {
-  return text.replace(/"[^"]*"/g, '"…"');
+  return text.replace(DOUBLE_QUOTED, '"…"').replace(SINGLE_QUOTED, "'…'");
 }
 
-const LABELLED_PATH = /(at path: |forbidden path: )(.+?)(?= with error:|, maybe |$)/g;
-const POSIX_PATH = /(?<![\w:/.])\/(?:[^\s/"'`]+\/)+[^\s"'`,)]*/g;
-const WINDOWS_PATH = /\b[a-z]:\\[^\s"'`,)]*/gi;
-const UNC_PATH = /\\\\[^\s"'`,)]+/g;
+// A path runs to the end of the message or to the next known separator: folder
+// names often hold spaces ("Acme Corp"), so whitespace can't end it.
+const PATH_END = String.raw`(?=\s+with error:|, maybe |["'\`]|$)`;
+const FILE_URL = /file:\/\/\S+/gi;
+const LABELLED_PATH = new RegExp(String.raw`(path:\s*)(.+?)${PATH_END}`, "gim");
+const UNC_PATH = new RegExp(String.raw`\\\\[^\\\s]+\\.*?${PATH_END}`, "gm");
+const WINDOWS_PATH = new RegExp(String.raw`\b[a-z]:\\.*?${PATH_END}`, "gim");
+const POSIX_PATH = new RegExp(
+  String.raw`(?<![\w:/.])\/(?:Users|home|Volumes|private|var|tmp|mnt|media|opt|srv|root)\/.*?${PATH_END}`,
+  "gm",
+);
 
 // Error text from file APIs quotes the full path; the log keeps only a
 // placeholder, and callers pass pathForLog() in ctx when the place matters.
 export function maskPaths(text: string): string {
   return text
+    .replace(FILE_URL, "<path>")
     .replace(LABELLED_PATH, "$1<path>")
     .replace(UNC_PATH, "<path>")
     .replace(WINDOWS_PATH, "<path>")

@@ -1,7 +1,7 @@
 import { debug, error, info, warn } from "@tauri-apps/plugin-log";
 import { z } from "zod";
 import { toMessage } from "./errorMessage";
-import { maskPaths } from "./logPrivacy";
+import { maskPaths, maskQuoted } from "./logPrivacy";
 import type { LogCode } from "./logCodes";
 
 type Context = Record<string, unknown>;
@@ -65,12 +65,22 @@ function describe(cause: unknown): string {
       .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
       .join("; ");
   }
-  return maskPaths(toMessage(cause));
+  // Both engines quote the offending input (JSC the token, V8 a snippet), and
+  // that input is a user's file or an agent's output.
+  if (cause instanceof SyntaxError) return "Invalid JSON";
+  return maskQuoted(maskPaths(toMessage(cause)));
+}
+
+// V8 starts a stack with "Name: message", which would bypass describe().
+function stackOf(cause: unknown): string | undefined {
+  if (!(cause instanceof Error) || cause instanceof z.ZodError) return undefined;
+  if (cause instanceof SyntaxError || !cause.stack) return undefined;
+  const lines = cause.stack.split("\n");
+  return (lines[0].startsWith(`${cause.name}:`) ? lines.slice(1) : lines).join("\n");
 }
 
 export function logError(code: LogCode, cause: unknown, ctx?: Context) {
-  const stack =
-    cause instanceof Error && !(cause instanceof z.ZodError) ? cause.stack : undefined;
+  const stack = stackOf(cause);
   write(error, code, describe(cause), stack ? { ...ctx, stack } : ctx);
 }
 

@@ -317,20 +317,33 @@ macro_rules! log_event {
     };
 }
 
+// Escapes are skipped so `\"name\"` inside a JSON string can't flip the
+// state; a quote right after a letter or digit is an apostrophe ("can't").
 pub fn mask_quoted(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
-    let mut inside = false;
-    for c in text.chars() {
-        if c == '"' {
-            if !inside {
-                out.push_str("\"…");
-            } else {
-                out.push('"');
+    let mut chars = text.chars();
+    let mut previous: Option<char> = None;
+    let mut quote: Option<char> = None;
+    while let Some(c) = chars.next() {
+        match quote {
+            Some(open) => {
+                if c == '\\' {
+                    chars.next();
+                } else if c == open {
+                    out.push(open);
+                    quote = None;
+                }
             }
-            inside = !inside;
-        } else if !inside {
-            out.push(c);
+            None => {
+                out.push(c);
+                let opens = c == '"' || (c == '\'' && !previous.is_some_and(char::is_alphanumeric));
+                if opens {
+                    out.push('…');
+                    quote = Some(c);
+                }
+            }
         }
+        previous = Some(c);
     }
     out
 }
@@ -491,6 +504,15 @@ mod tests {
         assert_eq!(tail.len(), 10);
         assert_eq!(tail[0], r#"line 5 {"…":"…","…":"…"}"#);
         assert!(!tail.iter().any(|l| l.contains("secret")));
+    }
+
+    #[test]
+    fn quoted_text_is_masked_despite_escapes() {
+        assert_eq!(
+            mask_quoted(r#"{"message":"I created \"patients_hiv\" tables"}"#),
+            r#"{"…":"…"}"#
+        );
+        assert_eq!(mask_quoted("can't find 'patients_hiv'"), "can't find '…'");
     }
 
     #[test]

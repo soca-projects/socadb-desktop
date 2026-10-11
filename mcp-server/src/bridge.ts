@@ -52,7 +52,7 @@ export function connect(): Promise<void> {
           clearTimeout(handler.timer);
           pending.delete(msg.id);
           if (msg.error) {
-            mcpLog.warn("mcp.server.request_failed", String(msg.error).replace(/"[^"]*"/g, '"…"'), {
+            mcpLog.warn("mcp.server.request_failed", String(msg.error).replace(/"(?:[^"\\]|\\.)*"/g, '"…"'), {
               action: handler.action,
             });
             handler.reject(new Error(msg.error));

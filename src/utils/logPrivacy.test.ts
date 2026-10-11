@@ -45,11 +45,23 @@ describe("maskPaths", () => {
         "forbidden path: /Volumes/ClientX/a.soca, maybe it is not allowed on the scope",
       ),
     ).toBe("forbidden path: <path>, maybe it is not allowed on the scope");
-    expect(maskPaths("cannot read D:\\Clients\\x.soca now")).toBe(
-      "cannot read <path> now",
+    expect(maskPaths("failed to get metadata of path: /Users/ana/Acme Corp/x.soca")).toBe(
+      "failed to get metadata of path: <path>",
     );
-    expect(maskPaths("cannot read /home/ana/x.soca")).toBe("cannot read <path>");
-    expect(maskPaths("see \\\\fs01\\share\\x.soca")).toBe("see <path>");
+  });
+
+  it("removes unlabelled paths to the end of the message", () => {
+    expect(maskPaths("Not allowed to open /Users/ana/Patients HIV/x.soca")).toBe(
+      "Not allowed to open <path>",
+    );
+    expect(
+      maskPaths("cannot read C:\\Users\\Ana Lopez\\Documents\\Acme Corp\\x.soca"),
+    ).toBe("cannot read <path>");
+    expect(maskPaths("see \\\\fs01\\share\\Acme Corp\\x.soca")).toBe("see <path>");
+    expect(maskPaths("open file:///Users/ana/Acme/x.soca failed")).toBe(
+      "open <path> failed",
+    );
+    expect(maskPaths('reveal "/home/ana/x.soca" failed')).toBe('reveal "<path>" failed');
   });
 
   it("leaves URLs and plain text alone", () => {
@@ -65,5 +77,14 @@ describe("maskQuoted", () => {
     expect(maskQuoted('Table "patients_hiv" already exists')).toBe(
       'Table "…" already exists',
     );
+  });
+
+  it("isn't fooled by escaped quotes, and masks single quotes but not apostrophes", () => {
+    expect(
+      maskQuoted(
+        '{"message":"model output: I created \\"patients_hiv\\" and \\"billing\\" tables"}',
+      ),
+    ).toBe('{"…":"…"}');
+    expect(maskQuoted("can't find table 'patients_hiv'")).toBe("can't find table '…'");
   });
 });

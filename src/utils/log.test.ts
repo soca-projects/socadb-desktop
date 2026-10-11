@@ -29,7 +29,8 @@ describe("log", () => {
       msg: "disk full",
       ctx: { source: "App.tsx" },
     });
-    expect(payload.ctx.stack).toContain("disk full");
+    expect(payload.ctx.stack).toContain("log.test.ts");
+    expect(payload.ctx.stack).not.toContain("disk full");
   });
 
   it("caps a flood of one code, then reports how many lines it dropped", () => {
@@ -57,6 +58,27 @@ describe("log", () => {
     });
     flushSuppressed();
     expect(vi.mocked(warn)).toHaveBeenCalledTimes(1);
+  });
+
+  it("never copies a parser's quote of the input, nor V8's message line in the stack", () => {
+    let parseError: unknown;
+    try {
+      JSON.parse('{"table": patients_hiv}');
+    } catch (e) {
+      parseError = e;
+    }
+    logError("import.failed", parseError);
+    const parsed = JSON.parse(vi.mocked(error).mock.calls[0][0]);
+    expect(parsed.msg).toBe("Invalid JSON");
+    expect(parsed.ctx).toBeUndefined();
+
+    const failure = new Error('Table "patients_hiv" already exists');
+    failure.stack =
+      'Error: Table "patients_hiv" already exists\n    at create (App.tsx:1:1)';
+    logError("mcp.request.failed", failure);
+    const logged = JSON.parse(vi.mocked(error).mock.calls[1][0]);
+    expect(logged.msg).toBe('Table "…" already exists');
+    expect(logged.ctx.stack).toBe("    at create (App.tsx:1:1)");
   });
 
   it("sums up a validation error on one line", () => {
