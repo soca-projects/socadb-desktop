@@ -3,12 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@tauri-apps/plugin-fs", () => ({ exists: vi.fn(), readTextFile: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(() => Promise.resolve()) }));
 vi.mock("@tauri-apps/api/path", () => ({ homeDir: vi.fn(), join: vi.fn() }));
-vi.mock("@tauri-apps/plugin-log", () => ({
-  error: vi.fn(() => Promise.resolve()),
-  warn: vi.fn(() => Promise.resolve()),
-  info: vi.fn(() => Promise.resolve()),
-  debug: vi.fn(() => Promise.resolve()),
-}));
 
 import { exists, readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
@@ -24,7 +18,7 @@ describe("readConfigForUpdate", () => {
   it("starts empty when there is no config yet", async () => {
     vi.mocked(exists).mockResolvedValue(false);
     expect(await readConfigForUpdate(PATH)).toEqual({});
-    expect(invoke).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalledWith("atomic_write", expect.anything());
   });
 
   it("keeps every setting of a valid config", async () => {
@@ -47,6 +41,6 @@ describe("readConfigForUpdate", () => {
     vi.mocked(exists).mockResolvedValue(true);
     vi.mocked(readTextFile).mockRejectedValue(new Error("Operation not permitted"));
     await expect(readConfigForUpdate(PATH)).rejects.toThrow("Operation not permitted");
-    expect(invoke).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalledWith("atomic_write", expect.anything());
   });
 });

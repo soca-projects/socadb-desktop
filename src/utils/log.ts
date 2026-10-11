@@ -1,4 +1,4 @@
-import { debug, error, info, warn } from "@tauri-apps/plugin-log";
+import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
 import { toMessage } from "./errorMessage";
 import { maskPaths, maskQuoted } from "./logPrivacy";
@@ -6,6 +6,22 @@ import type { LogCode } from "./logCodes";
 
 type Context = Record<string, unknown>;
 type Write = (message: string) => Promise<void>;
+
+// tauri-plugin-log's own command, called directly: its npm wrapper must match
+// the crate's minor version, and the versions that match our Tauri pull either
+// a second @tauri-apps/api or a vulnerable crate (rkyv via byte-unit).
+const LEVELS = { debug: 2, info: 3, warn: 4, error: 5 } as const;
+
+function command(level: keyof typeof LEVELS): Write {
+  return async (message) => {
+    await invoke("plugin:log|log", { level: LEVELS[level], message });
+  };
+}
+
+const debug = command("debug");
+const info = command("info");
+const warn = command("warn");
+const error = command("error");
 
 const MAX_MESSAGE = 2000;
 const RATE_WINDOW_MS = 60_000;
