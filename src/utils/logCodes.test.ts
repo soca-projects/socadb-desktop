@@ -20,18 +20,21 @@ function codes(texts: string[], pattern: RegExp): string[] {
 
 const rustCodes = codes(
   sources("src-tauri/src", [".rs"]),
-  /(?:log_event!|emit|write)\(\s*[^,()]+,\s*"([a-z_]+\.[a-z_.]+)"/g,
+  /(?:log_event!|emit|write)\(\s*(?:log::)?Level::\w+,\s*"([^"]*)"/g,
 );
-const mcpCodes = codes(
-  sources("mcp-server/src", [".ts"]),
-  /mcpLog\.\w+\(\s*"([a-z_]+\.[a-z_.]+)"/g,
-);
+const mcpCodes = codes(sources("mcp-server/src", [".ts"]), /mcpLog\.\w+\(\s*"([^"]*)"/g);
 const uiCodes = codes(
   sources("src", [".ts", ".tsx"]),
-  /(?:log(?:Error|Warn|Info|Debug)\(|send\(\s*\w+,)\s*"([a-z_]+\.[a-z_.]+)"/g,
+  /(?:log(?:Error|Warn|Info|Debug)\(|send\(\s*\w+,)\s*"([^"]*)"/g,
 );
 
 describe("log code catalogue", () => {
+  it("finds the codes it checks", () => {
+    expect(rustCodes).toContain("app.start");
+    expect(mcpCodes).toContain("mcp.server.start");
+    expect(uiCodes).toContain("ui.start");
+  });
+
   it("knows every code the Rust and MCP code write", () => {
     const unknown = [...rustCodes, ...mcpCodes].filter((code) => !(code in LOG_CODES));
     expect(unknown).toEqual([]);
