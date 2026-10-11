@@ -1,6 +1,7 @@
 import { debug, error, info, warn } from "@tauri-apps/plugin-log";
 import { z } from "zod";
 import { toMessage } from "./errorMessage";
+import { maskPaths } from "./logPrivacy";
 import type { LogCode } from "./logCodes";
 
 type Context = Record<string, unknown>;
@@ -53,7 +54,7 @@ function describe(cause: unknown): string {
       .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
       .join("; ");
   }
-  return toMessage(cause);
+  return maskPaths(toMessage(cause));
 }
 
 export function logError(code: LogCode, cause: unknown, ctx?: Context) {

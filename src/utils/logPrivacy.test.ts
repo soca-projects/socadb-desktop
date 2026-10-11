@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { maskQuoted, pathForLog } from "./logPrivacy";
+import { maskPaths, maskQuoted, pathForLog } from "./logPrivacy";
 
 describe("pathForLog", () => {
   it("keeps where a file is, never its name or folders", () => {
@@ -28,6 +28,35 @@ describe("pathForLog", () => {
     expect(pathForLog("/Users/ana/Documents/a.soca").id).toBe(a);
     expect(pathForLog("/Users/ana/Documents/b.soca").id).not.toBe(a);
     expect(a).toMatch(/^[0-9a-f]{8}$/);
+  });
+});
+
+describe("maskPaths", () => {
+  it("removes paths from file API errors, spaces included", () => {
+    expect(
+      maskPaths(
+        "failed to open file at path: /Users/ana/Clients/Acme Corp/Q3 billing.soca with error: Permission denied (os error 13)",
+      ),
+    ).toBe(
+      "failed to open file at path: <path> with error: Permission denied (os error 13)",
+    );
+    expect(
+      maskPaths(
+        "forbidden path: /Volumes/ClientX/a.soca, maybe it is not allowed on the scope",
+      ),
+    ).toBe("forbidden path: <path>, maybe it is not allowed on the scope");
+    expect(maskPaths("cannot read D:\\Clients\\x.soca now")).toBe(
+      "cannot read <path> now",
+    );
+    expect(maskPaths("cannot read /home/ana/x.soca")).toBe("cannot read <path>");
+    expect(maskPaths("see \\\\fs01\\share\\x.soca")).toBe("see <path>");
+  });
+
+  it("leaves URLs and plain text alone", () => {
+    expect(maskPaths("fetch http://localhost:1420/src/App.tsx failed")).toBe(
+      "fetch http://localhost:1420/src/App.tsx failed",
+    );
+    expect(maskPaths("Table not found")).toBe("Table not found");
   });
 });
 

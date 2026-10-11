@@ -305,6 +305,11 @@ async fn spawn_agent(
             .lock()
             .map(|t| t.iter().cloned().collect())
             .unwrap_or_default();
+        let tail = if cfg!(debug_assertions) {
+            tail
+        } else {
+            crate::logging::release_tail(&tail)
+        };
         let exit_info = match status {
             Ok(s) if s.success() => {
                 crate::log_event!(

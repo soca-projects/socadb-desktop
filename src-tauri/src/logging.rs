@@ -289,6 +289,34 @@ macro_rules! log_event {
     };
 }
 
+pub fn mask_quoted(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut inside = false;
+    for c in text.chars() {
+        if c == '"' {
+            if !inside {
+                out.push_str("\"…");
+            } else {
+                out.push('"');
+            }
+            inside = !inside;
+        } else if !inside {
+            out.push(c);
+        }
+    }
+    out
+}
+
+// What a release log keeps of an agent's last stderr lines: runners can echo
+// request text and raw agent events, so only their shape survives.
+pub fn release_tail(lines: &[String]) -> Vec<String> {
+    let start = lines.len().saturating_sub(10);
+    lines[start..]
+        .iter()
+        .map(|line| truncate(&mask_quoted(line), 200))
+        .collect()
+}
+
 pub fn truncate(text: &str, max: usize) -> String {
     match text.char_indices().nth(max) {
         Some((cut, _)) => format!("{}…", &text[..cut]),
@@ -422,6 +450,17 @@ mod tests {
         assert_eq!(admitted, RATE_LIMIT as usize);
         assert_eq!(admit("test.flood", start + RATE_WINDOW), (true, 10));
         assert!(admit("test.other", start).0);
+    }
+
+    #[test]
+    fn release_tails_keep_the_shape_of_runner_lines() {
+        let lines: Vec<String> = (0..15)
+            .map(|i| format!(r#"line {i} {{"type":"agent_message","text":"secret plan"}}"#))
+            .collect();
+        let tail = release_tail(&lines);
+        assert_eq!(tail.len(), 10);
+        assert_eq!(tail[0], r#"line 5 {"…":"…","…":"…"}"#);
+        assert!(!tail.iter().any(|l| l.contains("secret")));
     }
 
     #[test]

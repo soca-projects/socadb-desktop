@@ -44,3 +44,18 @@ export function pathForLog(path: string): PathForLog {
 export function maskQuoted(text: string): string {
   return text.replace(/"[^"]*"/g, '"…"');
 }
+
+const LABELLED_PATH = /(at path: |forbidden path: )(.+?)(?= with error:|, maybe |$)/g;
+const POSIX_PATH = /(?<![\w:/.])\/(?:[^\s/"'`]+\/)+[^\s"'`,)]*/g;
+const WINDOWS_PATH = /\b[a-z]:\\[^\s"'`,)]*/gi;
+const UNC_PATH = /\\\\[^\s"'`,)]+/g;
+
+// Error text from file APIs quotes the full path; the log keeps only a
+// placeholder, and callers pass pathForLog() in ctx when the place matters.
+export function maskPaths(text: string): string {
+  return text
+    .replace(LABELLED_PATH, "$1<path>")
+    .replace(UNC_PATH, "<path>")
+    .replace(WINDOWS_PATH, "<path>")
+    .replace(POSIX_PATH, "<path>");
+}
