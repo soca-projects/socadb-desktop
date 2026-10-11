@@ -205,6 +205,12 @@ function serialize<T>(work: () => Promise<T>): Promise<T> {
   return next;
 }
 
+// Parse errors of other apps' configs can quote the file (JSC's JSON errors
+// include the bad token), and those files hold tokens: log only the kind.
+export function configErrorForLog(error: unknown): unknown {
+  return error instanceof SyntaxError ? "Invalid JSON" : error;
+}
+
 export function getMcpServerPath(): Promise<string> {
   return invoke<string>("get_mcp_binary_path");
 }
@@ -229,7 +235,7 @@ export async function syncIntegrations() {
         if (plan.choice && plan.choice !== choices[id]) await saveChoice(id, plan.choice);
       } catch (e) {
         // Never rewrite a file we couldn't parse: it holds the client's whole config.
-        logWarn("mcp.registration.failed", e, { client: id });
+        logWarn("mcp.registration.failed", configErrorForLog(e), { client: id });
       }
     }
   });
@@ -242,7 +248,9 @@ export async function getIntegrationStatuses(): Promise<IntegrationStatus[]> {
       try {
         return statusOf(id, choices[id], await CLIENTS[id].read());
       } catch (e) {
-        logWarn("mcp.registration.config_unreadable", e, { client: id });
+        logWarn("mcp.registration.config_unreadable", configErrorForLog(e), {
+          client: id,
+        });
         return { id, installed: true, enabled: false, removed: false, unreadable: true };
       }
     }),

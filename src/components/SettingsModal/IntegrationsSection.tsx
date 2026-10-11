@@ -8,6 +8,7 @@ import { CopyableCommand } from "./CopyableCommand";
 import { toMessage } from "../../utils/errorMessage";
 import { logError } from "../../utils/log";
 import {
+  configErrorForLog,
   getIntegrationStatuses,
   getMcpServerPath,
   setIntegrationEnabled,
@@ -212,7 +213,9 @@ export function IntegrationsSection() {
         await setIntegrationEnabled(status.id, !status.enabled);
         setChanged((c) => ({ ...c, [status.id]: true }));
       } catch (error) {
-        logError("mcp.integration.toggle_failed", error, { client: status.id });
+        logError("mcp.integration.toggle_failed", configErrorForLog(error), {
+          client: status.id,
+        });
         toast.error(
           t("integrations.failed", {
             name: CLIENTS[status.id].name,

@@ -123,12 +123,34 @@ fn scrub_with_homes<S: AsRef<str>>(text: &str, homes: &[S]) -> String {
         out = out.replace(home, "~");
         out = out.replace(&home.replace('\\', "\\\\"), "~");
     }
-    let out = mask_after(&out, "sk-", "sk-[redacted]", 16);
-    mask_after(&out, "Bearer ", "Bearer [redacted]", 12)
+    TOKEN_PREFIXES
+        .iter()
+        .fold(out, |text, (prefix, min)| mask_after(&text, prefix, *min))
 }
 
+// Prefixes of API keys and tokens an error message may carry, with the
+// shortest secret part worth masking after each.
+const TOKEN_PREFIXES: &[(&str, usize)] = &[
+    ("sk-", 16),
+    ("Bearer ", 12),
+    ("bearer ", 12),
+    ("ghp_", 20),
+    ("gho_", 20),
+    ("ghu_", 20),
+    ("ghs_", 20),
+    ("ghr_", 20),
+    ("github_pat_", 20),
+    ("glpat-", 16),
+    ("xoxb-", 16),
+    ("xoxp-", 16),
+    ("xapp-", 16),
+    ("AKIA", 16),
+    ("AIza", 30),
+    ("eyJ", 30),
+];
+
 // A minimum length keeps ordinary words that contain the prefix, like "task-list".
-fn mask_after(text: &str, prefix: &str, replacement: &str, min: usize) -> String {
+fn mask_after(text: &str, prefix: &str, min: usize) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(i) = rest.find(prefix) {
@@ -139,7 +161,8 @@ fn mask_after(text: &str, prefix: &str, replacement: &str, min: usize) -> String
             .map_or(after.len(), |(j, _)| j);
         out.push_str(&rest[..i]);
         if len >= min {
-            out.push_str(replacement);
+            out.push_str(prefix);
+            out.push_str("[redacted]");
         } else {
             out.push_str(&rest[i..i + prefix.len() + len]);
         }
@@ -253,6 +276,18 @@ mod tests {
         assert_eq!(
             scrub_with_homes("task-list sk-short", &[] as &[&str]),
             "task-list sk-short"
+        );
+    }
+
+    #[test]
+    fn third_party_tokens_are_masked() {
+        let s = scrub_with_homes(
+            "GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123 jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0 slack xoxb-1234567890-abcdefghij",
+            &[] as &[&str],
+        );
+        assert_eq!(
+            s,
+            "GITHUB_TOKEN=ghp_[redacted] jwt eyJ[redacted] slack xoxb-[redacted]"
         );
     }
 
