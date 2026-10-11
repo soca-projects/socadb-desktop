@@ -3,6 +3,7 @@ mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
 mod install_location;
+mod logging;
 mod schema_files;
 mod ws;
 
@@ -123,6 +124,17 @@ fn atomic_write(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn show_logs(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
+    let file = dir.join(format!("{}.log", logging::file_stem()));
+    let target = if file.exists() { file } else { dir };
+    app.opener()
+        .reveal_item_in_dir(target)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn open_terminal() {
     #[cfg(target_os = "macos")]
     {
@@ -186,6 +198,7 @@ pub fn run() {
     install_location::ensure_installed();
 
     let builder = tauri::Builder::default()
+        .plugin(logging::plugin())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -205,6 +218,7 @@ pub fn run() {
             mcp_respond,
             atomic_write,
             open_terminal,
+            show_logs,
             keyring_get,
             keyring_set,
             keyring_delete,
@@ -221,6 +235,9 @@ pub fn run() {
             conversations::claude_sessions_prune,
         ])
         .setup(|app| {
+            logging::install_panic_hook();
+            logging::log_start(app.handle());
+
             #[cfg(target_os = "macos")]
             configure_sparkle(app);
 
@@ -242,6 +259,11 @@ pub fn run() {
                 ws::cleanup_port_file();
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                logging::log_stop();
+            }
+        });
 }
