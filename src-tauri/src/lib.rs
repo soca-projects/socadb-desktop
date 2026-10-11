@@ -198,7 +198,6 @@ pub fn run() {
     install_location::ensure_installed();
 
     let builder = tauri::Builder::default()
-        .plugin(logging::plugin())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -235,6 +234,7 @@ pub fn run() {
             conversations::claude_sessions_prune,
         ])
         .setup(|app| {
+            logging::init(app.handle());
             logging::install_panic_hook();
             logging::log_start(app.handle());
 

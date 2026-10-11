@@ -18,6 +18,13 @@ export const LOG_CODES = {
     meaning: "The app exited cleanly.",
     check: "Its absence before the next app.start is the crash signal.",
   },
+  "app.log_dir.unwritable": {
+    level: "warn",
+    meaning:
+      "The log directory couldn't be written at start, so lines go to stderr only.",
+    check:
+      "Ownership of the log dir (a root-owned folder after a sudo run?) or a read-only volume.",
+  },
   "app.panic": {
     level: "error",
     meaning: "Rust panicked; the process usually dies right after.",

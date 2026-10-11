@@ -28,12 +28,49 @@ pub fn file_stem() -> &'static str {
     }
 }
 
-pub fn plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+// Registered from setup rather than on the builder: a plugin that fails to
+// start on the builder aborts the launch, and a log is never worth that.
+pub fn init(app: &tauri::AppHandle) {
+    use tauri::Manager;
+    let to_file = app
+        .path()
+        .app_log_dir()
+        .is_ok_and(|dir| can_write(&dir.join(format!("{}.log", file_stem()))));
+    if let Err(e) = app.plugin(plugin(to_file)) {
+        eprintln!("SocaDB: logging disabled: {e}");
+        return;
+    }
+    if !to_file {
+        emit(
+            Level::Warn,
+            "app.log_dir.unwritable",
+            "The log directory can't be written; logging to stderr only",
+            json!({}),
+        );
+    }
+}
+
+fn can_write(file: &std::path::Path) -> bool {
+    file.parent()
+        .is_some_and(|dir| std::fs::create_dir_all(dir).is_ok())
+        && std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(file)
+            .is_ok()
+}
+
+fn plugin<R: tauri::Runtime>(to_file: bool) -> tauri::plugin::TauriPlugin<R> {
+    let target = if to_file {
+        TargetKind::LogDir {
+            file_name: Some(file_stem().into()),
+        }
+    } else {
+        TargetKind::Stderr
+    };
     let mut builder = tauri_plugin_log::Builder::new()
         .clear_targets()
-        .target(Target::new(TargetKind::LogDir {
-            file_name: Some(file_stem().into()),
-        }))
+        .target(Target::new(target))
         .rotation_strategy(RotationStrategy::KeepSome(ROTATED_FILES))
         .max_file_size(MAX_FILE_BYTES)
         .level(if cfg!(debug_assertions) {
@@ -57,7 +94,7 @@ pub fn plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
                 )
             ))
         });
-    if cfg!(debug_assertions) {
+    if cfg!(debug_assertions) && to_file {
         builder = builder.target(Target::new(TargetKind::Stdout));
     }
     builder.build()
