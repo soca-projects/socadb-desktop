@@ -15,7 +15,7 @@ import {
 import { addRecentFile } from "./recentFiles";
 import { closeSchema, handleRedo, handleUndo } from "./schemaActions";
 import { isWorthResuming } from "./schemaQueries";
-import { logError } from "./log";
+import { logError, logInfo } from "./log";
 
 // Inline editors (e.g. column rename inputs in SidePanel) commit their value
 // on blur, not on every keystroke. Force a blur before any destructive or
@@ -119,6 +119,7 @@ export function handleOpenRecent(filePath: string) {
 }
 
 export function handleShowLogs() {
+  logInfo("menu.action", "showLogs");
   invoke("show_logs").catch((e: unknown) => logError("app.show_logs.failed", e));
 }
 
@@ -146,20 +147,31 @@ function toWindowsSignature(accelerator: string): string {
   return accelerator.toLowerCase().replaceAll("cmdorctrl", "ctrl");
 }
 
-function shortcut(accelerator: string, run: () => void | Promise<void>): MenuShortcut {
-  return { accelerator, windowsSignature: toWindowsSignature(accelerator), run };
+function shortcut(
+  name: string,
+  accelerator: string,
+  run: () => void | Promise<void>,
+): MenuShortcut {
+  return {
+    accelerator,
+    windowsSignature: toWindowsSignature(accelerator),
+    run: () => {
+      logInfo("menu.action", name);
+      return run();
+    },
+  };
 }
 
 export const MENU_SHORTCUTS = {
-  newSchema: shortcut("CmdOrCtrl+N", () => handleNew()),
-  open: shortcut("CmdOrCtrl+O", () => handleOpen()),
-  save: shortcut("CmdOrCtrl+S", () => handleSave()),
-  saveAs: shortcut("CmdOrCtrl+Shift+S", () => handleSaveAs()),
-  home: shortcut("CmdOrCtrl+Shift+H", () => handleShowHome()),
-  findSchema: shortcut("CmdOrCtrl+F", () => handleFindSchema()),
-  closeSchema: shortcut("CmdOrCtrl+W", () => handleCloseSchema()),
-  closeWindow: shortcut("CmdOrCtrl+Shift+W", () => handleQuit()),
-  import: shortcut("CmdOrCtrl+I", () => {
+  newSchema: shortcut("newSchema", "CmdOrCtrl+N", () => handleNew()),
+  open: shortcut("open", "CmdOrCtrl+O", () => handleOpen()),
+  save: shortcut("save", "CmdOrCtrl+S", () => handleSave()),
+  saveAs: shortcut("saveAs", "CmdOrCtrl+Shift+S", () => handleSaveAs()),
+  home: shortcut("home", "CmdOrCtrl+Shift+H", () => handleShowHome()),
+  findSchema: shortcut("findSchema", "CmdOrCtrl+F", () => handleFindSchema()),
+  closeSchema: shortcut("closeSchema", "CmdOrCtrl+W", () => handleCloseSchema()),
+  closeWindow: shortcut("closeWindow", "CmdOrCtrl+Shift+W", () => handleQuit()),
+  import: shortcut("import", "CmdOrCtrl+I", () => {
     if (!isEditor()) {
       handleHomeImport();
       return;
@@ -167,21 +179,29 @@ export const MENU_SHORTCUTS = {
     commitActiveEdit();
     void emit("open-import");
   }),
-  export: shortcut("CmdOrCtrl+E", () => {
+  export: shortcut("export", "CmdOrCtrl+E", () => {
     if (!isEditor()) return;
     commitActiveEdit();
     void emit("open-export");
   }),
-  quit: shortcut("CmdOrCtrl+Q", () => handleQuit()),
-  undo: shortcut("CmdOrCtrl+Z", () => {
+  quit: shortcut("quit", "CmdOrCtrl+Q", () => handleQuit()),
+  undo: shortcut("undo", "CmdOrCtrl+Z", () => {
     if (isEditor()) handleUndo();
   }),
-  redo: shortcut("CmdOrCtrl+Shift+Z", () => {
+  redo: shortcut("redo", "CmdOrCtrl+Shift+Z", () => {
     if (isEditor()) handleRedo();
   }),
-  toggleSidebar: shortcut("CmdOrCtrl+B", () => void emit("toggle-sidebar")),
-  toggleFocus: shortcut("CmdOrCtrl+Shift+F", () => void emit("toggle-focus-mode")),
-  toggleTheme: shortcut("CmdOrCtrl+Shift+T", () =>
+  toggleSidebar: shortcut(
+    "toggleSidebar",
+    "CmdOrCtrl+B",
+    () => void emit("toggle-sidebar"),
+  ),
+  toggleFocus: shortcut(
+    "toggleFocus",
+    "CmdOrCtrl+Shift+F",
+    () => void emit("toggle-focus-mode"),
+  ),
+  toggleTheme: shortcut("toggleTheme", "CmdOrCtrl+Shift+T", () =>
     useThemeStore.getState().toggleTheme(),
   ),
 } as const;

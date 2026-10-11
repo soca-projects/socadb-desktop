@@ -7,7 +7,7 @@ import { useSchemaStore } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
 import { getSocaFilter } from "./fileOperations";
 import type { HomeSort } from "./homeList";
-import { logError } from "./log";
+import { logError, logInfo } from "./log";
 import { handleOpenRecent } from "./menuActions";
 import { addRecentFile, removeRecentFiles, replaceRecentFile } from "./recentFiles";
 import { HomeSortZ } from "./zodSchemas";
@@ -34,13 +34,15 @@ export function setHomeSort(sort: HomeSort) {
 
 export function openHomeEntry(path: string) {
   if (useSchemaStore.getState().filePath === path) {
-    useViewStore.getState().showEditor();
+    resumeCurrentSchema();
     return;
   }
+  logInfo("ui.action", "home.open");
   handleOpenRecent(path);
 }
 
 export function resumeCurrentSchema() {
+  logInfo("ui.action", "home.resume");
   useViewStore.getState().showEditor();
 }
 

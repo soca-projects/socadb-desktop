@@ -8,6 +8,7 @@ import { handleUpdateMenuAction, updateMenuItemState } from "../utils/updater";
 import { useUpdateStore } from "../stores/updateStore";
 import { IS_MAC } from "../utils/platform";
 import i18next from "../i18n";
+import { logInfo } from "../utils/log";
 
 const MENU_RECENT_LIMIT = 10;
 
@@ -35,7 +36,10 @@ async function buildRecentSubmenu(): Promise<Submenu> {
         await MenuItem.new({
           id: `recent_${entry.path}`,
           text: label,
-          action: () => handleOpenRecent(entry.path),
+          action: () => {
+            logInfo("menu.action", "openRecent");
+            handleOpenRecent(entry.path);
+          },
         }),
       );
     }
@@ -44,7 +48,10 @@ async function buildRecentSubmenu(): Promise<Submenu> {
       await MenuItem.new({
         id: "clear_recent",
         text: t("menu.clearRecent"),
-        action: () => clearRecentFiles(),
+        action: () => {
+          logInfo("menu.action", "clearRecent");
+          clearRecentFiles();
+        },
       }),
     );
   }

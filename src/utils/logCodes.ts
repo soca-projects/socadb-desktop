@@ -162,6 +162,22 @@ export const LOG_CODES = {
     meaning: "A React render threw; the error screen replaced the app.",
     check: "ctx.componentStack names the component; ctx.stack the line.",
   },
+  "menu.action": {
+    level: "info",
+    meaning: "A menu command ran, from a click or its shortcut; msg is the command.",
+    check: "Tells what the user triggered just before the lines that follow.",
+  },
+  "ui.action": {
+    level: "info",
+    meaning:
+      "A click that moves the user: toolbar home, opening or resuming a schema from the home.",
+    check: "Tells where a view.change came from.",
+  },
+  "ui.key": {
+    level: "debug",
+    meaning: "Dev builds only: a ⌘ or Ctrl shortcut pressed in the window.",
+    check: "A shortcut with no menu.action after it never reached the menu.",
+  },
   "view.change": {
     level: "info",
     meaning: "The window switched between the home and the editor.",

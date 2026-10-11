@@ -2,9 +2,25 @@ import i18next from "../i18n";
 import { useThemeStore } from "../stores/themeStore";
 import { useViewStore } from "../stores/viewStore";
 import { getStartupPreference } from "./startupPreference";
-import { logError, logInfo } from "./log";
+import { logDebug, logError, logInfo } from "./log";
 
 let initialized = false;
+
+const MODIFIER_KEYS = new Set(["Meta", "Control", "Alt", "Shift"]);
+
+// Only shortcuts, never the characters typed: those would be user content.
+function shortcutOf(event: KeyboardEvent): string {
+  const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+  return [
+    event.metaKey && "Meta",
+    event.ctrlKey && "Ctrl",
+    event.altKey && "Alt",
+    event.shiftKey && "Shift",
+    MODIFIER_KEYS.has(event.key) ? null : key,
+  ]
+    .filter(Boolean)
+    .join("+");
+}
 
 export function initAppLogging() {
   if (initialized) return;
@@ -24,6 +40,15 @@ export function initAppLogging() {
     view: useViewStore.getState().view,
     startup: getStartupPreference(),
   });
+  if (import.meta.env.DEV) {
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.metaKey || event.ctrlKey) logDebug("ui.key", shortcutOf(event));
+      },
+      true,
+    );
+  }
   useViewStore.subscribe((state, prev) => {
     if (state.view !== prev.view) logInfo("view.change", state.view);
   });
