@@ -3,6 +3,7 @@ import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { LOG_CODES, type LogCode } from "../src/utils/logCodes";
 
 const USAGE = `Commands:
   snapshot                         visible interactive elements
@@ -20,7 +21,10 @@ const USAGE = `Commands:
   press <key> [target]             e.g. Enter, Escape, Meta+k
   wait <text> [--gone] [--timeout MS]
   wait --target <target> [--gone] [--timeout MS]
-  shot [file.png]                  screenshot of the app window`;
+  shot [file.png]                  screenshot of the app window
+  logs [--lines N] [--level warn] [--code prefix] [--all-launches] [--mcp] [--json]
+                                   the dev app's log (last launch by default), with the
+                                   catalogue's hint under each warning and error`;
 
 function readPort(): number {
   const file = join(homedir(), ".socadb", ".port");
@@ -92,6 +96,75 @@ function windowId(): string {
   const id = spawnSync(helper, [pid], { encoding: "utf-8" }).stdout.trim();
   if (!id) throw new Error(`No window for pid ${pid}`);
   return id;
+}
+
+const LEVELS = ["debug", "info", "warn", "error"];
+const CTX_PREVIEW = 600;
+
+interface LogLine {
+  ts: string;
+  level: string;
+  launch: string;
+  src: string;
+  code?: string;
+  msg?: string;
+  ctx?: Record<string, unknown>;
+}
+
+// tauri-plugin-log's app_log_dir for the com.socadb.desktop identifier.
+function logDir(): string {
+  const home = homedir();
+  const id = "com.socadb.desktop";
+  if (process.platform === "darwin") return join(home, "Library", "Logs", id);
+  if (process.platform === "win32") {
+    return join(process.env.LOCALAPPDATA ?? join(home, "AppData", "Local"), id, "logs");
+  }
+  return join(process.env.XDG_DATA_HOME ?? join(home, ".local", "share"), id, "logs");
+}
+
+function parseLogLine(text: string): LogLine | null {
+  try {
+    const line = JSON.parse(text) as LogLine;
+    return typeof line.ts === "string" && typeof line.level === "string" ? line : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatLogLine(line: LogLine): string {
+  const ctx =
+    line.ctx && Object.keys(line.ctx).length > 0
+      ? ` ${JSON.stringify(line.ctx).slice(0, CTX_PREVIEW)}`
+      : "";
+  const head = `${line.ts.slice(11, 23)} ${line.level.toUpperCase().padEnd(5)} ${line.src.padEnd(4)} ${line.code ?? "-"}  ${line.msg ?? ""}${ctx}`;
+  const info =
+    line.code && line.code in LOG_CODES ? LOG_CODES[line.code as LogCode] : undefined;
+  return info && (line.level === "warn" || line.level === "error")
+    ? `${head}\n    → ${info.check}`
+    : head;
+}
+
+function readLogs(args: string[]): string {
+  const file = join(logDir(), flag(args, "--mcp") ? "mcp-server.log" : "socadb-dev.log");
+  const asJson = flag(args, "--json");
+  const allLaunches = flag(args, "--all-launches");
+  const count = Number(option(args, "--lines") ?? 40);
+  const minLevel = LEVELS.indexOf(option(args, "--level") ?? "debug");
+  const code = option(args, "--code");
+  if (!existsSync(file)) throw new Error(`No log yet at ${file}`);
+  let lines = readFileSync(file, "utf-8")
+    .split("\n")
+    .map(parseLogLine)
+    .filter((line): line is LogLine => line !== null);
+  const lastLaunch = lines.at(-1)?.launch;
+  if (!allLaunches) lines = lines.filter((line) => line.launch === lastLaunch);
+  lines = lines
+    .filter((line) => LEVELS.indexOf(line.level) >= minLevel)
+    .filter((line) => !code || line.code?.startsWith(code))
+    .slice(-count);
+  return lines
+    .map((line) => (asJson ? JSON.stringify(line) : formatLogLine(line)))
+    .join("\n");
 }
 
 function option(args: string[], name: string): string | undefined {
@@ -185,6 +258,9 @@ async function main() {
       result = file;
       break;
     }
+    case "logs":
+      result = readLogs(args);
+      break;
     default:
       console.log(USAGE);
       process.exit(command && command !== "help" ? 1 : 0);
