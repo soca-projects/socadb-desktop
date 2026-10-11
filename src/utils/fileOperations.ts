@@ -9,6 +9,7 @@ import { SchemaZ } from "./zodSchemas";
 import i18next from "../i18n";
 import { addRecentFile, removeRecentFile } from "./recentFiles";
 import { IS_MAC } from "./platform";
+import { pathForLog } from "./logPrivacy";
 import { logError, logInfo, logWarn } from "./log";
 
 export function migrateSchema(data: unknown) {
@@ -95,14 +96,14 @@ export async function saveCurrentSchema(): Promise<boolean> {
       await saveSchemaFile(schema, filePath);
       markSaved();
       addRecentFile(filePath);
-      logInfo("file.save", "Schema saved", { path: filePath });
+      logInfo("file.save", "Schema saved", { file: pathForLog(filePath) });
     } else {
       const path = await saveSchemaFileAs(schema);
       if (path) {
         setFilePath(path);
         markSaved();
         addRecentFile(path);
-        logInfo("file.save", "Schema saved", { path });
+        logInfo("file.save", "Schema saved", { file: pathForLog(path) });
       } else {
         return false;
       }
@@ -125,7 +126,7 @@ export async function openAndApplySchema(): Promise<void> {
       addRecentFile(result.path);
       useViewStore.getState().showEditor();
       logInfo("file.open", "Schema opened", {
-        path: result.path,
+        file: pathForLog(result.path),
         tables: result.schema.tables.length,
       });
     }
@@ -149,22 +150,22 @@ export async function openRecentFile(filePath: string): Promise<void> {
     addRecentFile(filePath);
     useViewStore.getState().showEditor();
     logInfo("file.open", "Schema opened", {
-      path: filePath,
+      file: pathForLog(filePath),
       tables: schema.tables.length,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "not_found") {
-      logWarn("file.open.not_found", msg, { path: filePath });
+      logWarn("file.open.not_found", msg, { file: pathForLog(filePath) });
       removeRecentFile(filePath);
       toast.error(i18next.t("recent.fileNotFound"));
     } else if (msg === "permission_denied") {
-      logWarn("file.open.permission_denied", msg, { path: filePath });
+      logWarn("file.open.permission_denied", msg, { file: pathForLog(filePath) });
       toast.error(
         i18next.t(IS_MAC ? "recent.permissionDeniedMac" : "recent.permissionDenied"),
       );
     } else {
-      logError("file.open.failed", e, { path: filePath });
+      logError("file.open.failed", e, { file: pathForLog(filePath) });
       toast.error(msg || i18next.t("toast.openFailed", { error: msg }));
     }
   }

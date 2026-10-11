@@ -6,7 +6,11 @@ import type { LogCode } from "./logCodes";
 type Context = Record<string, unknown>;
 type Write = (message: string) => Promise<void>;
 
-function write(fn: Write, code: LogCode, msg: string, ctx?: Context) {
+const MAX_MESSAGE = 2000;
+
+function write(fn: Write, code: LogCode, message: string, ctx?: Context) {
+  const msg =
+    message.length > MAX_MESSAGE ? `${message.slice(0, MAX_MESSAGE)}…` : message;
   const payload = { area: code.split(".")[0], code, msg, ...(ctx ? { ctx } : {}) };
   fn(JSON.stringify(payload)).catch(() => {
     // Logging must never be the thing that fails.

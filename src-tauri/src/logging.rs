@@ -6,6 +6,8 @@ use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 pub const TARGET: &str = "socadb";
 const MAX_FILE_BYTES: u128 = 5_000_000;
 const ROTATED_FILES: usize = 4;
+const MAX_MESSAGE: usize = 2000;
+pub const MAX_STDERR_LINE: usize = 500;
 
 static LAUNCH_ID: OnceLock<String> = OnceLock::new();
 static HOMES: OnceLock<Vec<String>> = OnceLock::new();
@@ -210,6 +212,7 @@ fn mask_after(text: &str, prefix: &str, min: usize) -> String {
 }
 
 pub fn emit(level: Level, code: &str, msg: &str, ctx: Value) {
+    let msg = truncate(msg, MAX_MESSAGE);
     let area = code.split('.').next().unwrap_or("app");
     let payload = json!({ "area": area, "code": code, "msg": msg, "ctx": ctx });
     log::log!(target: TARGET, level, "{payload}");
@@ -225,6 +228,13 @@ macro_rules! log_event {
             serde_json::json!({ $($key: $value),* }),
         )
     };
+}
+
+pub fn truncate(text: &str, max: usize) -> String {
+    match text.char_indices().nth(max) {
+        Some((cut, _)) => format!("{}…", &text[..cut]),
+        None => text.to_owned(),
+    }
 }
 
 pub fn install_panic_hook() {
@@ -344,6 +354,12 @@ mod tests {
         assert!(line.starts_with(
             r#"{"ts":"2026-10-11T00:00:00.000Z","level":"error","launch":"L1","src":"rust""#
         ));
+    }
+
+    #[test]
+    fn long_messages_are_cut_on_a_char_boundary() {
+        assert_eq!(truncate("éééé", 2), "éé…");
+        assert_eq!(truncate("short", 10), "short");
     }
 
     #[test]

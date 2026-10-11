@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { dispatchMcpAction } from "../utils/mcpActions";
 import { logDebug, logError, logInfo } from "../utils/log";
+import { maskQuoted } from "../utils/logPrivacy";
 
 export function useMcpBridge() {
   useEffect(() => {
@@ -26,7 +27,7 @@ export function useMcpBridge() {
         const outcome = {
           ok: result.ok,
           ms: Math.round(performance.now() - started),
-          error: result.ok ? undefined : result.error,
+          error: result.ok ? undefined : maskQuoted(result.error),
         };
         if (action.startsWith("dev_")) logDebug("mcp.tool", action, outcome);
         else logInfo("mcp.tool", action, outcome);

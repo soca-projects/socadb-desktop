@@ -43,10 +43,10 @@ export const LOG_CODES = {
       "The message names the bun and runner paths: missing runtime in the bundle, or run `bun run build:mcp` in dev.",
   },
   "agent.stderr": {
-    level: "info",
-    meaning: "A line the agent runner wrote to stderr.",
+    level: "debug",
+    meaning: "Dev builds only: a line the agent runner wrote to stderr (500 chars max).",
     check:
-      "Read it next to the agent.exit.* or agent.turn.error line of the same launch.",
+      "In release, only the last 20 lines survive, in the stderr_tail of an agent.exit.* line.",
   },
   "agent.exit.signal": {
     level: "error",
@@ -192,7 +192,8 @@ export const LOG_CODES = {
   },
   "file.open": {
     level: "info",
-    meaning: "A schema was opened; ctx has the path and table count.",
+    meaning:
+      "A schema was opened; ctx.file has where it is (never its name) and an id, ctx.tables the table count.",
     check: "Context for errors that follow in the editor.",
   },
   "file.open.failed": {
@@ -203,17 +204,17 @@ export const LOG_CODES = {
   "file.open.not_found": {
     level: "warn",
     meaning: "The schema file no longer exists; it was dropped from the recents.",
-    check: "ctx.path; moved or deleted outside SocaDB, or on a disconnected disk.",
+    check: "ctx.file.where; moved or deleted outside SocaDB, or on a disconnected disk.",
   },
   "file.open.permission_denied": {
     level: "warn",
     meaning: "macOS privacy or file permissions refused to read the schema.",
     check:
-      "ctx.path: Documents, Desktop or iCloud → System Settings › Privacy & Security › Files & Folders.",
+      "ctx.file.where: ~/Documents, ~/Desktop or iCloud Drive → System Settings › Privacy & Security › Files & Folders.",
   },
   "file.save": {
     level: "info",
-    meaning: "A schema was saved; ctx has the path.",
+    meaning: "A schema was saved; ctx.file has where it is and an id.",
     check: "Context for later lines.",
   },
   "file.save.failed": {
@@ -261,7 +262,7 @@ export const LOG_CODES = {
   "home.read.failed": {
     level: "warn",
     meaning: "A recent schema could not be read for its home card.",
-    check: "ctx.path and the message: an invalid .soca shows as Unreadable on the home.",
+    check: "ctx.file and the message: an invalid .soca shows as Unreadable on the home.",
   },
   "home.load.failed": {
     level: "error",

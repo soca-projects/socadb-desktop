@@ -365,13 +365,16 @@ async fn spawn_agent(
             let reader = BufReader::new(stderr);
             let mut lines = reader.lines();
             while let Ok(Some(line)) = lines.next_line().await {
+                let line = crate::logging::truncate(&line, crate::logging::MAX_STDERR_LINE);
                 if let Ok(mut tail) = stderr_tail.lock() {
                     if tail.len() == STDERR_TAIL {
                         tail.pop_front();
                     }
                     tail.push_back(line.clone());
                 }
-                crate::log_event!(Level::Info, "agent.stderr", line, "provider" => pid);
+                // Runners can echo request text: the full stream stays out of
+                // release logs, which keep only the tail on a crash.
+                crate::log_event!(Level::Debug, "agent.stderr", line, "provider" => pid);
             }
         });
     }
