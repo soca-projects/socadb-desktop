@@ -9,7 +9,7 @@ vi.mock("@tauri-apps/plugin-log", () => ({
 
 import { error, warn } from "@tauri-apps/plugin-log";
 import { z } from "zod";
-import { logError, logWarn } from "./log";
+import { flushSuppressed, logError, logWarn } from "./log";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -45,6 +45,18 @@ describe("log", () => {
       ctx: { code: "ui.unhandled_rejection", dropped: 5 },
     });
     expect(vi.mocked(error)).toHaveBeenCalledTimes(21);
+  });
+
+  it("reports dropped lines when the page goes away, before the window ends", () => {
+    for (let i = 0; i < 23; i++) logError("ui.render_crash", new Error("loop"));
+    flushSuppressed();
+    const summary = JSON.parse(vi.mocked(warn).mock.calls[0][0]);
+    expect(summary).toMatchObject({
+      code: "log.suppressed",
+      ctx: { code: "ui.render_crash", dropped: 3 },
+    });
+    flushSuppressed();
+    expect(vi.mocked(warn)).toHaveBeenCalledTimes(1);
   });
 
   it("sums up a validation error on one line", () => {

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { dispatchMcpAction } from "../utils/mcpActions";
-import { logDebug, logError, logInfo } from "../utils/log";
+import { logDebug, logError, logInfo, logWarn } from "../utils/log";
 import { maskQuoted } from "../utils/logPrivacy";
 
 export function useMcpBridge() {
@@ -24,13 +24,14 @@ export function useMcpBridge() {
         const { action, payload } = envelope.data;
         const started = performance.now();
         const result = await dispatchMcpAction(action, payload ?? {});
-        const outcome = {
-          ok: result.ok,
-          ms: Math.round(performance.now() - started),
-          error: result.ok ? undefined : maskQuoted(result.error),
-        };
-        if (action.startsWith("dev_")) logDebug("mcp.tool", action, outcome);
-        else logInfo("mcp.tool", action, outcome);
+        const ms = Math.round(performance.now() - started);
+        if (!result.ok) {
+          logWarn("mcp.tool.failed", action, { ms, error: maskQuoted(result.error) });
+        } else if (action.startsWith("dev_")) {
+          logDebug("mcp.tool", action, { ms });
+        } else {
+          logInfo("mcp.tool", action, { ms });
+        }
         const msg = result.ok
           ? { id: requestId, result: result.data }
           : { id: requestId, error: result.error };

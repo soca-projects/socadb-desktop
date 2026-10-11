@@ -2,7 +2,7 @@ import i18next from "../i18n";
 import { useThemeStore } from "../stores/themeStore";
 import { useViewStore } from "../stores/viewStore";
 import { getStartupPreference } from "./startupPreference";
-import { logDebug, logError, logInfo } from "./log";
+import { flushSuppressed, logDebug, logError, logInfo } from "./log";
 
 let initialized = false;
 
@@ -34,6 +34,7 @@ export function initAppLogging() {
   window.addEventListener("unhandledrejection", (event) => {
     logError("ui.unhandled_rejection", event.reason);
   });
+  window.addEventListener("pagehide", flushSuppressed);
   logInfo("ui.start", "Interface loaded", {
     language: i18next.resolvedLanguage,
     theme: useThemeStore.getState().theme,

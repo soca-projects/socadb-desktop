@@ -252,7 +252,35 @@ fn admit(code: &str, now: Instant) -> (bool, u32) {
     (true, reported)
 }
 
+// Counts dropped since the last summary, written before the app stops or
+// panics so a cut just before an incident still shows.
+pub fn flush_suppressed() {
+    let pending: Vec<(String, u32)> = {
+        let mut rates = RATES
+            .get_or_init(|| Mutex::new(HashMap::new()))
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        rates
+            .iter_mut()
+            .filter(|(_, rate)| rate.dropped > 0)
+            .map(|(code, rate)| (code.clone(), std::mem::take(&mut rate.dropped)))
+            .collect()
+    };
+    for (code, dropped) in pending {
+        write(
+            Level::Warn,
+            "log.suppressed",
+            "Repeated lines were dropped",
+            json!({ "code": code, "dropped": dropped }),
+        );
+    }
+}
+
 pub fn emit(level: Level, code: &str, msg: &str, ctx: Value) {
+    // A line the level filter drops must not use up its code's quota.
+    if !log::log_enabled!(target: TARGET, level) {
+        return;
+    }
     if !matches!(code, "app.panic" | "app.start" | "app.stop") {
         let (admitted, dropped) = admit(code, Instant::now());
         if dropped > 0 {
@@ -333,6 +361,7 @@ pub fn install_panic_hook() {
             .map(|s| (*s).to_owned())
             .or_else(|| info.payload().downcast_ref::<String>().cloned())
             .unwrap_or_else(|| "panic".into());
+        flush_suppressed();
         emit(
             Level::Error,
             "app.panic",
@@ -383,6 +412,7 @@ pub fn log_start(app: &tauri::AppHandle) {
 }
 
 pub fn log_stop() {
+    flush_suppressed();
     emit(Level::Info, "app.stop", "SocaDB stopped", json!({}));
     log::logger().flush();
 }

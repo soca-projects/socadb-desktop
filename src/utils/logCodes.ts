@@ -419,8 +419,15 @@ export const LOG_CODES = {
   },
   "mcp.tool": {
     level: "info",
-    meaning: "An MCP action ran; msg is the action, ctx has ok, ms and the error.",
-    check: "Slow ms or ok=false next to an agent.turn.error explains what the agent hit.",
+    meaning: "An MCP action succeeded; msg is the action, ctx.ms its duration.",
+    check: "Slow ms shows what made an agent turn slow; failures are mcp.tool.failed.",
+  },
+  "mcp.tool.failed": {
+    level: "warn",
+    meaning:
+      "An MCP action returned an error to the agent; msg is the action, ctx.error the reason (names masked).",
+    check:
+      "Next to an agent.turn.error it explains what the agent hit; a validation error points at the tool schema in mcp-server/src/tools.",
   },
   "mcp.request.failed": {
     level: "error",

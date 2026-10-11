@@ -11,7 +11,7 @@ const MAX_MESSAGE = 2000;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 20;
 
-const rates = new Map<string, { since: number; count: number; dropped: number }>();
+const rates = new Map<LogCode, { since: number; count: number; dropped: number }>();
 
 // An error thrown in a render or event loop would otherwise rotate the whole
 // history out of the log within minutes.
@@ -29,6 +29,17 @@ function admit(code: LogCode, now: number): { admitted: boolean; dropped: number
     return { admitted: false, dropped };
   }
   return { admitted: true, dropped };
+}
+
+export function flushSuppressed() {
+  for (const [code, rate] of rates) {
+    if (rate.dropped === 0) continue;
+    send(warn, "log.suppressed", "Repeated lines were dropped", {
+      code,
+      dropped: rate.dropped,
+    });
+    rate.dropped = 0;
+  }
 }
 
 function write(fn: Write, code: LogCode, message: string, ctx?: Context) {
@@ -71,6 +82,7 @@ export function logInfo(code: LogCode, message: string, ctx?: Context) {
   write(info, code, message, ctx);
 }
 
+// Release logs stop at info: sending debug lines would only use up quotas.
 export function logDebug(code: LogCode, message: string, ctx?: Context) {
-  write(debug, code, message, ctx);
+  if (import.meta.env.DEV) write(debug, code, message, ctx);
 }
