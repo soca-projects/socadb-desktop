@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { getSocadbDir } from "./socadbDir";
+import { logWarn } from "./log";
 import { ConversationFileZ, ConversationZ, LegacyConversationsZ } from "./zodSchemas";
 import type { Conversation, ProviderId } from "../types/chat";
 
@@ -33,7 +34,11 @@ export async function listConversations(): Promise<Conversation[]> {
   for (const raw of files) {
     const conversation = parseConversationFile(raw);
     if (conversation) conversations.push(conversation);
-    else console.warn("[conversationFiles] skipped an unreadable conversation file");
+    else
+      logWarn(
+        "chat.conversation.invalid",
+        "Skipped a conversation file that doesn't parse",
+      );
   }
   return conversations.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }

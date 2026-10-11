@@ -4,6 +4,7 @@ import { join } from "@tauri-apps/api/path";
 import { emit } from "@tauri-apps/api/event";
 import { z } from "zod";
 import { getSocadbDir } from "./socadbDir";
+import { logError, logWarn } from "./log";
 
 export const MAX_RECENT = 1000;
 
@@ -98,23 +99,29 @@ async function persistRecent() {
       content: JSON.stringify({ files: recentList }),
     });
   } catch (err) {
-    console.warn("[recentFiles] failed to persist:", err);
+    logError("recent.persist.failed", err);
   }
 }
 
 export async function loadRecentFiles() {
+  let content: string | null = null;
   try {
-    const content = await readTextFile(await recentFilePath());
-    const parsed = RecentFileZ.safeParse(JSON.parse(content));
-    if (parsed.success) {
-      recentList = parsed.data.files.slice(0, MAX_RECENT);
-    } else {
-      recentList = [];
-    }
+    content = await readTextFile(await recentFilePath());
   } catch {
     // No recent.json yet (first launch or never persisted) — start with empty list.
-    recentList = [];
   }
+  recentList = content === null ? [] : parseRecentFile(content);
   loaded = true;
   notify();
+}
+
+function parseRecentFile(content: string): readonly RecentEntry[] {
+  try {
+    const parsed = RecentFileZ.safeParse(JSON.parse(content));
+    if (parsed.success) return parsed.data.files.slice(0, MAX_RECENT);
+    logWarn("recent.load.invalid", parsed.error.message);
+  } catch (e) {
+    logWarn("recent.load.invalid", e);
+  }
+  return [];
 }

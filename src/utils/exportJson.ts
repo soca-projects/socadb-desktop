@@ -3,6 +3,7 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
 import i18next from "../i18n";
+import { logError } from "./log";
 
 export async function exportJson() {
   try {
@@ -18,6 +19,7 @@ export async function exportJson() {
 
     await writeTextFile(path, json);
   } catch (e) {
+    logError("export.json.failed", e);
     toast.error(i18next.t("toast.exportJsonFailed", { error: String(e) }));
   }
 }

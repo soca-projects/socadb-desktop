@@ -13,6 +13,7 @@ import { parseSqlDdl, adaptColumnsToDbType } from "../../utils/importSql";
 import { parseJsonSchema } from "../../utils/importJson";
 import { getNextTableColor } from "../../utils/tableColors";
 import { handleAutoLayout } from "../../utils/schemaActions";
+import { logError, logInfo, logWarn } from "../../utils/log";
 import type { DbType, Table, Relation } from "../../types/schema";
 
 type ImportFormat = "sql" | "json";
@@ -113,6 +114,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
         format === "sql" ? parseSqlDdl(content) : parseJsonSchema(content);
 
       if (tables.length === 0) {
+        logWarn("import.no_tables", "No table found in the file", { format, attempted });
         toast.error(t("toast.importNoTables"));
         return;
       }
@@ -144,9 +146,17 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
         mergeIntoSchema(tables, relations);
       }
 
+      logInfo("import.done", "Import done", {
+        format,
+        tables: tables.length,
+        relations: relations.length,
+        skipped,
+        fromHome,
+      });
       showImportSummary(tables.length, relations.length, skipped);
       onClose();
     } catch (e) {
+      logError("import.failed", e, { format });
       toast.error(
         e instanceof Error ? e.message : t("toast.importFailed", { error: String(e) }),
       );

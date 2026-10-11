@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRecentFiles, useRecentFilesLoaded } from "./useRecentFiles";
 import { loadHomeEntries } from "../utils/homeEntries";
 import type { HomeEntry } from "../utils/homeList";
+import { logError } from "../utils/log";
 
 export function useHomeEntries(): HomeEntry[] | null {
   const recents = useRecentFiles();
@@ -24,7 +25,7 @@ export function useHomeEntries(): HomeEntry[] | null {
         if (!cancelled) setEntries(next);
       })
       .catch((e: unknown) => {
-        console.warn("[home] failed to load schemas:", e);
+        logError("home.load.failed", e);
         if (!cancelled) setEntries([]);
       });
     return () => {

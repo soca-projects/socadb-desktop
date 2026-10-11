@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Schema } from "../types/schema";
 import { parseSchemaContent } from "./fileOperations";
 import { splitSchemaPath, type HomeEntry } from "./homeList";
+import { logWarn } from "./log";
 import type { RecentEntry } from "./recentFiles";
 import { SchemaFileInfoZ } from "./zodSchemas";
 
@@ -16,7 +17,8 @@ async function readSchema(path: string, modifiedAt: number): Promise<Schema | nu
   let schema: Schema | null = null;
   try {
     schema = parseSchemaContent(await invoke<string>("read_schema_file", { path }));
-  } catch {
+  } catch (e) {
+    logWarn("home.read.failed", e, { path });
     schema = null;
   }
   cache.set(path, { modifiedAt, schema });

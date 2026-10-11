@@ -1,6 +1,7 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { logError } from "./log";
 import { useThemeStore } from "../stores/themeStore";
 
 async function loadTheme() {
@@ -32,7 +33,7 @@ async function saveTheme() {
       await invoke("atomic_write", { path, content: JSON.stringify(data) });
     });
   } catch (err) {
-    console.warn("[themePersistence] failed to persist theme:", err);
+    logError("settings.theme.persist_failed", err);
   }
 }
 

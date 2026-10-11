@@ -10,6 +10,7 @@ import {
   type IntegrationChoiceZ,
 } from "./zodSchemas";
 import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { logError, logWarn } from "./log";
 
 export const INTEGRATION_IDS = ["claudeCode", "claudeDesktop", "codex"] as const;
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
@@ -213,7 +214,13 @@ export async function syncIntegrations() {
   // launch. Toggling in Settings still writes, since it's an explicit choice.
   if (import.meta.env.DEV) return;
   await serialize(async () => {
-    const ours = await getMcpServerPath();
+    let ours: string;
+    try {
+      ours = await getMcpServerPath();
+    } catch (e) {
+      logError("mcp.registration.binary_missing", e);
+      return;
+    }
     const choices = await readChoices();
     for (const id of INTEGRATION_IDS) {
       try {
@@ -222,7 +229,7 @@ export async function syncIntegrations() {
         if (plan.choice && plan.choice !== choices[id]) await saveChoice(id, plan.choice);
       } catch (e) {
         // Never rewrite a file we couldn't parse: it holds the client's whole config.
-        console.warn(`MCP registration skipped for ${id}:`, e);
+        logWarn("mcp.registration.failed", e, { client: id });
       }
     }
   });
@@ -234,7 +241,8 @@ export async function getIntegrationStatuses(): Promise<IntegrationStatus[]> {
     INTEGRATION_IDS.map(async (id) => {
       try {
         return statusOf(id, choices[id], await CLIENTS[id].read());
-      } catch {
+      } catch (e) {
+        logWarn("mcp.registration.config_unreadable", e, { client: id });
         return { id, installed: true, enabled: false, removed: false, unreadable: true };
       }
     }),

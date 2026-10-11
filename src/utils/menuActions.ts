@@ -14,6 +14,7 @@ import {
 import { addRecentFile } from "./recentFiles";
 import { closeSchema, handleRedo, handleUndo } from "./schemaActions";
 import { isWorthResuming } from "./schemaQueries";
+import { logError } from "./log";
 
 // Inline editors (e.g. column rename inputs in SidePanel) commit their value
 // on blur, not on every keystroke. Force a blur before any destructive or
@@ -42,6 +43,7 @@ export async function handleSaveAs() {
       addRecentFile(path);
     }
   } catch (e) {
+    logError("file.save_as.failed", e);
     toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
   }
 }

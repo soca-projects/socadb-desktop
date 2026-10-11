@@ -7,6 +7,7 @@ import { useSchemaStore } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
 import { getSocaFilter } from "./fileOperations";
 import type { HomeSort } from "./homeList";
+import { logError } from "./log";
 import { handleOpenRecent } from "./menuActions";
 import { addRecentFile, removeRecentFiles, replaceRecentFile } from "./recentFiles";
 import { HomeSortZ } from "./zodSchemas";
@@ -47,6 +48,7 @@ export async function revealHomeEntry(path: string) {
   try {
     await revealItemInDir(path);
   } catch (e) {
+    logError("home.reveal.failed", e);
     toast.error(i18next.t("home.revealFailed", { error: String(e) }));
   }
 }
@@ -67,6 +69,7 @@ export async function duplicateHomeEntry(path: string) {
     });
     addRecentFile(copy);
   } catch (e) {
+    logError("home.duplicate.failed", e);
     toast.error(i18next.t("home.duplicateFailed", { error: String(e) }));
   }
 }

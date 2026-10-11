@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
 import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
 import { StartupPreferenceZ } from "./zodSchemas";
+import { logError } from "./log";
 import type { View } from "../stores/viewStore";
 
 export type StartupPreference = z.infer<typeof StartupPreferenceZ>;
@@ -60,6 +61,6 @@ export async function setStartupPreference(value: StartupPreference): Promise<vo
       await invoke("atomic_write", { path, content: JSON.stringify(data) });
     });
   } catch (err) {
-    console.warn("[startupPreference] failed to persist:", err);
+    logError("settings.startup.persist_failed", err);
   }
 }

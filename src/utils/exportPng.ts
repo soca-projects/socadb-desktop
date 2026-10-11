@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
 import { useThemeStore } from "../stores/themeStore";
 import i18next from "../i18n";
+import { logError, logWarn } from "./log";
 
 export async function exportCanvasPng() {
   try {
@@ -28,6 +29,7 @@ export async function exportCanvasPng() {
     ]);
     if (!path) return;
     if (!blob) {
+      logWarn("export.png.render_failed", "PNG generation returned nothing");
       toast.error(i18next.t("toast.exportPngGenFailed"));
       return;
     }
@@ -35,6 +37,7 @@ export async function exportCanvasPng() {
     const bytes = new Uint8Array(await blob.arrayBuffer());
     await writeFile(path, bytes);
   } catch (e) {
+    logError("export.png.failed", e);
     toast.error(i18next.t("toast.exportPngFailed", { error: String(e) }));
   }
 }

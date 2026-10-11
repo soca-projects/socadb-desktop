@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../Modal/Modal";
+import { logWarn } from "../../utils/log";
 
 interface RenameSchemaModalProps {
   initialName: string;
@@ -27,6 +28,7 @@ export function RenameSchemaModal({
       await onRename(name);
     } catch (err) {
       const code = String(err);
+      logWarn("home.rename.failed", code);
       setError(
         code === "exists"
           ? t("home.rename.exists")

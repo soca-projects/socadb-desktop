@@ -162,6 +162,290 @@ export const LOG_CODES = {
     meaning: "The window switched between the home and the editor.",
     check: "Context for the lines that follow.",
   },
+  "file.open": {
+    level: "info",
+    meaning: "A schema was opened; ctx has the path and table count.",
+    check: "Context for errors that follow in the editor.",
+  },
+  "file.open.failed": {
+    level: "error",
+    meaning: "Opening a schema failed for a reason other than missing or forbidden.",
+    check: "The message: usually an invalid .soca (parse or migration) or an IO error.",
+  },
+  "file.open.not_found": {
+    level: "warn",
+    meaning: "The schema file no longer exists; it was dropped from the recents.",
+    check: "ctx.path; moved or deleted outside SocaDB, or on a disconnected disk.",
+  },
+  "file.open.permission_denied": {
+    level: "warn",
+    meaning: "macOS privacy or file permissions refused to read the schema.",
+    check:
+      "ctx.path: Documents, Desktop or iCloud → System Settings › Privacy & Security › Files & Folders.",
+  },
+  "file.save": {
+    level: "info",
+    meaning: "A schema was saved; ctx has the path.",
+    check: "Context for later lines.",
+  },
+  "file.save.failed": {
+    level: "error",
+    meaning: "Saving the schema to its file failed.",
+    check: "The message: disk full, permissions, or a read-only or removed volume.",
+  },
+  "file.save_as.failed": {
+    level: "error",
+    meaning: "Save As failed after choosing the path.",
+    check: "The message: permissions or disk; the dialog itself succeeded.",
+  },
+  "export.sql.failed": {
+    level: "error",
+    meaning: "Writing the SQL export failed.",
+    check: "The message; the file path was chosen in a save dialog.",
+  },
+  "export.svg.failed": {
+    level: "error",
+    meaning: "Rendering or writing the SVG export failed.",
+    check: "The message; html-to-image rendering or the write.",
+  },
+  "export.json.failed": {
+    level: "error",
+    meaning: "Writing the JSON export failed.",
+    check: "The message; the file path was chosen in a save dialog.",
+  },
+  "export.png.failed": {
+    level: "error",
+    meaning: "Rendering or writing the PNG export failed.",
+    check: "The message; html-to-image rendering or the write.",
+  },
+  "export.png.render_failed": {
+    level: "warn",
+    meaning: "PNG rendering returned no image.",
+    check:
+      "html-to-image gave no blob: often an empty canvas or a WebKit canvas limit on huge schemas.",
+  },
+  "layout.auto.failed": {
+    level: "error",
+    meaning: "The automatic layout (ELK) threw.",
+    check:
+      "The message; reproduce with the same schema shape (table and relation count).",
+  },
+  "home.read.failed": {
+    level: "warn",
+    meaning: "A recent schema could not be read for its home card.",
+    check: "ctx.path and the message: an invalid .soca shows as Unreadable on the home.",
+  },
+  "home.load.failed": {
+    level: "error",
+    meaning: "Loading the home's entries failed as a whole.",
+    check: "Usually schema_files_info failed; the message is the IPC error.",
+  },
+  "home.reveal.failed": {
+    level: "error",
+    meaning: "Show in Finder/Explorer failed.",
+    check: "The message from the opener plugin; the file may have moved.",
+  },
+  "home.duplicate.failed": {
+    level: "error",
+    meaning: "Duplicating a schema file failed.",
+    check: "The message: not_found, exists after 999 tries, or an IO error.",
+  },
+  "home.rename.failed": {
+    level: "warn",
+    meaning: "Renaming a schema file was refused or failed.",
+    check:
+      "exists and invalid_name are user errors shown in the dialog; anything else is IO.",
+  },
+  "recent.persist.failed": {
+    level: "error",
+    meaning: "The recents list could not be written to ~/.socadb/recent.json.",
+    check:
+      "The message: permissions or disk on ~/.socadb; the home loses recent changes at restart.",
+  },
+  "recent.load.invalid": {
+    level: "warn",
+    meaning: "recent.json exists but doesn't parse; the list starts empty.",
+    check: "The message names the bad field; the next change overwrites the file.",
+  },
+  "settings.startup.persist_failed": {
+    level: "error",
+    meaning: "The launch setting could not be written to config.json.",
+    check:
+      "A config.json that doesn't parse blocks the write on purpose; check the file.",
+  },
+  "settings.language.persist_failed": {
+    level: "error",
+    meaning: "The language could not be written to config.json.",
+    check: "Permissions on ~/.socadb or a config.json that doesn't parse.",
+  },
+  "settings.theme.persist_failed": {
+    level: "error",
+    meaning: "The theme could not be written to config.json.",
+    check: "Permissions on ~/.socadb or a config.json that doesn't parse.",
+  },
+  "session.save.failed": {
+    level: "error",
+    meaning:
+      "The current schema could not be saved for the next launch (first failure only).",
+    check: "localStorage full or unavailable; a huge schema can exceed WebKit's quota.",
+  },
+  "session.restore.invalid": {
+    level: "warn",
+    meaning: "The saved session didn't parse and was discarded.",
+    check:
+      "The message says which field failed; an unsaved draft from that session is lost.",
+  },
+  "chat.conversation.save_failed": {
+    level: "error",
+    meaning: "A conversation could not be written to disk.",
+    check: "Permissions or disk on ~/.socadb/conversations.",
+  },
+  "chat.conversation.delete_failed": {
+    level: "error",
+    meaning: "Deleting a conversation's files failed.",
+    check: "Permissions on ~/.socadb/conversations or the Claude session store.",
+  },
+  "chat.conversation.invalid": {
+    level: "warn",
+    meaning: "A conversation file doesn't parse and was skipped.",
+    check: "A file in ~/.socadb/conversations with an old or broken shape.",
+  },
+  "chat.conversations.load_failed": {
+    level: "error",
+    meaning: "Loading the conversations failed as a whole.",
+    check: "The message; the chat history appears empty.",
+  },
+  "chat.sessions.prune_failed": {
+    level: "warn",
+    meaning: "Removing Claude sessions of deleted conversations failed.",
+    check: "Harmless leftovers in the session store; the message says why.",
+  },
+  "chat.provider.persist_failed": {
+    level: "error",
+    meaning: "The provider setting (login type) could not be written to config.json.",
+    check: "A config.json that doesn't parse, or permissions.",
+  },
+  "chat.stream.parse_failed": {
+    level: "error",
+    meaning: "A line from the agent runner wasn't valid JSON.",
+    check:
+      "The runner printed something on stdout that isn't an event; see agent.stderr around it.",
+  },
+  "agent.init.failed": {
+    level: "warn",
+    meaning: "Preheating the agent runner failed; sending will report it again.",
+    check: "Read the agent.spawn.* or keyring.* line just before.",
+  },
+  "agent.turn.error": {
+    level: "warn",
+    meaning: "The agent ended a turn with an error; msg is its raw text.",
+    check:
+      "ctx.code (auth, model_unavailable, memory_lost) and ctx.provider; read agent.stderr lines around it.",
+  },
+  "keyring.save.failed": {
+    level: "error",
+    meaning: "Writing an API key to the OS keychain failed.",
+    check: "Denied or locked keychain, or no backend on Linux.",
+  },
+  "keyring.delete.failed": {
+    level: "error",
+    meaning: "Removing an API key from the OS keychain failed.",
+    check: "Denied or locked keychain.",
+  },
+  "keyring.migration.failed": {
+    level: "error",
+    meaning: "Moving old plaintext keys into the keychain could not finish.",
+    check:
+      "The keys stay in config.json until it succeeds; check keyring.save.failed lines.",
+  },
+  "keyring.plaintext_clear.failed": {
+    level: "error",
+    meaning: "An old plaintext key could not be removed from config.json.",
+    check: "Permissions or a config.json that doesn't parse.",
+  },
+  "mcp.tool": {
+    level: "info",
+    meaning: "An MCP action ran; msg is the action, ctx has ok, ms and the error.",
+    check: "Slow ms or ok=false next to an agent.turn.error explains what the agent hit.",
+  },
+  "mcp.request.failed": {
+    level: "error",
+    meaning: "Handling an MCP request threw.",
+    check: "The message and stack; the agent got an error reply.",
+  },
+  "mcp.respond.failed": {
+    level: "error",
+    meaning: "The reply to an MCP request could not be handed to the bridge.",
+    check: "Usually the connection closed; see mcp.ws.* lines.",
+  },
+  "mcp.registration.binary_missing": {
+    level: "error",
+    meaning: "The MCP server binary was not found, so no AI app was registered.",
+    check: "The bundle lacks socadb-mcp-*; in dev run `bun run build:mcp`.",
+  },
+  "mcp.registration.failed": {
+    level: "warn",
+    meaning: "Registering SocaDB with one AI app was skipped.",
+    check:
+      "ctx.client; its config file couldn't be read or written, and was left untouched.",
+  },
+  "mcp.registration.config_unreadable": {
+    level: "warn",
+    meaning: "An AI app's config file doesn't parse, so SocaDB won't touch it.",
+    check: "ctx.client; Settings › Integrations shows it as unreadable.",
+  },
+  "mcp.integration.toggle_failed": {
+    level: "error",
+    meaning: "Turning an integration on or off failed.",
+    check: "ctx.client and the message from the config write.",
+  },
+  "import.done": {
+    level: "info",
+    meaning:
+      "An import finished; ctx has format, counts and whether it came from the home.",
+    check: "Context for layout or editor errors that follow.",
+  },
+  "import.no_tables": {
+    level: "warn",
+    meaning: "The imported file had no table SocaDB could read.",
+    check: "ctx.attempted counts statements tried; unsupported SQL dialect or syntax.",
+  },
+  "import.failed": {
+    level: "error",
+    meaning: "Import threw while reading or parsing the file.",
+    check: "The message; ctx.format says which parser.",
+  },
+  "updater.available": {
+    level: "info",
+    meaning: "An update was found; msg is its version.",
+    check: "Context for later updater lines.",
+  },
+  "updater.check.failed": {
+    level: "error",
+    meaning: "Checking or downloading an update failed (Tauri updater).",
+    check: "The message: network, signature, or the update endpoint.",
+  },
+  "updater.sparkle.check_failed": {
+    level: "error",
+    meaning: "Sparkle's update check failed.",
+    check: "The message; network or the appcast.",
+  },
+  "updater.sparkle.update_failed": {
+    level: "error",
+    meaning: "Sparkle failed to download or install an update.",
+    check: "The message; signature or disk space.",
+  },
+  "updater.install.failed": {
+    level: "error",
+    meaning: "Installing the downloaded update failed.",
+    check: "The message; permissions on the app location.",
+  },
+  "updater.install_on_launch.failed": {
+    level: "error",
+    meaning: "Installing the staged update at launch failed.",
+    check:
+      "The message; the app may be on a read-only volume (see app.start ctx.install).",
+  },
 } satisfies Record<string, LogCodeInfo>;
 
 export type LogCode = keyof typeof LOG_CODES;

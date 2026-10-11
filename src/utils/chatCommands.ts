@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { EffortLevel, LoginType, ProviderId } from "../types/chat";
 import { DEFAULT_MODEL } from "../types/chat";
+import { logWarn } from "./log";
 
 export interface SendChatMessageInput {
   message: string;
@@ -31,7 +32,9 @@ export function stopChat(providerId: ProviderId) {
 // Fire-and-forget preheat: pays the spawn cost ahead of the first send.
 export function initChat(providerId: ProviderId, loginType: LoginType) {
   // chat_send reports the same failure when the user actually sends.
-  invoke("chat_init", { providerId, loginType }).catch(() => undefined);
+  invoke("chat_init", { providerId, loginType }).catch((e: unknown) =>
+    logWarn("agent.init.failed", e, { provider: providerId }),
+  );
 }
 
 export function resetAgent(providerId: ProviderId) {
