@@ -6,6 +6,70 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.4] - 2026-10-12
+
+SocaDB now opens on a home screen with every schema you have worked on,
+keeps each chat conversation so you can come back to it, and writes a
+local log so problems can be diagnosed instead of guessed. API keys move
+to the system keychain, the agents lose access to your files and shell,
+and on macOS SocaDB offers to install itself into Applications when it
+runs from the disk image.
+
+### Added
+
+- **Home screen**. Lists the schemas you have opened, created or saved,
+  each with a miniature, with search, sorting, and actions to rename,
+  duplicate, show in Finder or delete a draft. Settings › General
+  chooses whether SocaDB opens on it or on the last schema. (#87)
+- **Conversation history**. Each conversation is kept in its own file.
+  Browse, search, rename or delete them from the chat, or delete them
+  all from Settings › Conversations. A conversation keeps the provider
+  and model it was started with. (#81)
+- **Integrations settings**. Choose which AI apps SocaDB registers with
+  as an MCP server: Claude Code, Claude Desktop and, new, Codex. (#85)
+- **Install into Applications** (macOS). When SocaDB runs from the disk
+  image or another place it can't update itself, it offers to move into
+  Applications in one click. (#84)
+- **Local log**. Failures are written to a log file in the system's log
+  folder, opened from Help › Show Logs. It never contains schema
+  contents, chat text or API keys, and nothing leaves your computer.
+  (#88)
+- **Claude 5 and GPT-6** in the model picker, with updated agent SDKs.
+  (#77)
+
+### Changed
+
+- **API keys are stored in the system keychain** instead of the
+  settings file. The chat asks for a key before sending when none is
+  saved. (#76)
+- **Sign-in problems are explained on the first message**, with the
+  step that fixes them. (#76)
+- **The model and effort pickers sit under the message box.** (#81)
+- **The agents only work through SocaDB.** Neither can read your files
+  or run shell commands, and the Claude agent no longer picks up your
+  own Claude Code setup. (#77, #83)
+- **Narrow windows and wider settings.** The app fits smaller windows,
+  and conversations get their own settings tab. (#86)
+
+### Fixed
+
+- **Settings and recent schemas are no longer lost** when `config.json`
+  or `recent.json` can't be read or doesn't parse. The file is set
+  aside, so its content can still be recovered, and SocaDB never adds
+  itself back to an AI app you had turned off. (#88)
+- **The list of recent schemas is saved again.** A file permission kept
+  it from being written. (#87)
+- **Codex** recovers from reconnects, lost threads and API errors.
+  (#82)
+- **Stopping an answer** no longer shows an error. (#82)
+- **Claude Code and Claude Desktop** keep SocaDB's entry up to date.
+  (#78)
+- **The MCP bridge refuses connections from web pages.** (#79)
+- **Dark mode** styles and notifications follow the theme chosen in the
+  app rather than the system's. (#86)
+- **The window** can be dragged from the toolbar and closed from the
+  menu. (#87)
+
 ## [0.1.3] - 2026-09-25
 
 Updates no longer interrupt your work. SocaDB downloads new versions in
