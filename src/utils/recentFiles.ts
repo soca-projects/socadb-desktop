@@ -1,10 +1,12 @@
-import { readTextFile, writeTextFile, mkdir, exists } from "@tauri-apps/plugin-fs";
+import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { join } from "@tauri-apps/api/path";
 import { emit } from "@tauri-apps/api/event";
 import { z } from "zod";
 import { getSocadbDir } from "./socadbDir";
+import { logError, logWarn } from "./log";
 
-export const MAX_RECENT = 10;
+export const MAX_RECENT = 1000;
 
 const RecentEntryZ = z.object({
   path: z.string(),
@@ -20,67 +22,136 @@ export interface RecentEntry {
   openedAt: string;
 }
 
-let recentList: RecentEntry[] = [];
+let recentList: readonly RecentEntry[] = [];
+let loaded = false;
+// Set when recent.json exists but can't be read: writing would replace the
+// user's whole history with what this session saw.
+let persistBlocked = false;
+const listeners = new Set<() => void>();
 
-export function getRecentFiles(): RecentEntry[] {
-  return [...recentList];
+// No defensive copy: useSyncExternalStore re-renders forever if each call returns a new array.
+export function getRecentFiles(): readonly RecentEntry[] {
+  return recentList;
+}
+
+export function areRecentFilesLoaded(): boolean {
+  return loaded;
+}
+
+export function subscribeRecentFiles(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function notify() {
+  for (const listener of listeners) listener();
+}
+
+function update(next: readonly RecentEntry[]) {
+  recentList = next;
+  void persistRecent();
+  void emit("refresh-menu");
+  notify();
 }
 
 export function addRecentFile(path: string) {
   if (recentList[0]?.path === path) return;
-  recentList = recentList.filter((f) => f.path !== path);
-  recentList.unshift({ path, openedAt: new Date().toISOString() });
-  if (recentList.length > MAX_RECENT) {
-    recentList = recentList.slice(0, MAX_RECENT);
-  }
-  void persistRecent();
-  void emit("refresh-menu");
+  update(
+    [
+      { path, openedAt: new Date().toISOString() },
+      ...recentList.filter((f) => f.path !== path),
+    ].slice(0, MAX_RECENT),
+  );
 }
 
 export function removeRecentFile(path: string) {
-  recentList = recentList.filter((f) => f.path !== path);
-  void persistRecent();
-  void emit("refresh-menu");
+  removeRecentFiles([path]);
+}
+
+export function removeRecentFiles(paths: readonly string[]) {
+  const drop = new Set(paths);
+  const next = recentList.filter((f) => !drop.has(f.path));
+  if (next.length !== recentList.length) update(next);
+}
+
+export function replaceRecentFile(oldPath: string, newPath: string) {
+  if (oldPath === newPath || !recentList.some((f) => f.path === oldPath)) return;
+  update(
+    recentList
+      .filter((f) => f.path !== newPath)
+      .map((f) => (f.path === oldPath ? { ...f, path: newPath } : f)),
+  );
 }
 
 export function clearRecentFiles() {
-  recentList = [];
-  void persistRecent();
-  void emit("refresh-menu");
+  update([]);
 }
 
 async function recentFilePath(): Promise<string> {
   return await join(await getSocadbDir(), "recent.json");
 }
 
-async function ensureSocadbDir() {
-  const dir = await getSocadbDir();
-  if (!(await exists(dir))) {
-    await mkdir(dir, { recursive: true });
-  }
-}
-
+// atomic_write rather than plugin-fs: the fs scope covers what is inside
+// ~/.socadb but not the folder itself, which plugin-fs can't check or create.
 async function persistRecent() {
+  if (persistBlocked) return;
   try {
-    await ensureSocadbDir();
-    const data = JSON.stringify({ files: recentList });
-    await writeTextFile(await recentFilePath(), data);
+    await invoke("atomic_write", {
+      path: await recentFilePath(),
+      content: JSON.stringify({ files: recentList }),
+    });
   } catch (err) {
-    console.warn("[recentFiles] failed to persist:", err);
+    logError("recent.persist.failed", err);
   }
 }
 
 export async function loadRecentFiles() {
+  const path = await recentFilePath();
+  let content: string | null = null;
   try {
-    const content = await readTextFile(await recentFilePath());
-    const parsed = RecentFileZ.safeParse(JSON.parse(content));
-    if (parsed.success) {
-      recentList = parsed.data.files.slice(0, MAX_RECENT);
-    } else {
-      recentList = [];
+    content = await readTextFile(path);
+  } catch (e) {
+    if (await fileMayExist(path)) {
+      persistBlocked = true;
+      logError("recent.load.failed", e);
     }
-  } catch {
-    // No recent.json yet (first launch or never persisted) — start with empty list.
-    recentList = [];
   }
+  const parsed = content === null ? [] : parseRecentFile(content);
+  if (parsed === null && content !== null) await setAside(path, content);
+  recentList = parsed ?? [];
+  loaded = true;
+  notify();
+}
+
+// An unreadable list would be overwritten by the next opened file: keep a copy
+// next to it so the history can still be recovered by hand.
+async function setAside(path: string, content: string) {
+  const copy = path.replace(/recent\.json$/, `recent.invalid-${Date.now()}.json`);
+  try {
+    await invoke("atomic_write", { path: copy, content });
+  } catch (e) {
+    persistBlocked = true;
+    logError("recent.persist.failed", e, { setAside: true });
+  }
+}
+
+async function fileMayExist(path: string): Promise<boolean> {
+  try {
+    return await exists(path);
+  } catch {
+    return true;
+  }
+}
+
+function parseRecentFile(content: string): readonly RecentEntry[] | null {
+  try {
+    const parsed = RecentFileZ.safeParse(JSON.parse(content));
+    if (parsed.success) return parsed.data.files.slice(0, MAX_RECENT);
+    logWarn("recent.load.invalid", parsed.error);
+  } catch (e) {
+    logWarn("recent.load.invalid", e);
+  }
+  return null;
 }

@@ -4,16 +4,11 @@ import { Modal } from "../Modal/Modal";
 import type { DbType } from "../../types/schema";
 
 interface NewSchemaModalProps {
-  isFirstLaunch: boolean;
   onClose: () => void;
   onCreate: (name: string, dbType: DbType) => void;
 }
 
-export function NewSchemaModal({
-  isFirstLaunch,
-  onClose,
-  onCreate,
-}: NewSchemaModalProps) {
+export function NewSchemaModal({ onClose, onCreate }: NewSchemaModalProps) {
   const { t } = useTranslation();
   const [name, setName] = useState(t("newSchema.untitled"));
   const [dbType, setDbType] = useState<DbType>("postgresql");
@@ -24,11 +19,7 @@ export function NewSchemaModal({
   };
 
   return (
-    <Modal
-      onClose={onClose}
-      dismissible={!isFirstLaunch}
-      ariaLabelledBy="new-schema-title"
-    >
+    <Modal onClose={onClose} ariaLabelledBy="new-schema-title">
       <div
         className="p-6"
         onKeyDown={(e) => {
@@ -91,14 +82,12 @@ export function NewSchemaModal({
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          {!isFirstLaunch && (
-            <button
-              onClick={onClose}
-              className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-secondary transition-all hover:bg-surface-muted"
-            >
-              {t("newSchema.cancel")}
-            </button>
-          )}
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-secondary transition-all hover:bg-surface-muted"
+          >
+            {t("newSchema.cancel")}
+          </button>
           <button
             onClick={handleCreate}
             className="rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-accent/90 active:scale-[0.98]"

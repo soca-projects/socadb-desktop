@@ -1,9 +1,11 @@
 import { emit } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import { useSchemaStore } from "../stores/schemaStore";
 import { useThemeStore } from "../stores/themeStore";
+import { useViewStore } from "../stores/viewStore";
 import {
   openAndApplySchema,
   openRecentFile,
@@ -11,7 +13,9 @@ import {
   saveSchemaFileAs,
 } from "./fileOperations";
 import { addRecentFile } from "./recentFiles";
-import { handleRedo, handleUndo } from "./schemaActions";
+import { closeSchema, handleRedo, handleUndo } from "./schemaActions";
+import { isWorthResuming } from "./schemaQueries";
+import { logError, logInfo } from "./log";
 
 // Inline editors (e.g. column rename inputs in SidePanel) commit their value
 // on blur, not on every keystroke. Force a blur before any destructive or
@@ -40,13 +44,14 @@ export async function handleSaveAs() {
       addRecentFile(path);
     }
   } catch (e) {
+    logError("file.save_as.failed", e);
     toast.error(i18next.t("toast.saveFailed", { error: String(e) }));
   }
 }
 
 function isDirty() {
-  const { schema, savedAt } = useSchemaStore.getState();
-  return savedAt !== schema.updatedAt;
+  const { schema, filePath, savedAt } = useSchemaStore.getState();
+  return savedAt !== schema.updatedAt && isWorthResuming(schema, filePath);
 }
 
 export function handleOpen() {
@@ -67,6 +72,43 @@ export function handleNew() {
   void emit("new-schema-requested");
 }
 
+export function handleHomeImport() {
+  commitActiveEdit();
+  if (isDirty()) {
+    void emit("unsaved-guard-import");
+    return;
+  }
+  useViewStore.getState().requestImport();
+}
+
+function isEditor() {
+  return useViewStore.getState().view === "editor";
+}
+
+export function handleShowHome() {
+  commitActiveEdit();
+  useViewStore.getState().showHome();
+}
+
+export function handleFindSchema() {
+  commitActiveEdit();
+  useViewStore.getState().requestSearch();
+}
+
+export function handleCloseSchema() {
+  commitActiveEdit();
+  const { schema, filePath } = useSchemaStore.getState();
+  if (!isWorthResuming(schema, filePath)) {
+    useViewStore.getState().showHome();
+    return;
+  }
+  if (isDirty()) {
+    void emit("unsaved-guard-close");
+    return;
+  }
+  closeSchema();
+}
+
 export function handleOpenRecent(filePath: string) {
   commitActiveEdit();
   if (isDirty()) {
@@ -74,6 +116,11 @@ export function handleOpenRecent(filePath: string) {
     return;
   }
   void openRecentFile(filePath);
+}
+
+export function handleShowLogs() {
+  logInfo("menu.action", "showLogs");
+  invoke("show_logs").catch((e: unknown) => logError("app.show_logs.failed", e));
 }
 
 // Closing the window triggers WindowEvent::Destroyed which runs the agent +
@@ -100,29 +147,61 @@ function toWindowsSignature(accelerator: string): string {
   return accelerator.toLowerCase().replaceAll("cmdorctrl", "ctrl");
 }
 
-function shortcut(accelerator: string, run: () => void | Promise<void>): MenuShortcut {
-  return { accelerator, windowsSignature: toWindowsSignature(accelerator), run };
+function shortcut(
+  name: string,
+  accelerator: string,
+  run: () => void | Promise<void>,
+): MenuShortcut {
+  return {
+    accelerator,
+    windowsSignature: toWindowsSignature(accelerator),
+    run: () => {
+      logInfo("menu.action", name);
+      return run();
+    },
+  };
 }
 
 export const MENU_SHORTCUTS = {
-  newSchema: shortcut("CmdOrCtrl+N", () => handleNew()),
-  open: shortcut("CmdOrCtrl+O", () => handleOpen()),
-  save: shortcut("CmdOrCtrl+S", () => handleSave()),
-  saveAs: shortcut("CmdOrCtrl+Shift+S", () => handleSaveAs()),
-  import: shortcut("CmdOrCtrl+I", () => {
+  newSchema: shortcut("newSchema", "CmdOrCtrl+N", () => handleNew()),
+  open: shortcut("open", "CmdOrCtrl+O", () => handleOpen()),
+  save: shortcut("save", "CmdOrCtrl+S", () => handleSave()),
+  saveAs: shortcut("saveAs", "CmdOrCtrl+Shift+S", () => handleSaveAs()),
+  home: shortcut("home", "CmdOrCtrl+Shift+H", () => handleShowHome()),
+  findSchema: shortcut("findSchema", "CmdOrCtrl+F", () => handleFindSchema()),
+  closeSchema: shortcut("closeSchema", "CmdOrCtrl+W", () => handleCloseSchema()),
+  closeWindow: shortcut("closeWindow", "CmdOrCtrl+Shift+W", () => handleQuit()),
+  import: shortcut("import", "CmdOrCtrl+I", () => {
+    if (!isEditor()) {
+      handleHomeImport();
+      return;
+    }
     commitActiveEdit();
     void emit("open-import");
   }),
-  export: shortcut("CmdOrCtrl+E", () => {
+  export: shortcut("export", "CmdOrCtrl+E", () => {
+    if (!isEditor()) return;
     commitActiveEdit();
     void emit("open-export");
   }),
-  quit: shortcut("CmdOrCtrl+Q", () => handleQuit()),
-  undo: shortcut("CmdOrCtrl+Z", () => handleUndo()),
-  redo: shortcut("CmdOrCtrl+Shift+Z", () => handleRedo()),
-  toggleSidebar: shortcut("CmdOrCtrl+B", () => void emit("toggle-sidebar")),
-  toggleFocus: shortcut("CmdOrCtrl+Shift+F", () => void emit("toggle-focus-mode")),
-  toggleTheme: shortcut("CmdOrCtrl+Shift+T", () =>
+  quit: shortcut("quit", "CmdOrCtrl+Q", () => handleQuit()),
+  undo: shortcut("undo", "CmdOrCtrl+Z", () => {
+    if (isEditor()) handleUndo();
+  }),
+  redo: shortcut("redo", "CmdOrCtrl+Shift+Z", () => {
+    if (isEditor()) handleRedo();
+  }),
+  toggleSidebar: shortcut(
+    "toggleSidebar",
+    "CmdOrCtrl+B",
+    () => void emit("toggle-sidebar"),
+  ),
+  toggleFocus: shortcut(
+    "toggleFocus",
+    "CmdOrCtrl+Shift+F",
+    () => void emit("toggle-focus-mode"),
+  ),
+  toggleTheme: shortcut("toggleTheme", "CmdOrCtrl+Shift+T", () =>
     useThemeStore.getState().toggleTheme(),
   ),
 } as const;

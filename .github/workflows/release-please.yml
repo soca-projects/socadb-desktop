@@ -10,6 +10,9 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-22.04
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       # Generate an installation token for the socadb-release-bot GitHub App.
       # We use the App's token instead of the default GITHUB_TOKEN so the PR
@@ -23,8 +26,54 @@ jobs:
           private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
 
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: main
+
+  # Opens the PR that brings the release commit back into develop. The branch
+  # is cut from develop with main merged into it: the rules require a PR branch
+  # to be up to date with its base, and main is behind develop.
+  sync-develop:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - name: Open the sync PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          repo="$GITHUB_REPOSITORY"
+          branch="chore/sync-main-$VERSION"
+          title="chore: sync main into develop after $VERSION"
+
+          if [ "$(gh api "repos/$repo/compare/develop...main" --jq .ahead_by)" = "0" ]; then
+            echo "develop already contains main."
+            exit 0
+          fi
+          if [ -n "$(gh pr list --repo "$repo" --head "$branch" --state open --json number --jq '.[].number')" ]; then
+            echo "The sync PR is already open."
+            exit 0
+          fi
+
+          develop=$(gh api "repos/$repo/git/ref/heads/develop" --jq .object.sha)
+          if gh api "repos/$repo/git/ref/heads/$branch" >/dev/null 2>&1; then
+            gh api -X PATCH "repos/$repo/git/refs/heads/$branch" -f sha="$develop" -F force=true >/dev/null
+          else
+            gh api "repos/$repo/git/refs" -f ref="refs/heads/$branch" -f sha="$develop" >/dev/null
+          fi
+          if ! gh api "repos/$repo/merges" -f base="$branch" -f head=main -f commit_message="$title" >/dev/null; then
+            echo "::error::main doesn't merge cleanly into develop: merge it into $branch by hand, then open the PR."
+            exit 1
+          fi
+
+          gh pr create --repo "$repo" --base develop --head "$branch" --title "$title" --body "Brings the $VERSION release commit from main into develop: the release-please manifest, the changelog and the version files. Merge it with a merge commit so develop keeps main's history."

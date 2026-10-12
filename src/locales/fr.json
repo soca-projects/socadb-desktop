@@ -10,7 +10,93 @@
     "settings": "Paramètres",
     "untitled": "Sans titre",
     "mysql": "MySQL",
-    "postgresql": "PostgreSQL"
+    "postgresql": "PostgreSQL",
+    "home": "Accueil"
+  },
+  "home": {
+    "title": "Schémas",
+    "new": "Nouveau schéma",
+    "open": "Ouvrir…",
+    "import": "Importer…",
+    "searchLabel": "Rechercher un schéma",
+    "searchPlaceholder": "Rechercher un schéma, un dossier ou une table…",
+    "clearSearch": "Effacer la recherche",
+    "sortLabel": "Trier par",
+    "sort": {
+      "opened": "Dernière ouverture",
+      "modified": "Dernière modification",
+      "name": "Nom"
+    },
+    "resume": "Reprendre",
+    "allSchemas": "Tous les schémas",
+    "tables_one": "{{count}} table",
+    "tables_other": "{{count}} tables",
+    "opened": "ouvert {{when}}",
+    "modified": "modifié {{when}}",
+    "justNow": "à l'instant",
+    "neverSaved": "Jamais enregistré",
+    "badge": {
+      "draft": "Non enregistré",
+      "modified": "Modifié",
+      "open": "Ouvert",
+      "unreadable": "Illisible",
+      "unavailable": "Inaccessible"
+    },
+    "card": {
+      "open": "Ouvrir {{name}}",
+      "resume": "Reprendre {{name}}",
+      "actions": "Actions pour {{name}}"
+    },
+    "action": {
+      "open": "Ouvrir",
+      "revealMac": "Afficher dans le Finder",
+      "revealWindows": "Afficher dans l'Explorateur",
+      "revealLinux": "Afficher dans le gestionnaire de fichiers",
+      "rename": "Renommer…",
+      "duplicate": "Dupliquer",
+      "remove": "Retirer de l'accueil",
+      "removeHint": "Le fichier reste sur le disque",
+      "resume": "Reprendre",
+      "saveAs": "Enregistrer sous…",
+      "deleteDraft": "Supprimer le brouillon",
+      "deleteDraftHint": "Il ne pourra pas être récupéré"
+    },
+    "deleteDraft": {
+      "title": "Supprimer ce brouillon ?",
+      "description": "« {{name}} » n'a jamais été enregistré : il ne pourra pas être récupéré.",
+      "confirm": "Supprimer"
+    },
+    "cancel": "Annuler",
+    "copySuffix": "copie",
+    "revealFailed": "Impossible d'afficher le fichier : {{error}}",
+    "duplicateFailed": "Impossible de dupliquer le fichier : {{error}}",
+    "noResults": "Aucun schéma ne correspond à « {{query}} »",
+    "noResultsHint": "La recherche porte sur le nom du fichier, son dossier et les noms de tables.",
+    "missing_one": "{{count}} schéma introuvable",
+    "missing_other": "{{count}} schémas introuvables",
+    "missingShow": "Afficher",
+    "missingHide": "Masquer",
+    "missingExplain": "Ces fichiers ont été déplacés, renommés ou supprimés en dehors de SocaDB, ou ils sont sur un disque non connecté.",
+    "locate": "Le retrouver…",
+    "remove": "Retirer",
+    "removeAll": "Tout retirer",
+    "empty": {
+      "title": "Aucun schéma pour l'instant",
+      "description": "SocaDB conçoit des schémas de bases MySQL et PostgreSQL, à la main ou avec l'IA. Commencez de l'une de ces trois façons.",
+      "newHint": "Partir d'une page blanche, à la main ou avec l'IA",
+      "open": "Ouvrir un fichier",
+      "openHint": "Un fichier .soca déjà sur votre ordinateur",
+      "import": "Importer",
+      "importHint": "Un fichier SQL exporté d'une base ou d'un autre outil"
+    },
+    "rename": {
+      "title": "Renommer le schéma",
+      "label": "Nom du fichier",
+      "confirm": "Renommer",
+      "exists": "Un fichier porte déjà ce nom dans ce dossier.",
+      "invalid": "Utilisez un nom sans /, \\ ni :.",
+      "failed": "Impossible de renommer le fichier : {{error}}"
+    }
   },
   "theme": {
     "switchToDark": "Passer en mode sombre",
@@ -35,7 +121,8 @@
     "undo": "Annuler",
     "redo": "Rétablir",
     "autoLayout": "Réorganiser",
-    "deleteRelation": "Supprimer la relation"
+    "deleteRelation": "Supprimer la relation",
+    "exitFocusMode": "Appuyez sur <kbd>{{shortcut}}</kbd> pour quitter le mode focus"
   },
   "contextMenu": {
     "rename": "Renommer",
@@ -102,54 +189,99 @@
   "settings": {
     "title": "Paramètres",
     "agents": "Agents",
+    "integrations": "Intégrations",
     "language": "Langue",
     "languageDescription": "Choisissez la langue de l'application.",
-    "close": "Fermer"
+    "close": "Fermer",
+    "conversations": "Conversations",
+    "deleteAllDescription": "Les conversations sont gardées jusqu'à ce que vous les supprimiez. La suppression efface aussi la mémoire de l'agent pour les conversations Claude.",
+    "deleteAllConversations": "Supprimer toutes les conversations",
+    "deleteAllConfirm": "Supprimer toutes les conversations ? C'est définitif.",
+    "deleteAll": "Tout supprimer",
+    "deleteAllWhileAnswering": "Disponible une fois la réponse de l'agent terminée.",
+    "cancel": "Annuler",
+    "general": "Général",
+    "startupTitle": "Au lancement, ouvrir",
+    "startupDescription": "Ce que SocaDB affiche quand vous l'ouvrez.",
+    "startup": {
+      "home": "La liste des schémas",
+      "homeHint": "L'accueil avec tous vos schémas. Un brouillon non enregistré apparaît en tête.",
+      "lastSchema": "Le dernier schéma",
+      "lastSchemaHint": "Reprend là où vous en étiez, brouillon compris."
+    }
+  },
+  "integrations": {
+    "title": "Utiliser SocaDB depuis d'autres apps",
+    "description": "Les apps activées ici peuvent lire et modifier le schéma ouvert dans SocaDB. Elles n'y ont accès que pendant que SocaDB est ouverte, et vous demandent la permission avant d'utiliser ses outils.",
+    "notInstalled": "Pas installé",
+    "unreadable": "SocaDB ne modifie pas sa config, qu'il n'arrive pas à lire.",
+    "removed": "Retiré à la main de la config de {{name}}. SocaDB ne s'y réinscrit plus, sauf si vous le réactivez ici.",
+    "restartToAdd": "Activé. Redémarrez {{name}} pour qu'il voie SocaDB.",
+    "restartToRemove": "Désactivé. Redémarrez {{name}} pour qu'il retire SocaDB.",
+    "off": "Désactivé",
+    "on": "Activé",
+    "availableInNewSessions": "Disponible dans les nouvelles sessions",
+    "failed": "Impossible de modifier la config de {{name}} : {{error}}",
+    "howTo": "Comment s'en servir",
+    "howToOpen": "Gardez SocaDB ouverte avec votre schéma.",
+    "howToAsk": "Dans Claude Code, Claude Desktop ou Codex, demandez ce que vous voulez faire avec le schéma. Par exemple :",
+    "howToExample": "Lis le schéma ouvert dans SocaDB et écris la migration SQL pour PostgreSQL.",
+    "howToAllow": "La première fois, l'app vous demande d'autoriser les outils SocaDB.",
+    "otherApp": "Une autre app compatible MCP ?",
+    "otherAppHint": "Ajoutez ce serveur dans la configuration MCP de l'app, sous le nom socadb :"
   },
   "agent": {
-    "signInWith": "Se connecter avec...",
-    "subscriptionIncluded": "Inclus dans votre abonnement",
-    "ownApiKey": "Utiliser sa propre clé API",
-    "connectedVia": "Connecté via {{method}}",
-    "connectedViaEmail": "Connecté via {{method}} ({{email}})",
-    "checking": "Vérification...",
-    "notConnected": "Non connecté",
-    "disconnect": "Déconnecter",
-    "switchToApiKey": "Pour utiliser une clé API, lancez",
-    "switchToApiKeyEnd": "dans le terminal.",
-    "signInTitle": "Se connecter avec {{label}}",
-    "terminalSteps": "Suivez ces étapes dans le terminal.",
+    "ownApiKey": "Votre propre clé API",
     "openTerminal": "Ouvrir le terminal",
     "stepInstall": "1. Installer {{name}} (si nécessaire)",
     "stepSignIn": "2. Démarrer {{name}} et se connecter",
     "stepLogin": "3. Ou se connecter manuellement",
-    "connectionDetected": "Connexion détectée !",
-    "detectingConnection": "SocaDB détectera votre connexion automatiquement...",
-    "apiKeyTitle": "Se connecter avec une clé API",
+    "showSetupSteps": "Afficher la configuration {{name}}",
+    "hideSetupSteps": "Masquer la configuration {{name}}",
     "apiKeyGetFrom": "Récupérez votre clé API sur la",
-    "connecting": "Connexion...",
-    "connect": "Connecter",
+    "apiKeySave": "Enregistrer",
+    "apiKeyUpdate": "Mettre à jour",
+    "apiKeyReplace": "Coller une nouvelle clé pour remplacer",
+    "apiKeyStored": "Clé API enregistrée",
+    "apiKeyRemove": "Supprimer la clé",
+    "saving": "Enregistrement...",
     "keyringUnavailable": "Impossible de sauvegarder la clé API de manière sécurisée. Veuillez réessayer.",
-    "disconnectFailed": "Impossible de supprimer la clé API. Veuillez réessayer.",
-    "showDetails": "Pourquoi ce n'est pas détecté ?",
-    "hideDetails": "Masquer les détails",
-    "runDiagnose": "Lancer le diagnostic",
-    "diagnosing": "En cours..."
+    "disconnectFailed": "Impossible de supprimer la clé API. Veuillez réessayer."
   },
   "chat": {
     "newConversation": "Nouvelle conversation",
     "newChat": "Nouveau chat",
     "closeChat": "Fermer le chat",
+    "apiKeyNeeded": "Ajoutez votre clé API {{name}} dans les paramètres, section Agents, pour discuter.",
     "askAi": "Demander à l'IA de modifier le schéma...",
-    "connectProvider": "Configurez un provider pour commencer...",
     "whatToBuild": "Que souhaitez-vous créer ?",
-    "connectInSettings": "Configurez un provider dans les paramètres.",
     "stop": "Arrêter",
     "sendMessage": "Envoyer le message",
     "suggestion1": "Schéma e-commerce complet avec 10 tables",
     "suggestion2": "Ajouter une table utilisateurs avec champs d'auth",
     "suggestion3": "Schéma pour une app type Spotify",
-    "suggestion4": "Analyser mon schéma et suggérer des améliorations"
+    "suggestion4": "Analyser mon schéma et suggérer des améliorations",
+    "memoryLost": "L'agent ne se souvient plus de cette conversation : sa mémoire a été effacée. Il repart du schéma actuel.",
+    "history": "Historique",
+    "backToChat": "Retour à la conversation",
+    "searchConversations": "Rechercher dans les conversations",
+    "noConversations": "Aucune conversation pour l'instant.",
+    "noMatch": "Aucune conversation ne contient « {{query}} ».",
+    "rename": "Renommer",
+    "renameLabel": "Nouveau titre",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer « {{name}} » ? La conversation et la mémoire de l'agent seront effacées.",
+    "cancel": "Annuler",
+    "lockedWhileAnswering": "Tant que l'agent répond, impossible d'ouvrir une autre conversation ou de supprimer celle en cours.",
+    "providerSwitched": "Nouvelle conversation : {{model}} ne peut pas reprendre une conversation commencée avec {{previous}}.",
+    "model": "Modèle",
+    "groups": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "week": "7 derniers jours",
+      "month": "30 derniers jours",
+      "older": "Plus ancien"
+    }
   },
   "provider": {
     "claude": {
@@ -181,6 +313,10 @@
     "saveAs": "Enregistrer sous...",
     "import": "Importer...",
     "export": "Exporter...",
+    "home": "Accueil",
+    "findSchema": "Rechercher un schéma",
+    "closeSchema": "Fermer le schéma",
+    "closeWindow": "Fermer la fenêtre",
     "edit": "Édition",
     "undo": "Annuler",
     "redo": "Rétablir",
@@ -194,14 +330,19 @@
     "checkingForUpdates": "Recherche des mises à jour...",
     "downloadingUpdate": "Téléchargement de la mise à jour...",
     "help": "Aide",
+    "showLogs": "Afficher les journaux",
     "hideSocaDB": "Masquer SocaDB",
     "quitSocaDB": "Quitter SocaDB",
     "exit": "Quitter"
   },
   "chatError": {
     "generic": "Erreur : {{message}}",
+    "notSignedIn": "Vous n'êtes pas connecté à {{cli}}. Ouvrez un terminal, lancez `{{command}}`, puis réessayez. Les étapes détaillées sont dans les paramètres, section Agents.",
+    "apiKeyRejected": "{{name}} a refusé la clé API. Vérifiez-la ou remplacez-la dans les paramètres, section Agents.",
+    "apiKeyMissing": "Aucune clé API {{name}} n'est enregistrée. Ajoutez-la dans les paramètres, section Agents, ou passez en mode abonnement.",
+    "keyringUnavailable": "SocaDB n'a pas pu lire votre clé API {{name}} dans le trousseau du système. Autorisez l'accès si le système le demande, ou enregistrez à nouveau la clé dans les paramètres, section Agents.",
     "creditBalance": "Erreur : {{message}}\n\nAjoutez des crédits sur la [{{consoleName}}]({{consoleUrl}}), puis réessayez. Si le problème persiste, reconnectez votre clé API dans les paramètres.",
-    "statusTimeout": "Vérification du statut expirée"
+    "modelUnavailable": "{{model}} n'est pas disponible avec votre forfait ChatGPT. Choisissez un autre modèle sous le champ de saisie, ou utilisez une clé API OpenAI dans les paramètres, section Agents."
   },
   "toast": {
     "exportSqlFailed": "Échec de l'export SQL : {{error}}",
@@ -253,7 +394,9 @@
     "failed": "Échec de l'installation : {{error}}"
   },
   "recent": {
-    "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé."
+    "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé.",
+    "permissionDenied": "SocaDB n'a pas le droit de lire ce fichier.",
+    "permissionDeniedMac": "SocaDB n'a pas le droit de lire ce fichier. Autorisez-le dans Réglages Système › Confidentialité et sécurité › Fichiers et dossiers."
   },
   "toolCall": {
     "create_table": "table créée",

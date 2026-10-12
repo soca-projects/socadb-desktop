@@ -1,9 +1,10 @@
 import { memo } from "react";
 import { ChatToolCall } from "../ChatToolCall/ChatToolCall";
-import type { ChatMessage as ChatMessageType } from "../../types/chat";
+import { isEmptyMessage, type ChatMessage as ChatMessageType } from "../../types/chat";
 
 interface ChatMessageProps {
   message: ChatMessageType;
+  thinking?: boolean;
 }
 
 function ThinkingIndicator() {
@@ -23,9 +24,13 @@ function ThinkingIndicator() {
   );
 }
 
-export const ChatMessage = memo(function ChatMessage({ message }: ChatMessageProps) {
+export const ChatMessage = memo(function ChatMessage({
+  message,
+  thinking = false,
+}: ChatMessageProps) {
   const isUser = message.role === "user";
-  const isEmpty = !message.content.trim() && message.toolCalls.length === 0;
+  const isEmpty = isEmptyMessage(message);
+  if (isEmpty && !isUser && !thinking) return null;
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>

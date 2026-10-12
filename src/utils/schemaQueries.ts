@@ -44,3 +44,7 @@ export function serializeRelation(schema: Schema, r: Relation) {
     to: { table: toTable?.name, column: toCol?.name },
   };
 }
+
+export function isWorthResuming(schema: Schema, filePath: string | null): boolean {
+  return filePath !== null || schema.tables.length > 0;
+}

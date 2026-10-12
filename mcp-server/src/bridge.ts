@@ -2,22 +2,35 @@ import { WebSocket } from "ws";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { mcpLog } from "./log.js";
 
 let ws: WebSocket | null = null;
 let requestId = 0;
 const pending = new Map<
   number,
-  { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout> }
+  {
+    action: string;
+    resolve: (value: unknown) => void;
+    reject: (reason: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+  }
 >();
 
 function readPort(): number {
   const portFile = join(homedir(), ".socadb", ".port");
+  let content: string;
   try {
-    const content = readFileSync(portFile, "utf-8").trim();
-    return parseInt(content, 10);
+    content = readFileSync(portFile, "utf-8").trim();
   } catch {
+    mcpLog.error("mcp.server.app_not_running", "No ~/.socadb/.port file");
     throw new Error("SocaDB is not running. Please open SocaDB first.");
   }
+  const port = parseInt(content, 10);
+  if (!Number.isInteger(port) || port <= 0) {
+    mcpLog.error("mcp.server.port_invalid", "The port file holds no valid port", { content });
+    throw new Error("SocaDB is not running. Please open SocaDB first.");
+  }
+  return port;
 }
 
 export function connect(): Promise<void> {
@@ -27,6 +40,7 @@ export function connect(): Promise<void> {
 
     ws.on("open", () => {
       console.error(`Connected to SocaDB on port ${port}`);
+      mcpLog.info("mcp.server.connected", "Connected to SocaDB", { port });
       resolve();
     });
 
@@ -38,6 +52,9 @@ export function connect(): Promise<void> {
           clearTimeout(handler.timer);
           pending.delete(msg.id);
           if (msg.error) {
+            mcpLog.warn("mcp.server.request_failed", String(msg.error).replace(/"(?:[^"\\]|\\.)*"/g, '"…"'), {
+              action: handler.action,
+            });
             handler.reject(new Error(msg.error));
           } else {
             handler.resolve(msg.result);
@@ -50,11 +67,13 @@ export function connect(): Promise<void> {
 
     ws.on("error", (err) => {
       console.error("WebSocket error:", err.message);
+      mcpLog.error("mcp.server.socket_error", err.message);
       reject(err);
     });
 
     ws.on("close", () => {
       console.error("Disconnected from SocaDB");
+      mcpLog.warn("mcp.server.disconnected", "Disconnected from SocaDB", { pending: pending.size });
       ws = null;
       for (const [, handler] of pending) {
         clearTimeout(handler.timer);
@@ -76,11 +95,12 @@ export function send(action: string, payload?: unknown): Promise<unknown> {
     const timer = setTimeout(() => {
       if (pending.has(id)) {
         pending.delete(id);
+        mcpLog.warn("mcp.server.request_timeout", action);
         reject(new Error(`Request ${action} timed out`));
       }
     }, 10000);
 
-    pending.set(id, { resolve, reject, timer });
+    pending.set(id, { action, resolve, reject, timer });
     ws.send(JSON.stringify({ id, action, payload }));
   });
 }

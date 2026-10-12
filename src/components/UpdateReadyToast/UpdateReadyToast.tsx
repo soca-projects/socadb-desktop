@@ -62,7 +62,7 @@ export function UpdateReadyToast({ toastId }: Props) {
                 onClick={() => {
                   void openUrl(CHANGELOG_URL);
                 }}
-                className="underline decoration-tertiary/40 underline-offset-2 transition-colors hover:text-accent hover:decoration-accent"
+                className="underline decoration-border-hover underline-offset-2 transition-colors hover:text-accent hover:decoration-accent"
               >
                 {t("updater.releaseNotes")}
               </button>

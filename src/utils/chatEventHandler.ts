@@ -1,38 +1,12 @@
 import { useChatStore } from "../stores/chatStore";
-import type { ChatStatusResult, ChatEvent, ProviderId } from "../types/chat";
-import { makeProvider, PROVIDERS } from "../types/chat";
-import { ChatStatusResultZ, ChatErrorZ } from "./zodSchemas";
+import type { ChatEvent, ProviderId } from "../types/chat";
+import { PROVIDERS } from "../types/chat";
+import { ChatErrorZ } from "./zodSchemas";
 import { resetAgent } from "./chatCommands";
+import { authErrorText, modelUnavailableText } from "./chatErrors";
 import i18next from "../i18n";
-
-let nextRequestId = 1;
-
-const statusResolvers = new Map<
-  number,
-  {
-    providerId: string;
-    resolve: (result: ChatStatusResult) => void;
-    timeout: ReturnType<typeof setTimeout>;
-  }
->();
-
-export function registerStatusResolver(
-  providerId: string,
-  resolve: (result: ChatStatusResult) => void,
-  timeout: ReturnType<typeof setTimeout>,
-): number {
-  const id = nextRequestId++;
-  statusResolvers.set(id, { providerId, resolve, timeout });
-  return id;
-}
-
-export function removeStatusResolver(requestId: number) {
-  const resolver = statusResolvers.get(requestId);
-  if (resolver) {
-    clearTimeout(resolver.timeout);
-    statusResolvers.delete(requestId);
-  }
-}
+import { maskQuoted } from "./logPrivacy";
+import { logWarn } from "./log";
 
 function ensureAssistantMessage() {
   const store = useChatStore.getState();
@@ -43,22 +17,6 @@ function ensureAssistantMessage() {
 }
 
 export function handleChatEvent(parsed: ChatEvent) {
-  if (parsed.type === "chat_status_result") {
-    const parse = ChatStatusResultZ.safeParse(parsed);
-    if (!parse.success) return;
-    const result: ChatStatusResult = parse.data;
-    const pid = (parsed.providerId as string) ?? "claude";
-    for (const [id, resolver] of statusResolvers) {
-      if (resolver.providerId === pid) {
-        clearTimeout(resolver.timeout);
-        statusResolvers.delete(id);
-        resolver.resolve(result);
-        break;
-      }
-    }
-    return;
-  }
-
   if (parsed.type !== "chat_event") return;
 
   const store = useChatStore.getState();
@@ -100,13 +58,26 @@ export function handleChatEvent(parsed: ChatEvent) {
       );
       break;
 
-    case "done":
+    case "memory_lost":
+      if (isStale) break;
+      ensureAssistantMessage();
+      // Its own message: "done" replaces the text of the last one.
+      store.setAssistantText(i18next.t("chat.memoryLost"));
+      store.startAssistantMessage();
+      break;
+
+    case "done": {
       if (!isStale && parsed.response) {
         ensureAssistantMessage();
         store.setAssistantText(parsed.response as string);
       }
-      store.finishResponse((parsed.sessionId as string) ?? "");
+      // A stale answer belongs to another conversation, and a turn stopped before
+      // its session started reports none: keep the conversation's own session then.
+      const reported =
+        !isStale && typeof parsed.sessionId === "string" ? parsed.sessionId : "";
+      store.finishResponse(reported || (store.sessionId ?? ""));
       break;
+    }
 
     case "error": {
       if (!isStale) {
@@ -116,12 +87,21 @@ export function handleChatEvent(parsed: ChatEvent) {
         const lower = errorMsg.toLowerCase();
         const providerId = (parsed.providerId as ProviderId) ?? "claude";
         const meta = PROVIDERS[providerId];
+        // Runner errors can quote raw agent events (Codex dumps its output):
+        // the release log keeps their shape, not their content.
+        logWarn("agent.turn.error", maskQuoted(errorMsg).slice(0, 300), {
+          provider: providerId,
+          code: errorParse.success ? errorParse.data.code : undefined,
+        });
 
-        if (lower.includes("not logged in")) {
+        if (errorParse.success && errorParse.data.code === "auth") {
           store.appendAssistantText(
-            i18next.t("chatError.generic", { message: errorMsg }),
+            authErrorText(providerId, store.providers[providerId]),
           );
-          store.setProvider(providerId, makeProvider(providerId, false, null, null));
+        } else if (errorParse.success && errorParse.data.code === "model_unavailable") {
+          store.appendAssistantText(
+            modelUnavailableText(errorParse.data.model ?? store.selectedModel),
+          );
         } else if (lower.includes("credit balance")) {
           store.appendAssistantText(
             i18next.t("chatError.creditBalance", {
@@ -137,7 +117,9 @@ export function handleChatEvent(parsed: ChatEvent) {
           );
         }
       }
-      store.finishResponse("");
+      // An error ends the turn, not the conversation: dropping the session here
+      // would make the next message start over without the agent's memory.
+      store.finishResponse(store.sessionId ?? "");
       break;
     }
   }

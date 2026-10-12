@@ -4,6 +4,7 @@ import {
   PlusIcon as Plus,
   ArrowLeftIcon as ArrowLeft,
 } from "@phosphor-icons/react";
+import { formatShortcut } from "../../utils/platform";
 
 interface EmptyCanvasProps {
   onAddTable: () => void;
@@ -51,13 +52,13 @@ export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
         >
           <span className="flex items-center gap-1.5">
             <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary shadow-soft">
-              {"\u2318"}N
+              {formatShortcut(["Mod", "N"])}
             </kbd>
             {t("emptyCanvas.newSchema")}
           </span>
           <span className="flex items-center gap-1.5">
             <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary shadow-soft">
-              {"\u2318"}O
+              {formatShortcut(["Mod", "O"])}
             </kbd>
             {t("emptyCanvas.openFile")}
           </span>

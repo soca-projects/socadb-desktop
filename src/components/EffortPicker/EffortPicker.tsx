@@ -37,7 +37,7 @@ export function EffortPicker({ modelId, value, onChange, disabled }: EffortPicke
       {open && (
         <div
           role="listbox"
-          className="absolute right-0 top-full z-30 mt-1 min-w-[120px] overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card"
+          className="absolute bottom-full left-0 z-30 mb-1 min-w-[120px] overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card"
         >
           {levels.map((level) => (
             <button

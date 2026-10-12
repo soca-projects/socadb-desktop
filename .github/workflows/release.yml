@@ -18,48 +18,36 @@ jobs:
     outputs:
       body: ${{ steps.release_body.outputs.body }}
       prerelease: ${{ steps.flags.outputs.prerelease }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      # Fail loudly if package.json / mcp-server/package.json / Cargo.toml /
-      # tauri.conf.json drift from the tag. The Tauri bundle names embed the
-      # tauri.conf.json version, so a mismatch produces artifacts whose
-      # filenames don't match the install links we render below.
-      - name: Verify version consistency
+      # Keep in sync with build.yml and BUN_VERSION in mcp-server/src/build.ts.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.3
+
+      # A stable tag comes from release-please, whose PR bumps the version
+      # files: they must hold the tag's version, which the bundle names embed.
+      # RC and beta tags are cut from develop, whose files keep the last stable
+      # version: build.yml writes the tag's base version into them.
+      - name: Check the version
+        id: version
         shell: bash
         run: |
           tag="${GITHUB_REF_NAME}"
-          expected="${tag#v}"
-          base="${expected%-rc.*}"
+          version="${tag#v}"
+          base="${version%-rc.*}"
           base="${base%-beta.*}"
-
-          extract_json() {
-            grep -m1 '"version"' "$1" | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
-          }
-          extract_cargo() {
-            grep -m1 '^version[[:space:]]*=' "$1" | sed 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/'
-          }
-
-          check() {
-            file="$1"
-            actual="$2"
-            if [ "$actual" != "$base" ]; then
-              echo "::error file=$file::version is '$actual', expected '$base' (from tag $tag)"
-              return 1
+          if [[ "$tag" == *-rc* || "$tag" == *-beta* ]]; then
+            if git ls-remote --exit-code --tags origin "refs/tags/v$base" >/dev/null; then
+              echo "::error::v$base is already released: tag a later version (bun run release:rc)."
+              exit 1
             fi
-          }
-
-          mismatch=0
-          check package.json "$(extract_json package.json)" || mismatch=1
-          check mcp-server/package.json "$(extract_json mcp-server/package.json)" || mismatch=1
-          check src-tauri/Cargo.toml "$(extract_cargo src-tauri/Cargo.toml)" || mismatch=1
-          check src-tauri/tauri.conf.json "$(extract_json src-tauri/tauri.conf.json)" || mismatch=1
-
-          if [ $mismatch -eq 1 ]; then
-            echo "Version files are out of sync with tag $tag." >&2
-            exit 1
+          else
+            bun scripts/version.ts check "$base"
           fi
-          echo "All 4 version files match $base."
+          echo "version=$base" >> "$GITHUB_OUTPUT"
 
       # Build the GitHub release body from CHANGELOG.md so each release ships
       # with hand-curated notes plus a permanent install section. RC and beta
@@ -106,13 +94,15 @@ jobs:
               echo "Pre-release build of v${base_version} for testing."
               echo ""
             fi
+            # Bundles are named after the version files, which hold the base
+            # version even for an RC.
             echo "## Install"
             echo ""
-            echo "- **macOS Apple Silicon**: \`SocaDB_${version}_aarch64.dmg\`"
-            echo "- **macOS Intel**: \`SocaDB_${version}_x64.dmg\`"
-            echo "- **Linux Debian/Ubuntu**: \`SocaDB_${version}_amd64.deb\`"
-            echo "- **Linux universal**: \`SocaDB_${version}_amd64.AppImage\` (\`chmod +x\` then run)"
-            echo "- **Windows**: \`SocaDB_${version}_x64-setup.exe\`"
+            echo "- **macOS Apple Silicon**: \`SocaDB_${base_version}_aarch64.dmg\`"
+            echo "- **macOS Intel**: \`SocaDB_${base_version}_x64.dmg\`"
+            echo "- **Linux Debian/Ubuntu**: \`SocaDB_${base_version}_amd64.deb\`"
+            echo "- **Linux universal**: \`SocaDB_${base_version}_amd64.AppImage\` (\`chmod +x\` then run)"
+            echo "- **Windows**: \`SocaDB_${base_version}_x64-setup.exe\`"
             echo "RELEASEBODY_EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -174,6 +164,7 @@ jobs:
     with:
       publish: true
       tag-name: ${{ github.ref_name }}
+      version: ${{ needs.prepare.outputs.version }}
       release-body: ${{ needs.prepare.outputs.body }}
       prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
     secrets: inherit

@@ -1,9 +1,17 @@
 #!/usr/bin/env node
+import { CODEX_DISABLED_FEATURES, runCodexExec } from "./codex-exec.ts";
 import {
   CODEX_EFFORTS,
+  codexErrorCode,
+  codexErrorText,
   emit,
+  emitDone,
+  emitError,
+  errorText,
   getMcpBinaryPath,
   getModuleDir,
+  isAuthErrorMessage,
+  isReconnectNotice,
   startRunner,
   type ChatSendCommand,
   type CodexEffort,
@@ -12,131 +20,170 @@ import {
 const __dirname = getModuleDir(import.meta.url);
 
 let abortController: AbortController | undefined;
-let currentSessionId: string | undefined;
+
+interface TurnState {
+  threadId?: string;
+  started: boolean;
+  lastError?: string;
+}
+
+function codexArgs(cmd: ChatSendCommand, threadId: string | undefined): string[] {
+  const effort: CodexEffort =
+    cmd.effort && CODEX_EFFORTS.includes(cmd.effort as CodexEffort)
+      ? (cmd.effort as CodexEffort)
+      : "medium";
+  return [
+    "--config",
+    `developer_instructions=${JSON.stringify(cmd.systemPrompt)}`,
+    "--config",
+    `mcp_servers.socadb.command=${JSON.stringify(getMcpBinaryPath(__dirname))}`,
+    "--config",
+    "mcp_servers.socadb.args=[]",
+    "--config",
+    "mcp_servers.socadb.env={}",
+    // SocaDB's own tools are the agent's job; under a read-only sandbox codex would
+    // otherwise ask for an approval nobody can give.
+    "--config",
+    'mcp_servers.socadb.default_tools_approval_mode="approve"',
+    "--model",
+    cmd.model ?? "gpt-6-sol",
+    "--sandbox",
+    "read-only",
+    "--skip-git-repo-check",
+    "--config",
+    `model_reasoning_effort="${effort}"`,
+    "--config",
+    'web_search="live"',
+    "--config",
+    'approval_policy="never"',
+    ...CODEX_DISABLED_FEATURES.flatMap((feature) => ["--disable", feature]),
+    ...(threadId ? ["resume", threadId] : []),
+  ];
+}
+
+function reportError(raw: string, model: string | undefined) {
+  emitError("codex", codexErrorText(raw), codexErrorCode(raw), model);
+}
 
 async function handleSend(cmd: ChatSendCommand) {
-  abortController = new AbortController();
+  const controller = new AbortController();
+  abortController = controller;
+  const turn: TurnState = { threadId: cmd.sessionId, started: false };
 
   try {
-    const { Codex } = await import("@openai/codex-sdk");
-    const effort: CodexEffort =
-      cmd.effort && CODEX_EFFORTS.includes(cmd.effort as CodexEffort)
-        ? (cmd.effort as CodexEffort)
-        : "medium";
-
-    const codex = new Codex({
-      config: {
-        developer_instructions: cmd.systemPrompt,
-        mcp_servers: {
-          socadb: {
-            command: getMcpBinaryPath(__dirname),
-            args: [],
-            env: {},
-          },
-        },
-      },
-    });
-
-    const threadOptions = {
-      model: cmd.model ?? "gpt-5.5",
-      skipGitRepoCheck: true,
-      webSearchEnabled: true,
-      sandboxMode: "danger-full-access" as const,
-      approvalPolicy: "never" as const,
-      modelReasoningEffort: effort,
-    };
-
-    const thread = cmd.sessionId
-      ? codex.resumeThread(cmd.sessionId, threadOptions)
-      : codex.startThread(threadOptions);
-
-    const { events } = await thread.runStreamed(cmd.message, {
-      signal: abortController.signal,
-    });
-
-    let finalResponse = "";
-
-    for await (const event of events) {
-      switch (event.type) {
-        case "thread.started":
-          currentSessionId = event.thread_id;
-          emit({
-            type: "chat_event",
-            event: "session_init",
-            sessionId: currentSessionId,
-          });
-          break;
-
-        case "item.started": {
-          const item = event.item;
-          if (item.type === "mcp_tool_call") {
-            emit({
-              type: "chat_event",
-              event: "tool_use",
-              toolName: item.tool,
-              toolInput: item.arguments,
-              toolUseId: item.id,
-            });
-          }
-          if (item.type === "agent_message") {
-            emit({
-              type: "chat_event",
-              event: "text_delta",
-              text: item.text,
-            });
-          }
-          break;
-        }
-
-        case "item.completed": {
-          const item = event.item;
-          if (item.type === "agent_message") {
-            finalResponse = item.text;
-          }
-          if (item.type === "mcp_tool_call") {
-            emit({
-              type: "chat_event",
-              event: "tool_result",
-              toolUseId: item.id,
-              output:
-                item.status === "failed"
-                  ? item.error?.message
-                  : item.result?.content,
-              isError: item.status === "failed",
-            });
-          }
-          break;
-        }
-
-        case "error":
-          emit({
-            type: "chat_event",
-            event: "error",
-            message: event.message,
-            providerId: "codex",
-          });
-          break;
-      }
+    try {
+      await runTurn(cmd, controller, turn);
+    } catch (error) {
+      // A thread codex can't find fails before it starts. Keeping its id would
+      // fail every later message of the conversation, so start over without it.
+      const raw = errorText(error);
+      const resumeFailed =
+        cmd.sessionId &&
+        !turn.started &&
+        !controller.signal.aborted &&
+        !isAuthErrorMessage(raw);
+      if (!resumeFailed) throw error;
+      console.error("[codex-agent] resume failed:", codexErrorText(raw));
+      emit({ type: "chat_event", event: "memory_lost" });
+      turn.threadId = undefined;
+      turn.lastError = undefined;
+      await runTurn(cmd, controller, turn);
     }
-
-    emit({
-      type: "chat_event",
-      event: "done",
-      response: finalResponse,
-      sessionId: currentSessionId,
-    });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[codex-agent] error:", errorMessage);
-    emit({
-      type: "chat_event",
-      event: "error",
-      message: errorMessage,
-      providerId: "codex",
-    });
+    if (controller.signal.aborted) {
+      emitDone("", turn.threadId);
+      return;
+    }
+    const raw = turn.lastError ?? errorText(error);
+    console.error("[codex-agent] error:", raw);
+    reportError(raw, cmd.model);
   } finally {
     abortController = undefined;
   }
+}
+
+async function runTurn(
+  cmd: ChatSendCommand,
+  controller: AbortController,
+  turn: TurnState,
+) {
+  const events = runCodexExec(
+    codexArgs(cmd, turn.threadId),
+    cmd.message,
+    controller.signal,
+  );
+
+  let finalResponse = "";
+
+  for await (const event of events) {
+    switch (event.type) {
+      case "thread.started":
+        turn.started = true;
+        turn.threadId = event.thread_id;
+        emit({
+          type: "chat_event",
+          event: "session_init",
+          sessionId: event.thread_id,
+        });
+        break;
+
+      case "item.started": {
+        const item = event.item;
+        if (item.type === "mcp_tool_call") {
+          emit({
+            type: "chat_event",
+            event: "tool_use",
+            toolName: item.tool,
+            toolInput: item.arguments,
+            toolUseId: item.id,
+          });
+        }
+        if (item.type === "agent_message") {
+          emit({
+            type: "chat_event",
+            event: "text_delta",
+            text: item.text,
+          });
+        }
+        break;
+      }
+
+      case "item.completed": {
+        const item = event.item;
+        if (item.type === "agent_message") {
+          finalResponse = item.text;
+        }
+        if (item.type === "mcp_tool_call") {
+          emit({
+            type: "chat_event",
+            event: "tool_result",
+            toolUseId: item.id,
+            output: item.status === "failed" ? item.error?.message : item.result?.content,
+            isError: item.status === "failed",
+          });
+        }
+        break;
+      }
+
+      // Codex reports each retry of a dropped connection as an error event and
+      // usually recovers; only the turn failing ends it. A rejected login won't
+      // recover, so it is reported at the first retry instead of after all of them.
+      case "error":
+        if (!isReconnectNotice(event.message)) {
+          turn.lastError = event.message;
+        } else if (isAuthErrorMessage(event.message)) {
+          reportError(event.message, cmd.model);
+          return;
+        }
+        break;
+
+      case "turn.failed":
+        reportError(event.error.message, cmd.model);
+        return;
+    }
+  }
+
+  emitDone(finalResponse, turn.threadId);
 }
 
 function handleStop() {
@@ -145,75 +192,7 @@ function handleStop() {
   }
 }
 
-async function handleStatus() {
-  try {
-    const { Codex } = await import("@openai/codex-sdk");
-    const codex = new Codex();
-    const abortCtrl = new AbortController();
-
-    // Don't pin a model: some models only work on API-key accounts, not
-    // ChatGPT subscriptions, and the SDK reports an error event we'd misread
-    // as "not logged in". Letting the binary pick its default gives us a
-    // true auth check.
-    const thread = codex.startThread({
-      skipGitRepoCheck: true,
-      modelReasoningEffort: "low",
-    });
-
-    const { events } = await thread.runStreamed("what is 2+2?", {
-      signal: abortCtrl.signal,
-    });
-
-    for await (const event of events) {
-      if (event.type === "error") {
-        // Log the real error so it surfaces in stderr / chat_diagnose instead
-        // of silently being reported as "not logged in".
-        console.error("[codex-status] error event:", event.message);
-        abortCtrl.abort();
-        emit({
-          type: "chat_status_result",
-          providerId: "codex",
-          loggedIn: false,
-          email: null,
-          loginType: null,
-        });
-        return;
-      }
-      if (event.type === "item.completed") {
-        abortCtrl.abort();
-        emit({
-          type: "chat_status_result",
-          providerId: "codex",
-          loggedIn: true,
-          email: null,
-          loginType: "subscription",
-        });
-        return;
-      }
-    }
-
-    emit({
-      type: "chat_status_result",
-      providerId: "codex",
-      loggedIn: false,
-      email: null,
-      loginType: null,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[codex-status] caught:", message);
-    emit({
-      type: "chat_status_result",
-      providerId: "codex",
-      loggedIn: false,
-      email: null,
-      loginType: null,
-    });
-  }
-}
-
 startRunner({
   handleSend,
   handleStop,
-  handleStatus,
 });

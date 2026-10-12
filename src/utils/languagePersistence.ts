@@ -1,6 +1,7 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { queueConfigWrite, socadbConfigPath } from "./socadbDir";
+import { queueConfigWrite, readConfigForUpdate, socadbConfigPath } from "./socadbDir";
+import { logError } from "./log";
 import i18next from "../i18n";
 import { isLanguage } from "../i18n";
 
@@ -21,18 +22,12 @@ async function saveLanguage(lng: string) {
   try {
     await queueConfigWrite(async () => {
       const path = await socadbConfigPath();
-      let data: Record<string, unknown> = {};
-      try {
-        const content = await readTextFile(path);
-        data = JSON.parse(content) as Record<string, unknown>;
-      } catch {
-        // First save: file doesn't exist yet, start from empty object.
-      }
+      const data = await readConfigForUpdate(path);
       data.language = lng;
       await invoke("atomic_write", { path, content: JSON.stringify(data) });
     });
   } catch (err) {
-    console.warn("[languagePersistence] failed to persist language:", err);
+    logError("settings.language.persist_failed", err);
   }
 }
 

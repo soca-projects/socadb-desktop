@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  // The theme picked in the app lives in data-theme; Tailwind's default would
+  // follow the OS setting instead.
+  darkMode: ["selector", '[data-theme="dark"]'],
   theme: {
     extend: {
       fontFamily: {

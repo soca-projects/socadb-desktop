@@ -1,12 +1,16 @@
 mod chat;
-mod detect;
-mod diagnose;
+mod codex_config;
+mod conversations;
+#[cfg(target_os = "macos")]
+mod install_location;
+mod logging;
+mod schema_files;
 mod ws;
 
 use std::process::Command;
 use tauri::Manager;
 
-const KEYRING_SERVICE: &str = "socadb-desktop";
+pub const KEYRING_SERVICE: &str = "socadb-desktop";
 
 #[tauri::command]
 fn keyring_get(account: String) -> Result<Option<String>, String> {
@@ -76,12 +80,10 @@ fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
         .map(|s| s.to_owned())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn read_schema_file(path: String) -> Result<String, String> {
     let p = std::path::Path::new(&path);
-    let canonical = p
-        .canonicalize()
-        .map_err(|e| format!("Failed to read file: {e}"))?;
+    let canonical = p.canonicalize().map_err(schema_files::read_error)?;
     if !canonical
         .to_string_lossy()
         .to_lowercase()
@@ -89,7 +91,7 @@ fn read_schema_file(path: String) -> Result<String, String> {
     {
         return Err("Only .soca files are allowed".into());
     }
-    std::fs::read_to_string(&canonical).map_err(|e| format!("Failed to read file: {e}"))
+    std::fs::read_to_string(&canonical).map_err(schema_files::read_error)
 }
 
 #[tauri::command]
@@ -97,15 +99,39 @@ async fn mcp_respond(connection_id: u64, response: String) {
     ws::send_to_client(connection_id, response).await;
 }
 
-#[tauri::command]
-fn atomic_write(path: String, content: String) -> Result<(), String> {
-    let target = std::path::Path::new(&path);
+pub(crate) fn write_atomic(target: &std::path::Path, content: &str) -> Result<(), String> {
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let tmp = target.with_extension("tmp");
-    std::fs::write(&tmp, content).map_err(|e| e.to_string())?;
+    let _ = std::fs::remove_file(&tmp);
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    if let Ok(meta) = std::fs::metadata(target) {
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        options.mode(meta.permissions().mode());
+    }
+    let mut file = options.open(&tmp).map_err(|e| e.to_string())?;
+    std::io::Write::write_all(&mut file, content.as_bytes()).map_err(|e| e.to_string())?;
+    drop(file);
     std::fs::rename(&tmp, target).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn atomic_write(path: String, content: String) -> Result<(), String> {
+    write_atomic(std::path::Path::new(&path), &content)
+}
+
+#[tauri::command]
+fn show_logs(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
+    let file = dir.join(format!("{}.log", logging::file_stem()));
+    let target = if file.exists() { file } else { dir };
+    app.opener()
+        .reveal_item_in_dir(target)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -160,14 +186,17 @@ fn configure_sparkle(app: &tauri::App) {
         "x64"
     };
     if let Err(e) = updater.set_allowed_channels(Some(vec![channel.to_string()])) {
-        eprintln!("Failed to set Sparkle update channel: {e}");
+        log_event!(log::Level::Warn, "updater.sparkle.config_failed", e, "step" => "channel");
     }
     if let Err(e) = updater.set_handles_install_on_quit(true) {
-        eprintln!("Failed to take over Sparkle's install prompt: {e}");
+        log_event!(log::Level::Warn, "updater.sparkle.config_failed", e, "step" => "install_on_quit");
     }
 }
 
 pub fn run() {
+    #[cfg(target_os = "macos")]
+    install_location::ensure_installed();
+
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -182,33 +211,40 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             read_schema_file,
+            schema_files::schema_files_info,
+            schema_files::rename_schema_file,
+            schema_files::duplicate_schema_file,
             mcp_respond,
             atomic_write,
             open_terminal,
+            show_logs,
             keyring_get,
             keyring_set,
             keyring_delete,
             chat::chat_init,
             chat::chat_send,
             chat::chat_stop,
-            chat::chat_status,
-            chat::chat_set_api_key,
             chat::chat_reset,
-            diagnose::chat_diagnose,
-            detect::fast_detect_provider,
+            codex_config::codex_mcp_entry,
+            codex_config::codex_mcp_set,
+            conversations::conversation_list,
+            conversations::conversation_write,
+            conversations::conversation_delete,
+            conversations::conversation_retire_legacy,
+            conversations::claude_sessions_prune,
         ])
         .setup(|app| {
+            logging::init(app.handle());
+            logging::install_panic_hook();
+            logging::log_start(app.handle());
+
             #[cfg(target_os = "macos")]
             configure_sparkle(app);
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                match ws::start_ws_server(handle).await {
-                    Ok(_port) => {
-                        #[cfg(debug_assertions)]
-                        eprintln!("SocaDB MCP WebSocket server on port {_port}");
-                    }
-                    Err(e) => eprintln!("Failed to start WebSocket server: {e}"),
+                if let Err(e) = ws::start_ws_server(handle).await {
+                    log_event!(log::Level::Error, "mcp.ws.start_failed", e);
                 }
             });
             Ok(())
@@ -219,6 +255,11 @@ pub fn run() {
                 ws::cleanup_port_file();
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                logging::log_stop();
+            }
+        });
 }

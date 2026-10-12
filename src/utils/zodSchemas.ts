@@ -152,12 +152,79 @@ export const McpCreateRelationZ = McpRelationEndpointsZ.extend({
   type: RelationTypeZ.optional(),
 });
 
-export const ChatStatusResultZ = z.object({
-  loggedIn: z.boolean(),
-  email: z.string().nullable().default(null),
-  loginType: z.enum(["subscription", "api-key"]).nullable().default(null),
-});
-
 export const ChatErrorZ = z.object({
   message: z.string(),
+  code: z.enum(["auth", "model_unavailable"]).optional(),
+  model: z.string().optional(),
+});
+
+export const McpClientConfigZ = z.looseObject({
+  mcpServers: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const McpServerEntryZ = z.looseObject({
+  command: z.string().optional(),
+});
+
+export const IntegrationChoiceZ = z.enum(["on", "off", "removed"]);
+
+export const IntegrationChoicesZ = z.looseObject({
+  claudeCode: IntegrationChoiceZ.optional(),
+  claudeDesktop: IntegrationChoiceZ.optional(),
+  codex: IntegrationChoiceZ.optional(),
+});
+
+export const CodexMcpEntryZ = z.object({
+  installed: z.boolean(),
+  command: z.string().nullable(),
+});
+
+const ToolCallInfoZ = z.object({
+  id: z.string(),
+  name: z.string(),
+  input: z.record(z.string(), z.unknown()),
+  result: z.string().nullable(),
+  isSuccess: z.boolean(),
+});
+
+export const ChatMessageZ = z.object({
+  id: z.string(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+  toolCalls: z.array(ToolCallInfoZ),
+  timestamp: z.string(),
+});
+
+export const ConversationZ = z.object({
+  id: z.string(),
+  name: z.string(),
+  nameEdited: z.boolean().optional(),
+  provider: z.enum(["claude", "codex"]).optional(),
+  model: z.string().optional(),
+  sessionId: z.string().nullable(),
+  messages: z.array(ChatMessageZ),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const ConversationFileZ = ConversationZ.extend({ version: z.literal(1) });
+
+export const LegacyConversationsZ = z.object({ conversations: z.array(z.unknown()) });
+
+export const HomeSortZ = z.enum(["opened", "modified", "name"]);
+
+export const StartupPreferenceZ = z.enum(["home", "lastSchema"]);
+
+export const LastSessionZ = z.object({
+  schema: z.unknown(),
+  filePath: z.string().nullable().optional(),
+  savedAt: z.string().nullable().optional(),
+});
+
+export const FileStateZ = z.enum(["present", "missing", "unavailable"]);
+
+export const SchemaFileInfoZ = z.object({
+  path: z.string(),
+  state: FileStateZ,
+  modifiedMs: z.number().nullable(),
 });

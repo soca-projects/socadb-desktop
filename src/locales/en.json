@@ -10,7 +10,93 @@
     "settings": "Settings",
     "untitled": "Untitled",
     "mysql": "MySQL",
-    "postgresql": "PostgreSQL"
+    "postgresql": "PostgreSQL",
+    "home": "Home"
+  },
+  "home": {
+    "title": "Schemas",
+    "new": "New schema",
+    "open": "Open…",
+    "import": "Import…",
+    "searchLabel": "Search schemas",
+    "searchPlaceholder": "Search a schema, a folder or a table…",
+    "clearSearch": "Clear search",
+    "sortLabel": "Sort by",
+    "sort": {
+      "opened": "Last opened",
+      "modified": "Last modified",
+      "name": "Name"
+    },
+    "resume": "Resume",
+    "allSchemas": "All schemas",
+    "tables_one": "{{count}} table",
+    "tables_other": "{{count}} tables",
+    "opened": "opened {{when}}",
+    "modified": "modified {{when}}",
+    "justNow": "just now",
+    "neverSaved": "Never saved",
+    "badge": {
+      "draft": "Not saved",
+      "modified": "Unsaved changes",
+      "open": "Open",
+      "unreadable": "Unreadable",
+      "unavailable": "No access"
+    },
+    "card": {
+      "open": "Open {{name}}",
+      "resume": "Resume {{name}}",
+      "actions": "Actions for {{name}}"
+    },
+    "action": {
+      "open": "Open",
+      "revealMac": "Show in Finder",
+      "revealWindows": "Show in Explorer",
+      "revealLinux": "Show in file manager",
+      "rename": "Rename…",
+      "duplicate": "Duplicate",
+      "remove": "Remove from home",
+      "removeHint": "The file stays on disk",
+      "resume": "Resume",
+      "saveAs": "Save as…",
+      "deleteDraft": "Delete draft",
+      "deleteDraftHint": "It can't be recovered"
+    },
+    "deleteDraft": {
+      "title": "Delete this draft?",
+      "description": "“{{name}}” was never saved, so it can't be recovered.",
+      "confirm": "Delete"
+    },
+    "cancel": "Cancel",
+    "copySuffix": "copy",
+    "revealFailed": "Couldn't show the file: {{error}}",
+    "duplicateFailed": "Couldn't duplicate the file: {{error}}",
+    "noResults": "No schema matches “{{query}}”",
+    "noResultsHint": "Search looks at file names, folders and table names.",
+    "missing_one": "{{count}} schema can't be found",
+    "missing_other": "{{count}} schemas can't be found",
+    "missingShow": "Show",
+    "missingHide": "Hide",
+    "missingExplain": "These files were moved, renamed or deleted outside SocaDB, or they are on a disk that isn't connected.",
+    "locate": "Locate…",
+    "remove": "Remove",
+    "removeAll": "Remove all",
+    "empty": {
+      "title": "No schemas yet",
+      "description": "SocaDB designs MySQL and PostgreSQL schemas, by hand or with AI. Start in one of these three ways.",
+      "newHint": "Start from a blank page, by hand or with AI",
+      "open": "Open a file",
+      "openHint": "A .soca file already on your computer",
+      "import": "Import",
+      "importHint": "A SQL file exported from a database or another tool"
+    },
+    "rename": {
+      "title": "Rename schema",
+      "label": "File name",
+      "confirm": "Rename",
+      "exists": "A file with this name already exists in this folder.",
+      "invalid": "Use a name without /, \\ or :.",
+      "failed": "Couldn't rename the file: {{error}}"
+    }
   },
   "theme": {
     "switchToDark": "Switch to dark mode",
@@ -35,7 +121,8 @@
     "undo": "Undo",
     "redo": "Redo",
     "autoLayout": "Auto layout",
-    "deleteRelation": "Delete relation"
+    "deleteRelation": "Delete relation",
+    "exitFocusMode": "Press <kbd>{{shortcut}}</kbd> to exit focus mode"
   },
   "contextMenu": {
     "rename": "Rename",
@@ -102,54 +189,99 @@
   "settings": {
     "title": "Settings",
     "agents": "Agents",
+    "integrations": "Integrations",
     "language": "Language",
     "languageDescription": "Choose the application language.",
-    "close": "Close"
+    "close": "Close",
+    "conversations": "Conversations",
+    "deleteAllDescription": "Conversations are kept until you delete them. Deleting also erases the agent's memory of Claude conversations.",
+    "deleteAllConversations": "Delete all conversations",
+    "deleteAllConfirm": "Delete all conversations? This can't be undone.",
+    "deleteAll": "Delete all",
+    "deleteAllWhileAnswering": "Available once the agent has answered.",
+    "cancel": "Cancel",
+    "general": "General",
+    "startupTitle": "On launch, open",
+    "startupDescription": "What SocaDB shows when you open it.",
+    "startup": {
+      "home": "The schema list",
+      "homeHint": "The home with all your schemas. An unsaved draft shows at the top.",
+      "lastSchema": "The last schema",
+      "lastSchemaHint": "Picks up where you left off, draft included."
+    }
+  },
+  "integrations": {
+    "title": "Use SocaDB from other apps",
+    "description": "The apps turned on here can read and edit the schema open in SocaDB. They only reach it while SocaDB is open, and ask for your permission before using its tools.",
+    "notInstalled": "Not installed",
+    "unreadable": "SocaDB leaves its config alone because it can't read it.",
+    "removed": "Removed from {{name}}'s config by hand. SocaDB won't add itself back unless you turn it on here.",
+    "restartToAdd": "On. Restart {{name}} so it picks up SocaDB.",
+    "restartToRemove": "Off. Restart {{name}} so it drops SocaDB.",
+    "off": "Off",
+    "on": "On",
+    "availableInNewSessions": "Available in new sessions",
+    "failed": "Couldn't update {{name}}'s config: {{error}}",
+    "howTo": "How to use it",
+    "howToOpen": "Keep SocaDB open with your schema.",
+    "howToAsk": "In Claude Code, Claude Desktop or Codex, ask for what you want to do with the schema. For example:",
+    "howToExample": "Read the schema open in SocaDB and write the SQL migration for PostgreSQL.",
+    "howToAllow": "The first time, the app asks you to allow SocaDB's tools.",
+    "otherApp": "Another MCP-compatible app?",
+    "otherAppHint": "Add this server to the app's MCP configuration, named socadb:"
   },
   "agent": {
-    "signInWith": "Sign in with...",
-    "subscriptionIncluded": "Usage included with your plan",
-    "ownApiKey": "Provide your own API key",
-    "connectedVia": "Connected via {{method}}",
-    "connectedViaEmail": "Connected via {{method}} ({{email}})",
-    "checking": "Checking...",
-    "notConnected": "Not connected",
-    "disconnect": "Disconnect",
-    "switchToApiKey": "To switch to API key, run",
-    "switchToApiKeyEnd": "in your terminal.",
-    "signInTitle": "Sign in with {{label}}",
-    "terminalSteps": "Run these steps in your terminal.",
+    "ownApiKey": "Your own API key",
     "openTerminal": "Open Terminal",
     "stepInstall": "1. Install {{name}} (if needed)",
     "stepSignIn": "2. Start {{name}} and sign in",
     "stepLogin": "3. Or login manually",
-    "connectionDetected": "Connection detected!",
-    "detectingConnection": "SocaDB will detect your connection automatically...",
-    "apiKeyTitle": "Connect with API key",
+    "showSetupSteps": "Show {{name}} setup steps",
+    "hideSetupSteps": "Hide {{name}} setup steps",
     "apiKeyGetFrom": "Get your API key from the",
-    "connecting": "Connecting...",
-    "connect": "Connect",
+    "apiKeySave": "Save",
+    "apiKeyUpdate": "Update",
+    "apiKeyReplace": "Paste a new key to replace",
+    "apiKeyStored": "API key stored",
+    "apiKeyRemove": "Remove key",
+    "saving": "Saving...",
     "keyringUnavailable": "Failed to save API key securely. Please try again.",
-    "disconnectFailed": "Failed to remove API key. Please try again.",
-    "showDetails": "Why isn't it detected?",
-    "hideDetails": "Hide details",
-    "runDiagnose": "Run diagnostic",
-    "diagnosing": "Running..."
+    "disconnectFailed": "Failed to remove API key. Please try again."
   },
   "chat": {
     "newConversation": "New conversation",
     "newChat": "New chat",
     "closeChat": "Close chat",
+    "apiKeyNeeded": "Add your {{name}} API key in Settings, under Agents, to chat.",
     "askAi": "Ask AI to modify your schema...",
-    "connectProvider": "Connect a provider to start...",
     "whatToBuild": "What do you want to build?",
-    "connectInSettings": "Connect a provider in Settings to start.",
     "stop": "Stop",
     "sendMessage": "Send message",
     "suggestion1": "Complete e-commerce schema with 10 tables",
     "suggestion2": "Add a users table with auth fields",
     "suggestion3": "Schema for a Spotify-like music app",
-    "suggestion4": "Explain my current schema and suggest improvements"
+    "suggestion4": "Explain my current schema and suggest improvements",
+    "memoryLost": "The agent no longer remembers this conversation: its memory was deleted. It starts over from the current schema.",
+    "history": "History",
+    "backToChat": "Back to the conversation",
+    "searchConversations": "Search conversations",
+    "noConversations": "No conversations yet.",
+    "noMatch": "No conversation contains “{{query}}”.",
+    "rename": "Rename",
+    "renameLabel": "New title",
+    "delete": "Delete",
+    "deleteConfirm": "Delete “{{name}}”? The conversation and the agent's memory of it will be erased.",
+    "cancel": "Cancel",
+    "lockedWhileAnswering": "Until the agent has answered, other conversations can't be opened and the current one can't be deleted.",
+    "providerSwitched": "New conversation: {{model}} can't continue a conversation started with {{previous}}.",
+    "model": "Model",
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Last 7 days",
+      "month": "Last 30 days",
+      "older": "Older"
+    }
   },
   "provider": {
     "claude": {
@@ -181,6 +313,10 @@
     "saveAs": "Save As...",
     "import": "Import...",
     "export": "Export...",
+    "home": "Home",
+    "findSchema": "Find a Schema",
+    "closeSchema": "Close Schema",
+    "closeWindow": "Close Window",
     "edit": "Edit",
     "undo": "Undo",
     "redo": "Redo",
@@ -194,14 +330,19 @@
     "checkingForUpdates": "Checking for Updates...",
     "downloadingUpdate": "Downloading Update...",
     "help": "Help",
+    "showLogs": "Show Logs",
     "hideSocaDB": "Hide SocaDB",
     "quitSocaDB": "Quit SocaDB",
     "exit": "Exit"
   },
   "chatError": {
     "generic": "Error: {{message}}",
+    "notSignedIn": "You're not signed in to {{cli}}. Open a terminal, run `{{command}}`, then try again. Detailed steps are in Settings, under Agents.",
+    "apiKeyRejected": "{{name}} rejected the API key. Check or replace it in Settings, under Agents.",
+    "apiKeyMissing": "No {{name}} API key is saved. Add one in Settings, under Agents, or switch to your subscription.",
+    "keyringUnavailable": "SocaDB couldn't read your {{name}} API key from the system keychain. Allow access if your system asks, or save the key again in Settings, under Agents.",
     "creditBalance": "Error: {{message}}\n\nAdd credits on the [{{consoleName}}]({{consoleUrl}}), then try again. If it still fails, reconnect your API key in Settings.",
-    "statusTimeout": "Status check timed out"
+    "modelUnavailable": "{{model}} isn't available with your ChatGPT plan. Pick another model under the message box, or use an OpenAI API key in Settings, under Agents."
   },
   "toast": {
     "exportSqlFailed": "Failed to export SQL: {{error}}",
@@ -253,7 +394,9 @@
     "failed": "Update install failed: {{error}}"
   },
   "recent": {
-    "fileNotFound": "File not found. It may have been moved or deleted."
+    "fileNotFound": "File not found. It may have been moved or deleted.",
+    "permissionDenied": "SocaDB isn't allowed to read this file.",
+    "permissionDeniedMac": "SocaDB isn't allowed to read this file. Allow it in System Settings › Privacy & Security › Files & Folders."
   },
   "toolCall": {
     "create_table": "created table",

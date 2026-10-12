@@ -6,8 +6,10 @@ import {
   openAndApplySchema,
   openRecentFile,
 } from "../utils/fileOperations";
+import { closeSchema } from "../utils/schemaActions";
+import { useViewStore } from "../stores/viewStore";
 
-type PendingAction = "new" | "open" | "open-recent" | null;
+type PendingAction = "new" | "open" | "open-recent" | "close" | "import" | null;
 
 export function useUnsavedChangesGuard() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
@@ -17,6 +19,8 @@ export function useUnsavedChangesGuard() {
     const unlistens = [
       listen("unsaved-guard-new", () => setPendingAction("new")),
       listen("unsaved-guard-open", () => setPendingAction("open")),
+      listen("unsaved-guard-close", () => setPendingAction("close")),
+      listen("unsaved-guard-import", () => setPendingAction("import")),
       listen<string>("unsaved-guard-open-recent", (event) => {
         recentPathRef.current = event.payload;
         setPendingAction("open-recent");
@@ -38,6 +42,10 @@ export function useUnsavedChangesGuard() {
       if (path) {
         void openRecentFile(path);
       }
+    } else if (action === "close") {
+      closeSchema();
+    } else if (action === "import") {
+      useViewStore.getState().requestImport();
     }
   }, []);
 

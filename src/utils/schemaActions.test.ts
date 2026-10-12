@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { createTable, duplicateTable } from "./schemaActions";
+import { closeSchema, createTable, duplicateTable } from "./schemaActions";
 import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
+import { useViewStore } from "../stores/viewStore";
 
 function resetStore() {
   useSchemaStore.setState({
@@ -98,5 +99,20 @@ describe("duplicateTable", () => {
 
   it("returns null for missing table", () => {
     expect(duplicateTable("missing")).toBeNull();
+  });
+});
+
+describe("closeSchema", () => {
+  beforeEach(resetStore);
+
+  it("leaves an empty schema and shows the home", () => {
+    useSchemaStore.setState({ filePath: "/x/a.soca" });
+    createTable({ name: "users" });
+    useViewStore.setState({ view: "editor" });
+    closeSchema();
+    const state = useSchemaStore.getState();
+    expect(state.schema.tables).toHaveLength(0);
+    expect(state.filePath).toBeNull();
+    expect(useViewStore.getState().view).toBe("home");
   });
 });

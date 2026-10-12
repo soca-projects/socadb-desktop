@@ -35,7 +35,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
+      className="fixed inset-0 flex items-center justify-center bg-black/30 p-4 backdrop-blur-[2px]"
       style={{ zIndex }}
       onClick={dismissible ? onClose : undefined}
     >

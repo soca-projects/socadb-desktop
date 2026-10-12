@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { handleChatEvent } from "../utils/chatEventHandler";
 import type { ChatEvent } from "../types/chat";
+import { logError } from "../utils/log";
 
 export function useChatStream() {
   useEffect(() => {
@@ -13,7 +14,7 @@ export function useChatStream() {
         const parsed = JSON.parse(event.payload.raw) as ChatEvent;
         handleChatEvent(parsed);
       } catch (e) {
-        console.error("[chat-stream parse error]", e);
+        logError("chat.stream.parse_failed", e);
       }
     });
 

@@ -98,7 +98,7 @@ function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
             defaultValue={col.name}
             onBlur={(e) => updateColumn(tableId, col.id, { name: e.target.value })}
             onKeyDown={blurOnEnter}
-            className="min-w-0 flex-1 truncate bg-transparent font-mono text-[13px] font-medium text-primary outline-none placeholder:text-muted focus:text-primary"
+            className="min-w-0 flex-1 truncate bg-transparent font-mono text-[13px] font-medium text-primary outline-none placeholder:text-tertiary focus:text-primary"
             placeholder="column_name"
           />
 

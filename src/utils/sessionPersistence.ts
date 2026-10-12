@@ -1,13 +1,57 @@
 import { useSchemaStore } from "../stores/schemaStore";
+import { migrateSchema } from "./fileOperations";
+import { isWorthResuming } from "./schemaQueries";
+import { LastSessionZ, SchemaZ } from "./zodSchemas";
+import { logError, logWarn } from "./log";
 
 const LAST_SESSION_KEY = "socadb_last_session";
+
+let saveFailureLogged = false;
 
 function saveLastSession() {
   try {
     const { schema, filePath, savedAt } = useSchemaStore.getState();
     localStorage.setItem(LAST_SESSION_KEY, JSON.stringify({ schema, filePath, savedAt }));
+  } catch (e) {
+    // Runs on every store change: one line per launch is enough.
+    if (!saveFailureLogged) logError("session.save.failed", e);
+    saveFailureLogged = true;
+  }
+}
+
+export function clearLastSession() {
+  try {
+    localStorage.removeItem(LAST_SESSION_KEY);
   } catch {
-    // localStorage full or unavailable
+    // localStorage unavailable
+  }
+}
+
+// Returns whether the restored schema is worth resuming: closing a schema
+// leaves an empty, never-saved one behind.
+export function restoreLastSession(): boolean {
+  let raw: string | null;
+  try {
+    raw = localStorage.getItem(LAST_SESSION_KEY);
+  } catch {
+    return false;
+  }
+  if (!raw) return false;
+  try {
+    const session = LastSessionZ.parse(JSON.parse(raw));
+    migrateSchema(session.schema);
+    const schema = SchemaZ.parse(session.schema);
+    const filePath = session.filePath ?? null;
+    const { setSchema, setFilePath } = useSchemaStore.getState();
+    setSchema(schema);
+    setFilePath(filePath);
+    if (session.savedAt !== undefined)
+      useSchemaStore.setState({ savedAt: session.savedAt });
+    return isWorthResuming(schema, filePath);
+  } catch (e) {
+    logWarn("session.restore.invalid", e);
+    clearLastSession();
+    return false;
   }
 }
 

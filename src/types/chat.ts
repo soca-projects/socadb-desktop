@@ -2,14 +2,13 @@ import { IS_WINDOWS } from "../utils/platform";
 
 export type ProviderId = "claude" | "codex";
 
-export type ConnectionMethod = "subscription" | "api-key";
+export type LoginType = "subscription" | "api-key";
 
 export interface Provider {
   id: ProviderId;
   name: string;
-  connected: boolean;
-  connectionMethod: ConnectionMethod | null;
-  email: string | null;
+  loginType: LoginType;
+  apiKeyStored: boolean;
 }
 
 export interface SupportedModel {
@@ -29,7 +28,6 @@ export interface ProviderMeta {
   installCommand: string;
   startCommand: string;
   loginCommand: string;
-  logoutCommand: string;
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
@@ -38,13 +36,14 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     name: "Anthropic",
     models: [
       {
-        id: "claude-opus-4-7",
-        displayName: "Claude Opus 4.7",
+        id: "claude-fable-5-1",
+        displayName: "Claude Fable 5.1",
         description: "Most capable",
       },
+      { id: "claude-opus-5-5", displayName: "Claude Opus 5.5", description: "Powerful" },
       {
-        id: "claude-sonnet-4-6",
-        displayName: "Claude Sonnet 4.6",
+        id: "claude-sonnet-5",
+        displayName: "Claude Sonnet 5",
         description: "Fast, balanced",
       },
       { id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5", description: "Fastest" },
@@ -62,15 +61,14 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
       : "curl -fsSL https://claude.ai/install.sh | bash",
     startCommand: "claude",
     loginCommand: "claude /login",
-    logoutCommand: "claude /logout",
   },
   codex: {
     id: "codex",
     name: "OpenAI",
     models: [
-      { id: "gpt-5.5", displayName: "GPT 5.5", description: "Most capable" },
-      { id: "gpt-5.4", displayName: "GPT 5.4", description: "Fast, balanced" },
-      { id: "gpt-5.4-mini", displayName: "GPT 5.4 Mini", description: "Fastest" },
+      { id: "gpt-6-astra", displayName: "GPT-6 Astra", description: "Most capable" },
+      { id: "gpt-6-sol", displayName: "GPT-6 Sol", description: "Fast, balanced" },
+      { id: "gpt-6-luna", displayName: "GPT-6 Luna", description: "Fastest" },
     ],
     apiKeyPlaceholder: "sk-proj-...",
     apiKeyMinLength: 20,
@@ -79,7 +77,6 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     installCommand: "npm install -g @openai/codex",
     startCommand: "codex",
     loginCommand: "codex login",
-    logoutCommand: "codex logout",
   },
 };
 
@@ -91,41 +88,46 @@ export function getProviderFromModel(modelId: string): ProviderId {
 
 export function makeProvider(
   id: ProviderId,
-  connected: boolean,
-  connectionMethod: ConnectionMethod | null,
-  email: string | null,
+  loginType: LoginType = "subscription",
+  apiKeyStored = false,
 ): Provider {
-  return { id, name: PROVIDERS[id].name, connected, connectionMethod, email };
+  return { id, name: PROVIDERS[id].name, loginType, apiKeyStored };
 }
 
-export function getAvailableModels(
-  providers: Record<string, Provider>,
-): SupportedModel[] {
-  return PROVIDER_IDS.flatMap((id) =>
-    providers[id]?.connected ? PROVIDERS[id].models : [],
-  );
+export function getAvailableModels(): SupportedModel[] {
+  return PROVIDER_IDS.flatMap((id) => PROVIDERS[id].models);
 }
 
-export const DEFAULT_MODEL = "claude-sonnet-4-6";
+export function getModelDisplayName(id: string): string | undefined {
+  return getAvailableModels().find((m) => m.id === id)?.displayName;
+}
+
+export const DEFAULT_MODEL = "claude-sonnet-5";
+
+export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderId, string> = {
+  claude: DEFAULT_MODEL,
+  codex: "gpt-6-sol",
+};
 
 export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
 // Per-model effort support, sourced from official docs:
 //   https://platform.claude.com/docs/en/docs/build-with-claude/effort
-//   https://developers.openai.com/api/docs/guides/reasoning
+//   https://learn.chatgpt.com/docs/models
 // Empty list = the model does not accept the effort parameter at all.
 export const EFFORT_LEVELS_BY_MODEL: Record<string, readonly EffortLevel[]> = {
-  "claude-opus-4-7": ["low", "medium", "high", "xhigh", "max"],
-  "claude-sonnet-4-6": ["low", "medium", "high", "max"],
+  "claude-fable-5-1": ["low", "medium", "high", "xhigh", "max"],
+  "claude-opus-5-5": ["low", "medium", "high", "xhigh", "max"],
+  "claude-sonnet-5": ["low", "medium", "high", "xhigh", "max"],
   "claude-haiku-4-5": [],
-  "gpt-5.5": ["low", "medium", "high", "xhigh"],
-  "gpt-5.4": ["low", "medium", "high", "xhigh"],
-  "gpt-5.4-mini": ["low", "medium", "high"],
+  "gpt-6-astra": ["low", "medium", "high", "xhigh", "max"],
+  "gpt-6-sol": ["low", "medium", "high", "xhigh", "max"],
+  "gpt-6-luna": ["low", "medium", "high", "xhigh", "max"],
 };
 
 export const EFFORT_LEVELS_BY_PROVIDER: Record<ProviderId, EffortLevel[]> = {
   claude: ["low", "medium", "high", "xhigh", "max"],
-  codex: ["low", "medium", "high", "xhigh"],
+  codex: ["low", "medium", "high", "xhigh", "max"],
 };
 
 export const DEFAULT_EFFORT_BY_PROVIDER: Record<ProviderId, EffortLevel> = {
@@ -175,23 +177,24 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export function isEmptyMessage(message: ChatMessage): boolean {
+  return !message.content.trim() && message.toolCalls.length === 0;
+}
+
 export interface Conversation {
   id: string;
   name: string;
+  nameEdited?: boolean;
+  provider?: ProviderId;
+  model?: string;
   sessionId: string | null;
   messages: ChatMessage[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ChatStatusResult {
-  loggedIn: boolean;
-  email: string | null;
-  loginType: ConnectionMethod | null;
-}
-
 export interface ChatEvent {
-  type: "chat_event" | "chat_status_result" | "ready";
+  type: "chat_event" | "ready";
   event?: string;
   [key: string]: unknown;
 }

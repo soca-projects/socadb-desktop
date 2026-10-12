@@ -1,6 +1,40 @@
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { homeDir, join } from "@tauri-apps/api/path";
+import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import { dataDir, homeDir, join } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/core";
+import type { z } from "zod";
+import {
+  CodexMcpEntryZ,
+  IntegrationChoicesZ,
+  McpClientConfigZ,
+  McpServerEntryZ,
+  type IntegrationChoiceZ,
+} from "./zodSchemas";
+import {
+  INTEGRATIONS_UNKNOWN,
+  parseConfig,
+  queueConfigWrite,
+  readConfigForUpdate,
+  socadbConfigPath,
+} from "./socadbDir";
+import { logError, logWarn } from "./log";
+
+export const INTEGRATION_IDS = ["claudeCode", "claudeDesktop", "codex"] as const;
+export type IntegrationId = (typeof INTEGRATION_IDS)[number];
+export type IntegrationChoice = z.infer<typeof IntegrationChoiceZ>;
+type IntegrationChoices = Partial<Record<IntegrationId, IntegrationChoice>>;
+
+export interface ClientEntry {
+  installed: boolean;
+  command: string | null;
+}
+
+export interface IntegrationStatus {
+  id: IntegrationId;
+  installed: boolean;
+  enabled: boolean;
+  removed: boolean;
+  unreadable: boolean;
+}
 
 interface McpServerConfig {
   command: string;
@@ -8,87 +42,278 @@ interface McpServerConfig {
   type?: string;
 }
 
-async function getMcpBinaryPath(): Promise<string> {
+const SERVER_NAME = "socadb";
+
+export function isOurCommand(command: string): boolean {
+  return (command.split(/[\\/]/).pop() ?? "").startsWith("socadb-mcp-");
+}
+
+// Zod puts the declared keys first: rebuilding from the original object keeps
+// the client's own key order, so the only change in its file is our entry.
+function withServers(config: object, servers: Record<string, unknown>) {
+  const updated: Record<string, unknown> = Object.fromEntries(Object.entries(config));
+  updated.mcpServers = servers;
+  return updated;
+}
+
+export function withSocadbServer(
+  config: unknown,
+  server: McpServerConfig,
+): Record<string, unknown> | null {
+  const parsed = McpClientConfigZ.safeParse(config);
+  if (!parsed.success || typeof config !== "object" || config === null) return null;
+  const servers = parsed.data.mcpServers ?? {};
+  const existing = McpServerEntryZ.safeParse(servers[SERVER_NAME]);
+  const current = existing.success ? existing.data : {};
+  if (current.command === server.command) return null;
+  return withServers(config, { ...servers, [SERVER_NAME]: { ...current, ...server } });
+}
+
+export function withoutSocadbServer(config: unknown): Record<string, unknown> | null {
+  const parsed = McpClientConfigZ.safeParse(config);
+  if (!parsed.success || typeof config !== "object" || config === null) return null;
+  const servers = parsed.data.mcpServers;
+  if (!servers?.[SERVER_NAME]) return null;
+  return withServers(
+    config,
+    Object.fromEntries(Object.entries(servers).filter(([name]) => name !== SERVER_NAME)),
+  );
+}
+
+// A choice of "on" is only saved once the entry was written, so finding the
+// entry gone later means the user removed it by hand.
+export function planLaunch(
+  choice: IntegrationChoice | undefined,
+  entry: ClientEntry,
+  ours: string,
+): { register: boolean; choice: IntegrationChoice | undefined } {
+  if (!entry.installed || choice === "off" || choice === "removed") {
+    return { register: false, choice };
+  }
+  if (entry.command === null) {
+    return choice === "on"
+      ? { register: false, choice: "removed" }
+      : { register: true, choice: "on" };
+  }
+  if (!isOurCommand(entry.command)) return { register: false, choice };
+  return { register: entry.command !== ours, choice: "on" };
+}
+
+export function statusOf(
+  id: IntegrationId,
+  choice: IntegrationChoice | undefined,
+  entry: ClientEntry,
+): IntegrationStatus {
+  return {
+    id,
+    installed: entry.installed,
+    enabled:
+      entry.installed &&
+      choice !== "off" &&
+      choice !== "removed" &&
+      entry.command !== null &&
+      isOurCommand(entry.command),
+    removed: entry.installed && choice === "removed",
+    unreadable: false,
+  };
+}
+
+interface Client {
+  read(): Promise<ClientEntry>;
+  write(command: string | null): Promise<void>;
+}
+
+function jsonClient(
+  configPath: () => Promise<string>,
+  serverFor: (command: string) => McpServerConfig,
+): Client {
+  return {
+    async read() {
+      const path = await configPath();
+      // Only clients already set up here: never create a config file for them.
+      if (!(await exists(path))) return { installed: false, command: null };
+      const config = McpClientConfigZ.parse(JSON.parse(await readTextFile(path)));
+      const entry = McpServerEntryZ.safeParse(config.mcpServers?.[SERVER_NAME]);
+      return {
+        installed: true,
+        command: entry.success ? (entry.data.command ?? null) : null,
+      };
+    },
+    async write(command) {
+      const path = await configPath();
+      const config: unknown = JSON.parse(await readTextFile(path));
+      const updated =
+        command === null
+          ? withoutSocadbServer(config)
+          : withSocadbServer(config, serverFor(command));
+      if (!updated) return;
+      await invoke("atomic_write", { path, content: JSON.stringify(updated, null, 2) });
+    },
+  };
+}
+
+const CLIENTS: Record<IntegrationId, Client> = {
+  claudeCode: jsonClient(
+    async () => join(await homeDir(), ".claude.json"),
+    (command) => ({ command, args: [], type: "stdio" }),
+  ),
+  claudeDesktop: jsonClient(
+    async () => join(await dataDir(), "Claude", "claude_desktop_config.json"),
+    (command) => ({ command, args: [] }),
+  ),
+  codex: {
+    async read() {
+      return CodexMcpEntryZ.parse(await invoke("codex_mcp_entry"));
+    },
+    async write(command) {
+      await invoke("codex_mcp_set", { command });
+    },
+  },
+};
+
+interface StoredChoices {
+  choices: IntegrationChoices;
+  unknown: boolean;
+}
+
+// null when config.json exists but can't be read: its choices are unknown, and
+// assuming none would re-register SocaDB where the user removed it.
+async function readChoices(): Promise<StoredChoices | null> {
+  const path = await socadbConfigPath();
+  if (!(await exists(path))) return { choices: {}, unknown: false };
+  let config: Record<string, unknown> | null;
+  try {
+    config = parseConfig(await readTextFile(path));
+  } catch {
+    return null;
+  }
+  if (!config) return null;
+  const choices = IntegrationChoicesZ.safeParse(config.integrations);
+  return {
+    choices: choices.success ? choices.data : {},
+    unknown: config[INTEGRATIONS_UNKNOWN] === true,
+  };
+}
+
+// While the choices are unknown, "on" keeps an existing entry up to date and
+// turns a missing one into "removed": SocaDB is never added back on its own.
+export function launchChoice(
+  choice: IntegrationChoice | undefined,
+  unknown: boolean,
+): IntegrationChoice | undefined {
+  return choice ?? (unknown ? "on" : undefined);
+}
+
+async function clearUnknownChoices() {
+  await queueConfigWrite(async () => {
+    const path = await socadbConfigPath();
+    const data = Object.fromEntries(
+      Object.entries(await readConfigForUpdate(path)).filter(
+        ([key]) => key !== INTEGRATIONS_UNKNOWN,
+      ),
+    );
+    await invoke("atomic_write", { path, content: JSON.stringify(data) });
+  });
+}
+
+async function saveChoice(id: IntegrationId, choice: IntegrationChoice) {
+  await queueConfigWrite(async () => {
+    const path = await socadbConfigPath();
+    const data = await readConfigForUpdate(path);
+    const choices = IntegrationChoicesZ.safeParse(data.integrations);
+    data.integrations = { ...(choices.success ? choices.data : {}), [id]: choice };
+    await invoke("atomic_write", { path, content: JSON.stringify(data) });
+  });
+}
+
+let chain: Promise<void> = Promise.resolve();
+
+function serialize<T>(work: () => Promise<T>): Promise<T> {
+  const next = chain.then(work, work);
+  chain = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
+
+// Parse errors of other apps' configs can quote the file (JSC's JSON errors
+// include the bad token), and those files hold tokens: log only the kind.
+export function configErrorForLog(error: unknown): unknown {
+  return error instanceof SyntaxError ? "Invalid JSON" : error;
+}
+
+export function getMcpServerPath(): Promise<string> {
   return invoke<string>("get_mcp_binary_path");
 }
 
-function addMcpServer(
-  config: Record<string, unknown>,
-  serverName: string,
-  serverConfig: McpServerConfig,
-): boolean {
-  const servers = (config.mcpServers ?? {}) as Record<string, unknown>;
-  if (servers[serverName]) return false;
-  servers[serverName] = serverConfig;
-  config.mcpServers = servers;
-  return true;
-}
-
-async function registerClaudeCode(binaryPath: string): Promise<boolean> {
-  const home = await homeDir();
-  const configPath = await join(home, ".claude.json");
-
-  let config: Record<string, unknown> = {};
-  try {
-    const content = await readTextFile(configPath);
-    config = JSON.parse(content);
-  } catch {
-    // File doesn't exist or invalid JSON, start fresh
-  }
-
-  const added = addMcpServer(config, "socadb", {
-    command: binaryPath,
-    args: [],
-    type: "stdio",
-  });
-
-  if (added) {
-    await writeTextFile(configPath, JSON.stringify(config, null, 2));
-  }
-  return added;
-}
-
-async function registerClaudeDesktop(binaryPath: string): Promise<boolean> {
-  const home = await homeDir();
-  const configPath = await join(
-    home,
-    "Library",
-    "Application Support",
-    "Claude",
-    "claude_desktop_config.json",
-  );
-
-  let config: Record<string, unknown> = {};
-  try {
-    const content = await readTextFile(configPath);
-    config = JSON.parse(content);
-  } catch {
-    // File doesn't exist or invalid JSON, start fresh
-  }
-
-  const added = addMcpServer(config, "socadb", {
-    command: binaryPath,
-    args: [],
-  });
-
-  if (added) {
-    await writeTextFile(configPath, JSON.stringify(config, null, 2));
-  }
-  return added;
-}
-
-export async function registerMcpServers() {
-  try {
-    const binaryPath = await getMcpBinaryPath();
-
-    await registerClaudeCode(binaryPath);
-
+export async function syncIntegrations() {
+  // A dev build would repoint the AI clients at the checkout's binary on every
+  // launch. Toggling in Settings still writes, since it's an explicit choice.
+  if (import.meta.env.DEV) return;
+  await serialize(async () => {
+    let ours: string;
     try {
-      await registerClaudeDesktop(binaryPath);
-    } catch {
-      // Claude Desktop not installed, skip
+      ours = await getMcpServerPath();
+    } catch (e) {
+      logError("mcp.registration.binary_missing", e);
+      return;
     }
-  } catch (e) {
-    console.error("MCP registration failed:", e);
-  }
+    const stored = await readChoices();
+    if (stored === null) {
+      logWarn(
+        "mcp.registration.skipped",
+        "config.json can't be read; integrations left as they are",
+      );
+      return;
+    }
+    const { choices, unknown } = stored;
+    let settled = true;
+    for (const id of INTEGRATION_IDS) {
+      try {
+        const choice = launchChoice(choices[id], unknown);
+        const plan = planLaunch(choice, await CLIENTS[id].read(), ours);
+        if (plan.register) await CLIENTS[id].write(ours);
+        if (plan.choice && plan.choice !== choices[id]) await saveChoice(id, plan.choice);
+      } catch (e) {
+        settled = false;
+        // Never rewrite a file we couldn't parse: it holds the client's whole config.
+        logWarn("mcp.registration.failed", configErrorForLog(e), { client: id });
+      }
+    }
+    if (unknown && settled) await clearUnknownChoices();
+  });
+}
+
+export async function getIntegrationStatuses(): Promise<IntegrationStatus[]> {
+  const choices = (await readChoices())?.choices ?? {};
+  return Promise.all(
+    INTEGRATION_IDS.map(async (id) => {
+      try {
+        return statusOf(id, choices[id], await CLIENTS[id].read());
+      } catch (e) {
+        logWarn("mcp.registration.config_unreadable", configErrorForLog(e), {
+          client: id,
+        });
+        return { id, installed: true, enabled: false, removed: false, unreadable: true };
+      }
+    }),
+  );
+}
+
+export function setIntegrationEnabled(
+  id: IntegrationId,
+  enabled: boolean,
+): Promise<void> {
+  return serialize(async () => {
+    if (enabled) {
+      await CLIENTS[id].write(await getMcpServerPath());
+      await saveChoice(id, "on");
+      return;
+    }
+    const entry = await CLIENTS[id].read();
+    if (entry.command !== null && isOurCommand(entry.command))
+      await CLIENTS[id].write(null);
+    await saveChoice(id, "off");
+  });
 }

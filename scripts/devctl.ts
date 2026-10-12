@@ -1,0 +1,274 @@
+#!/usr/bin/env bun
+import { readFileSync, existsSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { LOG_CODES, type LogCode } from "../src/utils/logCodes";
+
+const USAGE = `Commands:
+  snapshot                         visible interactive elements
+  text [target] [--max N]          visible text (whole window by default)
+  state                            schema, chat and window state
+  click <target> [--index N] [--force]
+                                   click by accessible name, text, or css=<selector>;
+                                   --force clicks hidden elements (hover-only controls)
+  drag <target> <dx> <dy> [--index N]
+                                   press, move by dx,dy pixels, release
+  focus <target> [--index N]       focus an element (reveals :focus-within controls)
+  type <target> <text> [--append] [--index N]
+  clear <target> [--index N]
+  select <target> <option> [--index N]
+  press <key> [target]             e.g. Enter, Escape, Meta+k
+  wait <text> [--gone] [--timeout MS]
+  wait --target <target> [--gone] [--timeout MS]
+  shot [file.png]                  screenshot of the app window
+  logs [--lines N] [--level warn] [--code prefix] [--all-launches] [--mcp] [--json]
+                                   the dev app's log (last launch by default), with the
+                                   catalogue's hint under each warning and error`;
+
+function readPort(): number {
+  const file = join(homedir(), ".socadb", ".port");
+  if (!existsSync(file))
+    throw new Error("No ~/.socadb/.port: start the app with `bun run tauri dev`");
+  return Number(readFileSync(file, "utf-8").trim());
+}
+
+function send(
+  action: string,
+  payload: Record<string, unknown>,
+  timeoutMs: number,
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`ws://127.0.0.1:${readPort()}`);
+    const timer = setTimeout(() => {
+      ws.close();
+      reject(new Error(`${action} timed out after ${timeoutMs} ms`));
+    }, timeoutMs);
+    ws.onopen = () => ws.send(JSON.stringify({ id: 1, action, payload }));
+    ws.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("Cannot reach the app: is it running?"));
+    };
+    ws.onmessage = (event) => {
+      clearTimeout(timer);
+      ws.close();
+      const msg = JSON.parse(String(event.data));
+      if (msg.error) {
+        const hint = String(msg.error).startsWith("Unknown action: dev_")
+          ? "\n(the port belongs to a release build: quit the installed SocaDB and run `bun run tauri dev`)"
+          : "";
+        reject(new Error(`${msg.error}${hint}`));
+      } else resolve(msg.result);
+    };
+  });
+}
+
+const WINDOW_ID_SWIFT = `
+import CoreGraphics
+let pid = Int32(CommandLine.arguments[1])!
+let windows = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: Any]]
+let own = windows.filter { ($0[kCGWindowOwnerPID as String] as? Int32) == pid && (0...8).contains($0[kCGWindowLayer as String] as? Int ?? -1) }
+// WebKit keeps hidden windows that can be larger than a small app window.
+let visible = own.filter { ($0[kCGWindowIsOnscreen as String] as? Bool) == true }
+let area = { (w: [String: Any]) -> Double in
+  let b = w[kCGWindowBounds as String] as! [String: Double]
+  return b["Width"]! * b["Height"]!
+}
+if let main = (visible.isEmpty ? own : visible).max(by: { area($0) < area($1) }) { print(main[kCGWindowNumber as String]!) }
+`;
+
+function windowId(): string {
+  const pid = spawnSync("lsof", ["-nP", `-iTCP:${readPort()}`, "-sTCP:LISTEN", "-t"], {
+    encoding: "utf-8",
+  })
+    .stdout.trim()
+    .split("\n")[0];
+  if (!pid) throw new Error("No process is listening on the bridge port");
+  const helper = join(tmpdir(), "socadb-devctl-window-id-v4");
+  if (!existsSync(helper)) {
+    const source = `${helper}.swift`;
+    writeFileSync(source, WINDOW_ID_SWIFT);
+    const built = spawnSync("swiftc", ["-O", "-o", helper, source], {
+      encoding: "utf-8",
+    });
+    if (built.status !== 0) throw new Error(`swiftc failed: ${built.stderr}`);
+  }
+  const id = spawnSync(helper, [pid], { encoding: "utf-8" }).stdout.trim();
+  if (!id) throw new Error(`No window for pid ${pid}`);
+  return id;
+}
+
+const LEVELS = ["debug", "info", "warn", "error"];
+const CTX_PREVIEW = 600;
+
+interface LogLine {
+  ts: string;
+  level: string;
+  launch: string;
+  src: string;
+  code?: string;
+  msg?: string;
+  ctx?: Record<string, unknown>;
+}
+
+// tauri-plugin-log's app_log_dir for the com.socadb.desktop identifier.
+function logDir(): string {
+  const home = homedir();
+  const id = "com.socadb.desktop";
+  if (process.platform === "darwin") return join(home, "Library", "Logs", id);
+  if (process.platform === "win32") {
+    return join(process.env.LOCALAPPDATA ?? join(home, "AppData", "Local"), id, "logs");
+  }
+  return join(process.env.XDG_DATA_HOME ?? join(home, ".local", "share"), id, "logs");
+}
+
+function parseLogLine(text: string): LogLine | null {
+  try {
+    const line = JSON.parse(text) as LogLine;
+    return typeof line.ts === "string" && typeof line.level === "string" ? line : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatLogLine(line: LogLine): string {
+  const ctx =
+    line.ctx && Object.keys(line.ctx).length > 0
+      ? ` ${JSON.stringify(line.ctx).slice(0, CTX_PREVIEW)}`
+      : "";
+  const head = `${line.ts.slice(11, 23)} ${line.level.toUpperCase().padEnd(5)} ${line.src.padEnd(4)} ${line.code ?? "-"}  ${line.msg ?? ""}${ctx}`;
+  const info =
+    line.code && line.code in LOG_CODES ? LOG_CODES[line.code as LogCode] : undefined;
+  return info && (line.level === "warn" || line.level === "error")
+    ? `${head}\n    → ${info.check}`
+    : head;
+}
+
+function readLogs(args: string[]): string {
+  const file = join(logDir(), flag(args, "--mcp") ? "mcp-server.log" : "socadb-dev.log");
+  const asJson = flag(args, "--json");
+  const allLaunches = flag(args, "--all-launches");
+  const count = Number(option(args, "--lines") ?? 40);
+  const minLevel = LEVELS.indexOf(option(args, "--level") ?? "debug");
+  const code = option(args, "--code");
+  if (!existsSync(file)) throw new Error(`No log yet at ${file}`);
+  let lines = readFileSync(file, "utf-8")
+    .split("\n")
+    .map(parseLogLine)
+    .filter((line): line is LogLine => line !== null);
+  const lastLaunch = lines.at(-1)?.launch;
+  if (!allLaunches) lines = lines.filter((line) => line.launch === lastLaunch);
+  lines = lines
+    .filter((line) => LEVELS.indexOf(line.level) >= minLevel)
+    .filter((line) => !code || line.code?.startsWith(code))
+    .slice(-count);
+  return lines
+    .map((line) => (asJson ? JSON.stringify(line) : formatLogLine(line)))
+    .join("\n");
+}
+
+function option(args: string[], name: string): string | undefined {
+  const i = args.indexOf(name);
+  if (i === -1) return undefined;
+  const [, value] = args.splice(i, 2);
+  return value;
+}
+
+function flag(args: string[], name: string): boolean {
+  const i = args.indexOf(name);
+  if (i === -1) return false;
+  args.splice(i, 1);
+  return true;
+}
+
+async function main() {
+  const [command, ...args] = process.argv.slice(2);
+  const index = option(args, "--index");
+  const at = index === undefined ? {} : { index: Number(index) };
+  let result: unknown;
+  switch (command) {
+    case "snapshot":
+    case "state":
+      result = await send(`dev_${command}`, {}, 10000);
+      break;
+    case "text": {
+      const max = option(args, "--max");
+      result = await send(
+        "dev_text",
+        { target: args[0], ...(max ? { maxChars: Number(max) } : {}) },
+        10000,
+      );
+      break;
+    }
+    case "click": {
+      const force = flag(args, "--force");
+      result = await send("dev_click", { target: args[0], force, ...at }, 10000);
+      break;
+    }
+    case "drag":
+      result = await send(
+        "dev_drag",
+        { target: args[0], dx: Number(args[1]), dy: Number(args[2]), ...at },
+        10000,
+      );
+      break;
+    case "focus":
+      result = await send("dev_focus", { target: args[0], ...at }, 10000);
+      break;
+    case "type": {
+      const append = flag(args, "--append");
+      result = await send(
+        "dev_type",
+        { target: args[0], text: args[1], append, ...at },
+        10000,
+      );
+      break;
+    }
+    case "clear":
+      result = await send("dev_type", { target: args[0], text: "", ...at }, 10000);
+      break;
+    case "select":
+      result = await send(
+        "dev_select",
+        { target: args[0], option: args[1], ...at },
+        10000,
+      );
+      break;
+    case "press":
+      result = await send("dev_press", { key: args[0], target: args[1], ...at }, 10000);
+      break;
+    case "wait": {
+      const timeoutMs = Number(option(args, "--timeout") ?? 15000);
+      const target = option(args, "--target");
+      const gone = flag(args, "--gone");
+      const condition = target ? { target } : { text: args[0] };
+      result = await send(
+        "dev_wait",
+        { ...condition, gone, timeoutMs },
+        timeoutMs + 5000,
+      );
+      break;
+    }
+    case "shot": {
+      const file = args[0] ?? join(tmpdir(), `socadb-shot-${Date.now()}.png`);
+      const shot = spawnSync("screencapture", ["-x", "-o", "-l", windowId(), file], {
+        encoding: "utf-8",
+      });
+      if (shot.status !== 0) throw new Error(`screencapture failed: ${shot.stderr}`);
+      result = file;
+      break;
+    }
+    case "logs":
+      result = readLogs(args);
+      break;
+    default:
+      console.log(USAGE);
+      process.exit(command && command !== "help" ? 1 : 0);
+  }
+  console.log(typeof result === "string" ? result : JSON.stringify(result, null, 2));
+}
+
+main().catch((e: unknown) => {
+  console.error(e instanceof Error ? e.message : String(e));
+  process.exit(1);
+});

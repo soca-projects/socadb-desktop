@@ -1,6 +1,7 @@
 import { Component } from "react";
 import type { ReactNode, ErrorInfo } from "react";
 import i18next from "../../i18n";
+import { logError } from "../../utils/log";
 
 interface Props {
   children: ReactNode;
@@ -18,7 +19,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("ErrorBoundary caught:", error, info.componentStack);
+    logError("ui.render_crash", error, { componentStack: info.componentStack });
   }
 
   render() {

@@ -3,15 +3,18 @@ import { useTranslation } from "react-i18next";
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { listen } from "@tauri-apps/api/event";
 import { getRecentFiles, clearRecentFiles, loadRecentFiles } from "../utils/recentFiles";
-import { handleOpenRecent, MENU_SHORTCUTS } from "../utils/menuActions";
+import { handleOpenRecent, handleShowLogs, MENU_SHORTCUTS } from "../utils/menuActions";
 import { handleUpdateMenuAction, updateMenuItemState } from "../utils/updater";
 import { useUpdateStore } from "../stores/updateStore";
-import { IS_MAC, IS_LINUX } from "../utils/platform";
+import { IS_MAC } from "../utils/platform";
 import i18next from "../i18n";
+import { logInfo } from "../utils/log";
+
+const MENU_RECENT_LIMIT = 10;
 
 async function buildRecentSubmenu(): Promise<Submenu> {
   const t = i18next.t.bind(i18next);
-  const recentFiles = getRecentFiles();
+  const recentFiles = getRecentFiles().slice(0, MENU_RECENT_LIMIT);
 
   const items: (MenuItem | PredefinedMenuItem)[] = [];
 
@@ -33,7 +36,10 @@ async function buildRecentSubmenu(): Promise<Submenu> {
         await MenuItem.new({
           id: `recent_${entry.path}`,
           text: label,
-          action: () => handleOpenRecent(entry.path),
+          action: () => {
+            logInfo("menu.action", "openRecent");
+            handleOpenRecent(entry.path);
+          },
         }),
       );
     }
@@ -42,7 +48,10 @@ async function buildRecentSubmenu(): Promise<Submenu> {
       await MenuItem.new({
         id: "clear_recent",
         text: t("menu.clearRecent"),
-        action: () => clearRecentFiles(),
+        action: () => {
+          logInfo("menu.action", "clearRecent");
+          clearRecentFiles();
+        },
       }),
     );
   }
@@ -75,8 +84,7 @@ async function syncUpdateMenuItem() {
 
 // IS_MAC drives both the macOS-only "SocaDB" submenu (Hide/HideOthers/ShowAll/
 // Quit are PredefinedMenuItem variants that only render on macOS) and the
-// attach method (setAsAppMenu vs setAsWindowMenu). IS_LINUX skips predefined
-// items muda flags as "Linux: Unsupported" (CloseWindow, Hide).
+// attach method (setAsAppMenu vs setAsWindowMenu).
 
 async function buildAppSubmenu(updateItem: MenuItem): Promise<Submenu> {
   const t = i18next.t.bind(i18next);
@@ -129,6 +137,25 @@ async function setupMenu() {
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await buildRecentSubmenu(),
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      await MenuItem.new({
+        id: "home",
+        text: t("menu.home"),
+        accelerator: MENU_SHORTCUTS.home.accelerator,
+        action: () => void MENU_SHORTCUTS.home.run(),
+      }),
+      await MenuItem.new({
+        id: "find_schema",
+        text: t("menu.findSchema"),
+        accelerator: MENU_SHORTCUTS.findSchema.accelerator,
+        action: () => void MENU_SHORTCUTS.findSchema.run(),
+      }),
+      await MenuItem.new({
+        id: "close_schema",
+        text: t("menu.closeSchema"),
+        accelerator: MENU_SHORTCUTS.closeSchema.accelerator,
+        action: () => void MENU_SHORTCUTS.closeSchema.run(),
+      }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await MenuItem.new({
         id: "save",
@@ -235,20 +262,44 @@ async function setupMenu() {
     text: t("menu.window"),
     items: [
       await PredefinedMenuItem.new({ item: "Minimize" }),
-      // CloseWindow is "Linux: Unsupported" per muda — skip on Linux to
-      // avoid a dead menu entry.
-      ...(IS_LINUX ? [] : [await PredefinedMenuItem.new({ item: "CloseWindow" })]),
+      // The predefined CloseWindow is hardwired to Cmd+W, which closes the
+      // schema here.
+      await MenuItem.new({
+        id: "close_window",
+        text: t("menu.closeWindow"),
+        accelerator: MENU_SHORTCUTS.closeWindow.accelerator,
+        action: () => void MENU_SHORTCUTS.closeWindow.run(),
+      }),
     ],
   });
 
+  const showLogsItem = await MenuItem.new({
+    id: "show_logs",
+    text: t("menu.showLogs"),
+    action: () => handleShowLogs(),
+  });
   const items = appSubmenu
-    ? [appSubmenu, fileSubmenu, editSubmenu, viewSubmenu, windowSubmenu]
+    ? [
+        appSubmenu,
+        fileSubmenu,
+        editSubmenu,
+        viewSubmenu,
+        windowSubmenu,
+        await Submenu.new({ text: t("menu.help"), items: [showLogsItem] }),
+      ]
     : [
         fileSubmenu,
         editSubmenu,
         viewSubmenu,
         windowSubmenu,
-        await Submenu.new({ text: t("menu.help"), items: [updateItem] }),
+        await Submenu.new({
+          text: t("menu.help"),
+          items: [
+            updateItem,
+            await PredefinedMenuItem.new({ item: "Separator" }),
+            showLogsItem,
+          ],
+        }),
       ];
   const menu = await Menu.new({ items });
 

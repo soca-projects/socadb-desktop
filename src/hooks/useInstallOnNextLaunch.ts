@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import i18next from "../i18n";
 import { useUpdateStore } from "../stores/updateStore";
 import { toMessage } from "../utils/errorMessage";
+import { logError } from "../utils/log";
 import { IS_MAC } from "../utils/platform";
 
 // install() runs in-process on Linux; if it hangs, the preventDefault below
@@ -55,7 +56,7 @@ export function useInstallOnNextLaunch() {
         await window.destroy();
       } catch (error) {
         const message = toMessage(error);
-        console.error("[updater] install on next launch failed:", message);
+        logError("updater.install_on_launch.failed", message);
         setError(message);
         setPendingUpdateVersion(null);
         toast.error(i18next.t("updater.failed", { error: message }), {
