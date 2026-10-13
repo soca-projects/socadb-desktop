@@ -60,6 +60,14 @@ describe("parseSqlDdl", () => {
     expect(result.tables).toHaveLength(0);
     expect(result.relations).toHaveLength(0);
   });
+  it("links MySQL enum columns to an enum", () => {
+    const result = parseSqlDdl(
+      "CREATE TABLE orders (id INT AUTO_INCREMENT PRIMARY KEY, status ENUM('pending','paid') NOT NULL) ENGINE=InnoDB;",
+    );
+    const status = result.tables[0].columns.find((c) => c.name === "status");
+    expect(result.enums).toHaveLength(1);
+    expect(status?.enumId).toBe(result.enums[0].id);
+  });
 });
 
 describe("adaptColumnsToDbType", () => {
@@ -112,6 +120,32 @@ describe("adaptColumnsToDbType", () => {
     ];
     const result = adaptColumnsToDbType(tables, "postgresql");
     expect(result.tables[0].columns[0].type).toBe("varchar");
+    expect(result.adaptedCount).toBe(0);
+  });
+  it("keeps enum columns, which both dialects support", () => {
+    const tables = [
+      {
+        id: "t1",
+        name: "orders",
+        position: { x: 0, y: 0 },
+        columns: [
+          {
+            id: "c1",
+            name: "status",
+            type: "enum" as const,
+            enumId: "e1",
+            isPrimaryKey: false,
+            isForeignKey: false,
+            isNullable: false,
+            isUnique: false,
+            isAutoIncrement: false,
+            defaultValue: null,
+          },
+        ],
+      },
+    ];
+    const result = adaptColumnsToDbType(tables, "postgresql");
+    expect(result.tables[0].columns[0]).toMatchObject({ type: "enum", enumId: "e1" });
     expect(result.adaptedCount).toBe(0);
   });
 });

@@ -1,7 +1,7 @@
 import { useSchemaStore } from "../stores/schemaStore";
-import { migrateSchema } from "./fileOperations";
+import { parseSchemaData } from "./fileOperations";
 import { isWorthResuming } from "./schemaQueries";
-import { LastSessionZ, SchemaZ } from "./zodSchemas";
+import { LastSessionZ } from "./zodSchemas";
 import { logError, logWarn } from "./log";
 
 const LAST_SESSION_KEY = "socadb_last_session";
@@ -39,8 +39,8 @@ export function restoreLastSession(): boolean {
   if (!raw) return false;
   try {
     const session = LastSessionZ.parse(JSON.parse(raw));
-    migrateSchema(session.schema);
-    const schema = SchemaZ.parse(session.schema);
+    const schema = parseSchemaData(session.schema);
+    if (!schema) throw new Error("The saved session holds an invalid schema");
     const filePath = session.filePath ?? null;
     const { setSchema, setFilePath } = useSchemaStore.getState();
     setSchema(schema);

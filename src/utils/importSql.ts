@@ -1,4 +1,5 @@
-import type { Table, Relation, DbType, ColumnType } from "../types/schema";
+import type { Table, Relation, DbType, ColumnType, SchemaEnum } from "../types/schema";
+import { linkEnumColumns } from "./schemaIntegrity";
 import { COLUMN_TYPES_BY_DB } from "../types/schema";
 import {
   stripComments,
@@ -17,6 +18,7 @@ export interface SqlImportResult {
   relations: Relation[];
   detectedDbType: DbType | null;
   attempted: number;
+  enums: SchemaEnum[];
 }
 
 export function parseSqlDdl(sql: string): SqlImportResult {
@@ -44,8 +46,15 @@ export function parseSqlDdl(sql: string): SqlImportResult {
   }
 
   const relations = resolveForeignKeys(tables, allPendingFks);
+  const linked = linkEnumColumns(tables, []);
 
-  return { tables, relations, detectedDbType, attempted };
+  return {
+    tables: linked.tables,
+    relations,
+    enums: linked.enums,
+    detectedDbType,
+    attempted,
+  };
 }
 
 export interface AdaptResult {
@@ -60,7 +69,7 @@ export function adaptColumnsToDbType(tables: Table[], targetDbType: DbType): Ada
   const adapted = tables.map((table) => ({
     ...table,
     columns: table.columns.map((col) => {
-      if (validTypes.has(col.type)) return col;
+      if (validTypes.has(col.type) || col.type === "enum") return col;
       adaptedCount++;
       return { ...col, type: "varchar" as ColumnType };
     }),

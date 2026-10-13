@@ -14,7 +14,7 @@ import { parseJsonSchema } from "../../utils/importJson";
 import { getNextTableColor } from "../../utils/tableColors";
 import { handleAutoLayout } from "../../utils/schemaActions";
 import { logError, logInfo, logWarn } from "../../utils/log";
-import type { DbType, Table, Relation } from "../../types/schema";
+import type { DbType, Table, Relation, SchemaEnum } from "../../types/schema";
 
 type ImportFormat = "sql" | "json";
 type ImportMode = "replace" | "merge";
@@ -22,6 +22,7 @@ type ImportMode = "replace" | "merge";
 interface ConflictState {
   tables: Table[];
   relations: Relation[];
+  enums: SchemaEnum[];
   fileDbType: DbType;
   currentDbType: DbType;
   skipped: number;
@@ -75,6 +76,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
   const replaceSchema = (
     tables: Table[],
     relations: Relation[],
+    enums: SchemaEnum[],
     dbType: DbType,
     name: string,
   ) => {
@@ -82,6 +84,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
     const schema = createEmptySchema(name, dbType);
     schema.tables = assignColors(tables);
     schema.relations = relations;
+    if (enums.length) schema.enums = enums;
     store.setSchema(schema);
     store.setFilePath(null);
     useViewStore.getState().showEditor();
@@ -110,7 +113,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       if (!selected) return;
 
       const content = await readTextFile(selected);
-      const { tables, relations, detectedDbType, attempted } =
+      const { tables, relations, enums, detectedDbType, attempted } =
         format === "sql" ? parseSqlDdl(content) : parseJsonSchema(content);
 
       if (tables.length === 0) {
@@ -126,6 +129,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
         replaceSchema(
           tables,
           relations,
+          enums,
           detectedDbType ?? store.schema.dbType,
           fromHome ? fileStem(selected) || store.schema.name : store.schema.name,
         );
@@ -136,6 +140,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
           setConflict({
             tables,
             relations,
+            enums,
             fileDbType: detectedDbType,
             currentDbType,
             skipped,
@@ -143,7 +148,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
           return;
         }
 
-        mergeIntoSchema(tables, relations);
+        mergeIntoSchema(tables, relations, enums);
       }
 
       logInfo("import.done", "Import done", {
@@ -163,7 +168,11 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
     }
   };
 
-  const mergeIntoSchema = (tables: Table[], relations: Relation[]) => {
+  const mergeIntoSchema = (
+    tables: Table[],
+    relations: Relation[],
+    enums: SchemaEnum[],
+  ) => {
     const store = useSchemaStore.getState();
     const existingNames = new Set(store.schema.tables.map((t) => t.name.toLowerCase()));
     const allTables = [...store.schema.tables];
@@ -185,7 +194,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       return result;
     });
 
-    store.importTables(renamedTables, relations);
+    store.importTables(renamedTables, relations, enums);
     void handleAutoLayout();
   };
 
@@ -194,6 +203,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
     replaceSchema(
       conflict.tables,
       conflict.relations,
+      conflict.enums,
       conflict.fileDbType,
       useSchemaStore.getState().schema.name,
     );
@@ -211,7 +221,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       conflict.tables,
       conflict.currentDbType,
     );
-    mergeIntoSchema(adapted, conflict.relations);
+    mergeIntoSchema(adapted, conflict.relations, conflict.enums);
     showImportSummary(
       conflict.tables.length,
       conflict.relations.length,
