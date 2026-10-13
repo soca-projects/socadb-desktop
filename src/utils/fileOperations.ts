@@ -1,5 +1,5 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import type { Schema } from "../types/schema";
@@ -74,7 +74,7 @@ export async function openSchemaFile(): Promise<{
 
 export async function saveSchemaFile(schema: Schema, filePath: string): Promise<void> {
   const content = JSON.stringify(schema, null, 2);
-  await writeTextFile(filePath, content);
+  await invoke("write_schema_file", { path: filePath, content });
 }
 
 export async function saveSchemaFileAs(schema: Schema): Promise<string | null> {
