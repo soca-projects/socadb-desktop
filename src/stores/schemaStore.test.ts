@@ -232,4 +232,155 @@ describe("schemaStore", () => {
       expect(useSchemaStore.getState().schema.tables).toHaveLength(2);
     });
   });
+  describe("enums", () => {
+    beforeEach(addTestTable);
+
+    function addRole(defaultValue: string | null = "reader") {
+      useSchemaStore.getState().addColumn("t1", {
+        id: "c3",
+        name: "role",
+        type: "varchar",
+        isPrimaryKey: false,
+        isForeignKey: false,
+        isNullable: false,
+        isUnique: false,
+        isAutoIncrement: false,
+        defaultValue,
+      });
+    }
+    const column = (id: string) =>
+      useSchemaStore.getState().schema.tables[0].columns.find((c) => c.id === id);
+
+    it("turns a column into a new enum, keeping a default that is in the list", () => {
+      addRole();
+      const id = useSchemaStore
+        .getState()
+        .createEnumForColumn("t1", "c3", ["reader", "librarian"]);
+      const { enums } = useSchemaStore.getState().schema;
+      expect(enums).toEqual([
+        { id, name: "users_role", values: ["reader", "librarian"] },
+      ]);
+      expect(column("c3")).toMatchObject({
+        type: "enum",
+        enumId: id,
+        defaultValue: "reader",
+      });
+    });
+
+    it("clears a default that is not in the new list", () => {
+      addRole("guest");
+      useSchemaStore.getState().createEnumForColumn("t1", "c3", ["reader"]);
+      expect(column("c3")?.defaultValue).toBeNull();
+    });
+
+    it("removes the enum when its only column goes back to text", () => {
+      addRole();
+      useSchemaStore.getState().createEnumForColumn("t1", "c3", ["reader"]);
+      useSchemaStore.getState().updateColumn("t1", "c3", { type: "varchar" });
+      expect(useSchemaStore.getState().schema.enums).toEqual([]);
+      expect(column("c3")).not.toHaveProperty("enumId");
+    });
+
+    it("keeps a shared enum while another column uses it", () => {
+      addRole();
+      const id = useSchemaStore.getState().createEnumForColumn("t1", "c3", ["reader"]);
+      useSchemaStore.getState().updateColumn("t1", "c2", { type: "enum", enumId: id });
+      useSchemaStore.getState().updateColumn("t1", "c3", { type: "varchar" });
+      expect(useSchemaStore.getState().schema.enums?.map((e) => e.id)).toEqual([id]);
+    });
+
+    it("gives an empty enum to a column set to enum without one", () => {
+      addRole();
+      useSchemaStore.getState().updateColumn("t1", "c3", { type: "enum" });
+      const enums = useSchemaStore.getState().schema.enums ?? [];
+      expect(enums).toHaveLength(1);
+      expect(column("c3")?.enumId).toBe(enums[0].id);
+    });
+
+    it("clears defaults that use a value removed from the enum", () => {
+      addRole();
+      const id = useSchemaStore
+        .getState()
+        .createEnumForColumn("t1", "c3", ["reader", "librarian"]);
+      useSchemaStore.getState().updateEnum(id, { values: ["librarian"] });
+      expect(column("c3")?.defaultValue).toBeNull();
+    });
+
+    it("renames an enum", () => {
+      addRole();
+      const id = useSchemaStore.getState().createEnumForColumn("t1", "c3", ["reader"]);
+      useSchemaStore.getState().updateEnum(id, { name: "member_role" });
+      expect(useSchemaStore.getState().schema.enums?.[0].name).toBe("member_role");
+    });
+
+    it("keeps an enum that was already unused when an unrelated change happens", () => {
+      const schema = useSchemaStore.getState().schema;
+      useSchemaStore.getState().setSchema({
+        ...schema,
+        enums: [{ id: "e9", name: "orphan", values: ["a"] }],
+      });
+      useSchemaStore.getState().updateTable("t1", { name: "people" });
+      expect(useSchemaStore.getState().schema.enums?.map((e) => e.id)).toEqual(["e9"]);
+    });
+
+    it("does not add an enums key to a schema that never had one", () => {
+      useSchemaStore.getState().updateTable("t1", { name: "people" });
+      expect(useSchemaStore.getState().schema).not.toHaveProperty("enums");
+    });
+  });
+
+  describe("indexes", () => {
+    beforeEach(addTestTable);
+
+    const indexes = () => useSchemaStore.getState().schema.tables[0].indexes;
+
+    it("adds, updates and deletes an index", () => {
+      const { addIndex, updateIndex, deleteIndex } = useSchemaStore.getState();
+      addIndex("t1", { id: "i1", columnIds: ["c2"], unique: false });
+      updateIndex("t1", "i1", { unique: true, name: "users_email_key" });
+      expect(indexes()).toEqual([
+        { id: "i1", columnIds: ["c2"], unique: true, name: "users_email_key" },
+      ]);
+      deleteIndex("t1", "i1");
+      expect(indexes()).toEqual([]);
+    });
+
+    it("removes a deleted column from its indexes and drops indexes left empty", () => {
+      const { addIndex, deleteColumn } = useSchemaStore.getState();
+      addIndex("t1", { id: "i1", columnIds: ["c1", "c2"], unique: false });
+      addIndex("t1", { id: "i2", columnIds: ["c2"], unique: true });
+      deleteColumn("t1", "c2");
+      expect(indexes()).toEqual([{ id: "i1", columnIds: ["c1"], unique: false }]);
+    });
+  });
+
+  describe("type parameters", () => {
+    beforeEach(addTestTable);
+
+    it("drops the length when the type no longer takes one", () => {
+      const { updateColumn } = useSchemaStore.getState();
+      updateColumn("t1", "c2", { length: 120 });
+      updateColumn("t1", "c2", { type: "text" });
+      expect(useSchemaStore.getState().schema.tables[0].columns[1]).not.toHaveProperty(
+        "length",
+      );
+    });
+  });
+
+  describe("importTables with enums", () => {
+    it("adds incoming enums and renames those whose name is taken", () => {
+      const store = useSchemaStore.getState();
+      store.setSchema({
+        ...store.schema,
+        enums: [{ id: "e1", name: "status", values: ["a"] }],
+      });
+      useSchemaStore
+        .getState()
+        .importTables([], [], [{ id: "e2", name: "status", values: ["b"] }]);
+      expect(useSchemaStore.getState().schema.enums?.map((e) => e.name)).toEqual([
+        "status",
+        "status_2",
+      ]);
+    });
+  });
 });
