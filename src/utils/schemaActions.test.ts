@@ -100,6 +100,46 @@ describe("duplicateTable", () => {
   it("returns null for missing table", () => {
     expect(duplicateTable("missing")).toBeNull();
   });
+  it("copies the note and remaps index columns", () => {
+    const id = createTable({ name: "loans" });
+    const store = useSchemaStore.getState();
+    const colId = store.schema.tables[0].columns[0].id;
+    store.updateTable(id, { note: "One row per loan." });
+    store.addIndex(id, { id: "i1", columnIds: [colId], unique: true });
+    const copyId = duplicateTable(id);
+    const copy = useSchemaStore.getState().schema.tables.find((t) => t.id === copyId);
+    expect(copy?.note).toBe("One row per loan.");
+    expect(copy?.indexes).toHaveLength(1);
+    expect(copy?.indexes?.[0].id).not.toBe("i1");
+    expect(copy?.indexes?.[0].columnIds).toEqual([copy?.columns[0].id]);
+  });
+
+  it("shares PostgreSQL enums with the copy", () => {
+    const id = createTable({ name: "loans" });
+    const colId = useSchemaStore.getState().schema.tables[0].columns[0].id;
+    const enumId = useSchemaStore.getState().createEnumForColumn(id, colId, ["a"]);
+    const copyId = duplicateTable(id);
+    const { schema } = useSchemaStore.getState();
+    const copy = schema.tables.find((t) => t.id === copyId);
+    expect(schema.enums).toHaveLength(1);
+    expect(copy?.columns[0].enumId).toBe(enumId);
+  });
+
+  it("gives the copy its own MySQL enums", () => {
+    useSchemaStore.setState({ schema: createEmptySchema("test", "mysql") });
+    const id = createTable({ name: "orders" });
+    const colId = useSchemaStore.getState().schema.tables[0].columns[0].id;
+    const enumId = useSchemaStore.getState().createEnumForColumn(id, colId, ["a", "b"]);
+    const copyId = duplicateTable(id);
+    const { schema } = useSchemaStore.getState();
+    const copy = schema.tables.find((t) => t.id === copyId);
+    expect(schema.enums).toHaveLength(2);
+    expect(copy?.columns[0].enumId).not.toBe(enumId);
+    expect(schema.enums?.find((e) => e.id === copy?.columns[0].enumId)?.values).toEqual([
+      "a",
+      "b",
+    ]);
+  });
 });
 
 describe("closeSchema", () => {
