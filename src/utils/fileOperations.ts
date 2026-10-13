@@ -11,6 +11,7 @@ import { addRecentFile, removeRecentFile } from "./recentFiles";
 import { IS_MAC } from "./platform";
 import { pathForLog } from "./logPrivacy";
 import { logError, logInfo, logWarn } from "./log";
+import { normalizeSchema } from "./schemaIntegrity";
 
 export function migrateSchema(data: unknown) {
   if (!data || typeof data !== "object") return;
@@ -36,6 +37,12 @@ export function getSocaFilter() {
   return { name: i18next.t("fileFilter.soca"), extensions: ["soca"] };
 }
 
+export function parseSchemaData(raw: unknown): Schema | null {
+  migrateSchema(raw);
+  const parsed = SchemaZ.safeParse(raw);
+  return parsed.success ? normalizeSchema(parsed.data) : null;
+}
+
 export function parseSchemaContent(content: string): Schema {
   let raw: unknown;
   try {
@@ -43,12 +50,9 @@ export function parseSchemaContent(content: string): Schema {
   } catch {
     throw new Error(i18next.t("toast.invalidFile"));
   }
-  migrateSchema(raw);
-  const parsed = SchemaZ.safeParse(raw);
-  if (!parsed.success) {
-    throw new Error(i18next.t("toast.invalidFile"));
-  }
-  return parsed.data;
+  const schema = parseSchemaData(raw);
+  if (!schema) throw new Error(i18next.t("toast.invalidFile"));
+  return schema;
 }
 
 async function readSchemaFromPath(filePath: string): Promise<Schema> {

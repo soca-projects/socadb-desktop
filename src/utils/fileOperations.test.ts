@@ -87,4 +87,35 @@ describe("parseSchemaContent", () => {
     expect(code.length).toBeUndefined();
     expect(label.defaultKind).toBe("value");
   });
+  it("gives legacy MySQL enum columns an enum to point to", () => {
+    const legacy = file({ dbType: "mysql" });
+    legacy.tables[0].columns[1] = column("c2", "status", "enum");
+    const schema = parseSchemaContent(JSON.stringify(legacy));
+    expect(schema.enums).toHaveLength(1);
+    expect(schema.enums?.[0]).toMatchObject({ name: "loans_status", values: [] });
+    expect(schema.tables[0].columns[1].enumId).toBe(schema.enums?.[0].id);
+  });
+
+  it("drops index columns that do not exist", () => {
+    const schema = parseSchemaContent(
+      JSON.stringify(
+        file(
+          { enums: [{ id: "e1", name: "loan_status", values: [] }] },
+          { indexes: [{ id: "i1", columnIds: ["c1", "gone"], unique: false }] },
+        ),
+      ),
+    );
+    expect(schema.tables[0].indexes).toEqual([
+      { id: "i1", columnIds: ["c1"], unique: false },
+    ]);
+  });
+
+  it("adds no key to a file that uses none of the new fields", () => {
+    const plain = file();
+    plain.tables[0].columns[1] = column("c2", "title", "varchar");
+    const schema = parseSchemaContent(JSON.stringify(plain));
+    expect(schema).not.toHaveProperty("enums");
+    expect(schema.tables[0]).not.toHaveProperty("indexes");
+    expect(schema.tables[0]).not.toHaveProperty("note");
+  });
 });
