@@ -133,4 +133,49 @@ describe("parseJsonSchema", () => {
     const result = parseJsonSchema(json);
     expect(result.detectedDbType).toBe("mysql");
   });
+  it("keeps notes and remaps indexes and enums to the new ids", () => {
+    const json = JSON.stringify({
+      dbType: "postgresql",
+      enums: [{ id: "old-e1", name: "loan_status", values: ["active", "returned"] }],
+      tables: [
+        {
+          id: "old-t1",
+          name: "loans",
+          note: "One row per loan.",
+          position: { x: 0, y: 0 },
+          columns: [
+            {
+              id: "old-c1",
+              name: "status",
+              type: "enum",
+              enumId: "old-e1",
+              note: "Where it stands.",
+              isPrimaryKey: false,
+              isForeignKey: false,
+              isNullable: false,
+              isUnique: false,
+              isAutoIncrement: false,
+              defaultValue: "active",
+            },
+          ],
+          indexes: [{ id: "old-i1", columnIds: ["old-c1"], unique: false }],
+        },
+      ],
+      relations: [],
+    });
+    const result = parseJsonSchema(json);
+    const table = result.tables[0];
+    const column = table.columns[0];
+    expect(table.note).toBe("One row per loan.");
+    expect(column.note).toBe("Where it stands.");
+    expect(result.enums).toHaveLength(1);
+    expect(result.enums[0].id).not.toBe("old-e1");
+    expect(result.enums[0]).toMatchObject({
+      name: "loan_status",
+      values: ["active", "returned"],
+    });
+    expect(column.enumId).toBe(result.enums[0].id);
+    expect(table.indexes?.[0].id).not.toBe("old-i1");
+    expect(table.indexes?.[0].columnIds).toEqual([column.id]);
+  });
 });

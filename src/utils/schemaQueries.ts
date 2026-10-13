@@ -1,4 +1,4 @@
-import type { Schema, Table, Column, Relation } from "../types/schema";
+import type { Schema, Table, Column, Relation, SchemaEnum } from "../types/schema";
 
 export function findTableById(schema: Schema, id: string): Table | undefined {
   return schema.tables.find((t) => t.id === id);
@@ -14,6 +14,10 @@ export function findTableByName(schema: Schema, name: string): Table | undefined
 
 export function findColumnByName(table: Table, name: string): Column | undefined {
   return table.columns.find((c) => c.name === name);
+}
+
+export function findEnumById(schema: Schema, id: string): SchemaEnum | undefined {
+  return schema.enums?.find((e) => e.id === id);
 }
 
 export function getRelationsFromTable(schema: Schema, tableId: string): Relation[] {

@@ -54,9 +54,24 @@ export const ColumnZ = z.object({
   isUnique: z.boolean(),
   isAutoIncrement: z.boolean(),
   defaultValue: z.string().nullable(),
+  // A bad value in a hand-edited file is dropped rather than making the whole
+  // schema unreadable.
+  defaultKind: z.enum(["value", "expression"]).optional().catch(undefined),
+  length: z.number().int().positive().optional().catch(undefined),
+  precision: z.number().int().positive().optional().catch(undefined),
+  scale: z.number().int().nonnegative().optional().catch(undefined),
+  enumId: z.string().optional(),
+  note: z.string().optional(),
 });
 
 const PositionZ = z.object({ x: z.number(), y: z.number() });
+
+export const TableIndexZ = z.object({
+  id: z.string(),
+  columnIds: z.array(z.string()),
+  unique: z.boolean(),
+  name: z.string().optional(),
+});
 
 export const TableZ = z.object({
   id: z.string(),
@@ -64,6 +79,14 @@ export const TableZ = z.object({
   color: z.string().optional(),
   position: PositionZ,
   columns: z.array(ColumnZ),
+  note: z.string().optional(),
+  indexes: z.array(TableIndexZ).optional(),
+});
+
+export const SchemaEnumZ = z.object({
+  id: z.string(),
+  name: z.string(),
+  values: z.array(z.string()),
 });
 
 const RelationEndpointZ = z.object({
@@ -88,6 +111,7 @@ export const SchemaZ = z.object({
   updatedAt: z.string(),
   tables: z.array(TableZ),
   relations: z.array(RelationZ),
+  enums: z.array(SchemaEnumZ).optional(),
 });
 
 export const McpColumnInputZ = z.object({
