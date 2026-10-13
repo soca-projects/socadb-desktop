@@ -1,4 +1,4 @@
-import type { Column, DbType } from "../types/schema";
+import type { Column, DbType, DefaultKind } from "../types/schema";
 import { genId } from "./id";
 
 export function createDefaultIdColumn(dbType: DbType): Column {
@@ -25,4 +25,15 @@ export function createDefaultIdColumn(dbType: DbType): Column {
         isAutoIncrement: false,
         defaultValue: "gen_random_uuid()",
       };
+}
+
+const EXPRESSION_DEFAULT =
+  /^(?:current_timestamp|current_date|current_time|localtimestamp|localtime|null|[a-z_][\w.]*\(.*\))$/is;
+
+// Files saved before defaultKind existed hold either a bare value or an
+// expression. A value someone already wrapped in quotes is written as is.
+export function defaultKindOf(column: Column): DefaultKind {
+  if (column.defaultKind) return column.defaultKind;
+  const value = column.defaultValue?.trim() ?? "";
+  return /^'.*'$/s.test(value) || EXPRESSION_DEFAULT.test(value) ? "expression" : "value";
 }
