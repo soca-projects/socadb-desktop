@@ -214,6 +214,7 @@ pub fn run() {
             schema_files::schema_files_info,
             schema_files::rename_schema_file,
             schema_files::duplicate_schema_file,
+            schema_files::write_schema_file,
             mcp_respond,
             atomic_write,
             open_terminal,

@@ -152,6 +152,21 @@ fn duplicate_file(path: &Path, label: &str) -> Result<PathBuf, String> {
     Err("exists".into())
 }
 
+fn write_file(path: &Path, content: &str) -> Result<(), String> {
+    if !is_schema_path(path) {
+        return Err("Only .soca files can be saved".into());
+    }
+    crate::write_atomic(path, content)
+}
+
+// Saving goes through Rust because the fs plugin only writes paths picked in a
+// dialog during this launch: a schema reopened from the home or restored at
+// startup would be refused.
+#[tauri::command(async)]
+pub fn write_schema_file(path: String, content: String) -> Result<(), String> {
+    write_file(Path::new(&path), &content)
+}
+
 #[tauri::command(async)]
 pub fn duplicate_schema_file(path: String, copy_label: String) -> Result<String, String> {
     duplicate_file(Path::new(&path), &copy_label).map(|p| p.to_string_lossy().into_owned())
@@ -269,6 +284,20 @@ mod tests {
         assert_eq!(first, dir.join("shop copie.soca"));
         assert_eq!(second, dir.join("shop copie 2.soca"));
         assert_eq!(std::fs::read_to_string(&second).unwrap(), "A");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn save_writes_schema_files_only() {
+        let dir = temp_dir("save");
+        let schema = dir.join("shop.soca");
+        write_file(&schema, "{\"v\":1}").unwrap();
+        write_file(&schema, "{\"v\":2}").unwrap();
+        assert_eq!(std::fs::read_to_string(&schema).unwrap(), "{\"v\":2}");
+        assert!(!dir.join("shop.tmp").exists());
+        let other = dir.join("notes.txt");
+        assert!(write_file(&other, "x").is_err());
+        assert!(!other.exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
