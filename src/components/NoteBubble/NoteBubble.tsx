@@ -5,18 +5,15 @@ interface NoteBubbleProps {
   name: string;
   note: string;
   placeholder: string;
-  // The button that opens the bubble; Escape gives it the focus back.
   anchor: HTMLElement;
-  // Positioned under `below` (the anchor by default), across `frame`.
   below?: HTMLElement;
   frame: HTMLElement;
   onCommit: (note: string) => void;
   onClose: () => void;
 }
 
-// The note is edited here only, never shown inline: the panel stays compact
-// and the canvas shows a note icon whose hover reads it. One edit is one undo
-// step, so the text is committed on blur and on close, not per keystroke.
+// One edit is one undo step, so the text is committed on blur and on close,
+// not per keystroke.
 export function NoteBubble({
   name,
   note,

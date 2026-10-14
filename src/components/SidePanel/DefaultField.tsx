@@ -16,7 +16,6 @@ interface DefaultFieldProps {
   tableId: string;
   column: Column;
   dbType: DbType;
-  // Set for enum and boolean columns: the default is picked, not typed.
   choices: string[] | null;
 }
 

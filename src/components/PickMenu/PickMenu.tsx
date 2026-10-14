@@ -43,8 +43,7 @@ const MARGIN_PX = 8;
 const MAX_HEIGHT_PX = 380;
 const FLIP_BELOW_PX = 240;
 
-// Shared by the type menu and the default menus of the column editor. It is
-// portalled and fixed so the side panel's scroll area cannot clip it.
+// Portalled and fixed so the side panel's scroll area cannot clip it.
 export function PickMenu({
   anchor,
   value,
@@ -139,7 +138,7 @@ export function PickMenu({
     preventDefault: () => void;
     stopPropagation: () => void;
   }) => {
-    // A hidden completion list leaves every key to the field.
+    // Otherwise Escape would close an invisible list instead of the editor.
     if (hidden) return false;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();

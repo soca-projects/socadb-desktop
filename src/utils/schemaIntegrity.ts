@@ -102,7 +102,6 @@ function withoutStaleFields(c: Column, dbType: DbType | undefined): Column {
   if (scale !== undefined && decimal && precision !== undefined) next.scale = scale;
   if (defaultKind !== undefined && c.defaultValue !== null)
     next.defaultKind = defaultKind;
-  // UNSIGNED only exists in MySQL, on numeric columns.
   if (unsigned && dbType !== "postgresql" && MYSQL_NUMERIC_TYPES.has(c.type))
     next.unsigned = true;
   return next;

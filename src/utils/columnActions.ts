@@ -8,8 +8,6 @@ import type { Column, ColumnType } from "../types/schema";
 const isColumnType = (value: string): value is ColumnType =>
   ColumnTypeZ.safeParse(value).success;
 
-// `value` comes from the type menu: a column type, or `enum:<id>` to reuse an
-// existing PostgreSQL enum.
 export function changeColumnType(tableId: string, columnId: string, value: string) {
   const store = useSchemaStore.getState();
   const table = findTableById(store.schema, tableId);

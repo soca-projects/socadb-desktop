@@ -49,7 +49,6 @@ const NUMBER_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
   "bigserial",
 ]);
 
-// How the SQL export writes a default; also shown as a hint in the editor.
 export function defaultSql(column: Column): string | null {
   const value = column.defaultValue?.trim();
   if (!value) return null;
