@@ -197,7 +197,8 @@
     "noDefault": "No default",
     "setByAuto": "Set by AUTO",
     "defaultAsValue": "Written in SQL as DEFAULT {{sql}}. Click to make it a function the database runs, as is.",
-    "defaultAsExpression": "Written in SQL as DEFAULT {{sql}}. Click to make it fixed text, in quotes."
+    "defaultAsExpression": "Written in SQL as DEFAULT {{sql}}. Click to make it fixed text, in quotes.",
+    "notIndexable": "This type can't be indexed in this database"
   },
   "typeMenu": {
     "searchTypes": "Search types",

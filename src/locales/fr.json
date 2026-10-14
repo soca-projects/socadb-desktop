@@ -197,7 +197,8 @@
     "noDefault": "Aucun défaut",
     "setByAuto": "Fixé par AUTO",
     "defaultAsValue": "Écrit en SQL : DEFAULT {{sql}}. Cliquez pour en faire une fonction exécutée par la base, telle quelle.",
-    "defaultAsExpression": "Écrit en SQL : DEFAULT {{sql}}. Cliquez pour en faire un texte fixe, entre guillemets."
+    "defaultAsExpression": "Écrit en SQL : DEFAULT {{sql}}. Cliquez pour en faire un texte fixe, entre guillemets.",
+    "notIndexable": "Ce type ne peut pas être indexé dans cette base"
   },
   "typeMenu": {
     "searchTypes": "Chercher un type",
