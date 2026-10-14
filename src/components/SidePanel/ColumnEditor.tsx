@@ -115,6 +115,8 @@ export function ColumnEditor({
     >
       <div className="flex items-center gap-1.5">
         <ColumnIcon column={column} />
+        {/* Keyed on the name: undo and the agent rename the column under this
+            uncontrolled input. */}
         <input
           key={column.name}
           ref={nameRef}
