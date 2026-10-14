@@ -1,5 +1,5 @@
-import type { Column, Schema, SchemaEnum, Table } from "../types/schema";
-import { LENGTH_TYPES, PRECISION_TYPES } from "../types/schema";
+import type { Column, DbType, Schema, SchemaEnum, Table } from "../types/schema";
+import { LENGTH_TYPES, MYSQL_NUMERIC_TYPES, PRECISION_TYPES } from "../types/schema";
 import { genId } from "./id";
 
 // PostgreSQL gives every table a row type of the same name, so an enum cannot
@@ -93,8 +93,8 @@ export function pruneIndexes(tables: Table[]): Table[] {
   return changed ? next : tables;
 }
 
-function withoutStaleFields(c: Column): Column {
-  const { length, precision, scale, defaultKind, ...base } = c;
+function withoutStaleFields(c: Column, dbType: DbType | undefined): Column {
+  const { length, precision, scale, defaultKind, unsigned, ...base } = c;
   const decimal = PRECISION_TYPES.has(c.type);
   const next: Column = { ...base };
   if (length !== undefined && LENGTH_TYPES.has(c.type)) next.length = length;
@@ -102,17 +102,19 @@ function withoutStaleFields(c: Column): Column {
   if (scale !== undefined && decimal && precision !== undefined) next.scale = scale;
   if (defaultKind !== undefined && c.defaultValue !== null)
     next.defaultKind = defaultKind;
+  if (unsigned && dbType !== "postgresql" && MYSQL_NUMERIC_TYPES.has(c.type))
+    next.unsigned = true;
   return next;
 }
 
-const EXTRA_FIELDS = ["length", "precision", "scale", "defaultKind"] as const;
+const EXTRA_FIELDS = ["length", "precision", "scale", "defaultKind", "unsigned"] as const;
 
-export function pruneColumnFields(tables: Table[]): Table[] {
+export function pruneColumnFields(tables: Table[], dbType?: DbType): Table[] {
   let changed = false;
   const next = tables.map((t) => {
     let tableChanged = false;
     const columns = t.columns.map((c) => {
-      const clean = withoutStaleFields(c);
+      const clean = withoutStaleFields(c, dbType);
       if (EXTRA_FIELDS.every((key) => clean[key] === c[key])) return c;
       tableChanged = true;
       return clean;
@@ -149,7 +151,7 @@ const NO_ENUMS: SchemaEnum[] = [];
 export function normalizeSchema(schema: Schema, prev?: Schema): Schema {
   const current = schema.enums ?? NO_ENUMS;
   const linked = linkEnumColumns(schema.tables, current);
-  const tables = pruneColumnFields(pruneIndexes(linked.tables));
+  const tables = pruneColumnFields(pruneIndexes(linked.tables), schema.dbType);
   const enums = prev
     ? dropEnumsLeftUnused(prev.tables, tables, linked.enums)
     : linked.enums;

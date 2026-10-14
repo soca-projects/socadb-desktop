@@ -75,7 +75,10 @@ export function parseJsonSchema(json: string): JsonImportResult {
     };
   });
 
-  const linked = linkEnumColumns(pruneColumnFields(pruneIndexes(imported)), enums);
+  const linked = linkEnumColumns(
+    pruneColumnFields(pruneIndexes(imported), dbType),
+    enums,
+  );
 
   const relations: Relation[] = validRelations
     .map((r) => {

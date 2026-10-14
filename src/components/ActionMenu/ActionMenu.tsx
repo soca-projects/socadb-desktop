@@ -3,7 +3,7 @@ import { useClickOutside } from "../../hooks/useClickOutside";
 
 const MARGIN_PX = 8;
 
-export interface HomeMenuItem {
+export interface ActionMenuItem {
   label: string;
   hint?: string;
   danger?: boolean;
@@ -11,15 +11,15 @@ export interface HomeMenuItem {
   onSelect: () => void;
 }
 
-interface HomeCardMenuProps {
+interface ActionMenuProps {
   x: number;
   y: number;
   label: string;
-  items: HomeMenuItem[];
+  items: ActionMenuItem[];
   onClose: () => void;
 }
 
-export function HomeCardMenu({ x, y, label, items, onClose }: HomeCardMenuProps) {
+export function ActionMenu({ x, y, label, items, onClose }: ActionMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, onClose);
 

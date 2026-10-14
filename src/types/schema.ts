@@ -80,6 +80,7 @@ export const POSTGRESQL_COLUMN_TYPES: ColumnType[] = [
   "json",
   "jsonb",
   "bytea",
+  "enum",
 ];
 
 export const COLUMN_TYPES_BY_DB: Record<DbType, ColumnType[]> = {
@@ -94,6 +95,17 @@ export const LENGTH_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
 export const PRECISION_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
   "decimal",
   "numeric",
+]);
+
+export const MYSQL_NUMERIC_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
+  "int",
+  "bigint",
+  "tinyint",
+  "smallint",
+  "mediumint",
+  "float",
+  "double",
+  "decimal",
 ]);
 
 export type DefaultKind = "value" | "expression";
@@ -116,6 +128,7 @@ export interface Column {
   length?: number;
   precision?: number;
   scale?: number;
+  unsigned?: boolean;
   enumId?: string;
   note?: string;
 }

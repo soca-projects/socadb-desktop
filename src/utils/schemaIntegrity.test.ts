@@ -185,6 +185,21 @@ describe("pruneColumnFields", () => {
     expect(ratio).not.toHaveProperty("scale");
   });
 
+  it("keeps UNSIGNED only on MySQL numeric columns", () => {
+    const tables = [
+      table("t1", "orders", [
+        col("c1", "id", "int", { unsigned: true }),
+        col("c2", "code", "varchar", { unsigned: true }),
+      ]),
+    ];
+    const [id, code] = pruneColumnFields(tables, "mysql")[0].columns;
+    expect(id.unsigned).toBe(true);
+    expect(code).not.toHaveProperty("unsigned");
+    expect(pruneColumnFields(tables, "postgresql")[0].columns[0]).not.toHaveProperty(
+      "unsigned",
+    );
+  });
+
   it("drops the default kind when there is no default", () => {
     const tables = [
       table("t1", "books", [col("c1", "title", "text", { defaultKind: "value" })]),

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Column } from "../types/schema";
-import { createDefaultIdColumn, defaultKindOf } from "./columnDefaults";
+import { createDefaultIdColumn, defaultKindOf, defaultSql } from "./columnDefaults";
 
 describe("createDefaultIdColumn", () => {
   it("creates a MySQL id column with auto increment", () => {
@@ -60,5 +60,31 @@ describe("defaultKindOf", () => {
 
   it("lets an explicit kind win", () => {
     expect(defaultKindOf(withDefault("now()", { defaultKind: "value" }))).toBe("value");
+  });
+});
+
+describe("defaultSql", () => {
+  const base = createDefaultIdColumn("postgresql");
+  const sql = (extra: Partial<Column>) =>
+    defaultSql({ ...base, isPrimaryKey: false, ...extra });
+
+  it("writes expressions as they are", () => {
+    expect(sql({ type: "timestamptz", defaultValue: "now()" })).toBe("now()");
+  });
+
+  it("quotes text and doubles quotes inside it", () => {
+    expect(sql({ type: "varchar", defaultValue: "it's" })).toBe("'it''s'");
+    expect(sql({ type: "varchar", defaultValue: "0" })).toBe("'0'");
+  });
+
+  it("leaves numbers and booleans bare on their own types", () => {
+    expect(sql({ type: "numeric", defaultValue: "1.5" })).toBe("1.5");
+    expect(sql({ type: "integer", defaultValue: "0" })).toBe("0");
+    expect(sql({ type: "boolean", defaultValue: "true" })).toBe("true");
+  });
+
+  it("returns null without a default", () => {
+    expect(sql({ defaultValue: null })).toBeNull();
+    expect(sql({ defaultValue: "  " })).toBeNull();
   });
 });

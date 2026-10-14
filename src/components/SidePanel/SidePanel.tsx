@@ -5,11 +5,6 @@ import {
   CaretRightIcon as CaretRight,
   PlusIcon as Plus,
   TrashIcon as Trash,
-  KeyIcon as Key,
-  LinkIcon as Link,
-  DotsSixVerticalIcon as DragHandle,
-  HashIcon as Hash,
-  CaretUpDownIcon as CaretUpDown,
   DotsThreeVerticalIcon as DotsThreeVertical,
   PencilSimpleIcon as PencilSimple,
 } from "@phosphor-icons/react";
@@ -17,156 +12,24 @@ import { useSchemaStore } from "../../stores/schemaStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { genId } from "../../utils/id";
 import { createTable } from "../../utils/schemaActions";
-import type { ColumnType, Table, Column } from "../../types/schema";
-import { COLUMN_TYPES_BY_DB } from "../../types/schema";
+import type { Table } from "../../types/schema";
 import {
   getColorVariants,
   normalizeTableColor,
   PRESET_COLORS,
 } from "../../utils/tableColors";
+import { ColumnEditor } from "./ColumnEditor";
+import { ColumnRow } from "./ColumnRow";
 
 const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
   if (e.key === "Enter") e.currentTarget.blur();
 };
 
-const BADGE_INACTIVE =
-  "bg-transparent text-tertiary border-transparent hover:bg-surface-muted hover:text-tertiary";
-const BADGE_ACTIVE = {
-  default: "bg-accent/10 text-accent border-accent/20",
-  amber: "bg-badge-primary-bg text-badge-primary border-badge-primary-border",
-  blue: "bg-badge-unique-bg text-badge-unique border-badge-unique-border",
-} as const;
-
-function ConstraintBadge({
-  label,
-  active,
-  disabled,
-  onClick,
-  variant = "default",
-}: {
-  label: string;
-  active: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  variant?: "default" | "amber" | "blue";
-}) {
-  const colorClass = active ? BADGE_ACTIVE[variant] : BADGE_INACTIVE;
-
-  return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      disabled={disabled}
-      aria-pressed={active}
-      className={`inline-flex items-center rounded-[4px] border px-[5px] py-[1px] font-mono text-[11px] font-medium leading-tight transition-all ${colorClass} ${disabled ? "cursor-not-allowed opacity-30" : "cursor-pointer"}`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function ColumnRow({ col, tableId }: { col: Column; tableId: string }) {
-  const { t } = useTranslation();
-  const updateColumn = useSchemaStore((s) => s.updateColumn);
-  const deleteColumn = useSchemaStore((s) => s.deleteColumn);
-  const columnTypes = useSchemaStore((s) => COLUMN_TYPES_BY_DB[s.schema.dbType]);
-
-  return (
-    <div className="group relative">
-      <div className="absolute left-0 top-0 flex h-full w-5 items-center justify-center opacity-0 transition-opacity group-hover:opacity-40">
-        <DragHandle size={10} className="text-tertiary" />
-      </div>
-
-      <div className="rounded-md py-1.5 pl-5 pr-2 transition-colors group-hover:bg-surface-muted/50">
-        <div className="flex items-center gap-1.5">
-          <div className="flex w-3.5 shrink-0 items-center justify-center">
-            {col.isPrimaryKey ? (
-              <Key size={13} weight="fill" className="text-badge-primary" />
-            ) : col.isForeignKey ? (
-              <Link size={13} weight="bold" className="text-badge-unique" />
-            ) : (
-              <Hash size={13} className="text-muted" />
-            )}
-          </div>
-
-          <input
-            type="text"
-            spellCheck={false}
-            autoCorrect="off"
-            defaultValue={col.name}
-            onBlur={(e) => updateColumn(tableId, col.id, { name: e.target.value })}
-            onKeyDown={blurOnEnter}
-            className="min-w-0 flex-1 truncate bg-transparent font-mono text-[13px] font-medium text-primary outline-none placeholder:text-tertiary focus:text-primary"
-            placeholder="column_name"
-          />
-
-          <div className="relative shrink-0">
-            <select
-              value={col.type}
-              onChange={(e) =>
-                updateColumn(tableId, col.id, {
-                  type: e.target.value as ColumnType,
-                })
-              }
-              className="cursor-pointer appearance-none rounded-[4px] border border-border bg-surface py-0.5 pl-1.5 pr-4 font-mono text-[11px] text-tertiary outline-none transition-all hover:border-border-hover hover:text-secondary focus:border-accent/40"
-            >
-              {columnTypes.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-            <CaretUpDown
-              size={8}
-              weight="bold"
-              className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-tertiary"
-            />
-          </div>
-
-          <button
-            onClick={() => deleteColumn(tableId, col.id)}
-            className="shrink-0 rounded-[4px] p-[3px] text-muted transition-all hover:bg-red-500/10 hover:text-red-500"
-            aria-label={t("sidePanel.deleteColumn")}
-          >
-            <Trash size={13} />
-          </button>
-        </div>
-
-        <div className="mt-1 flex items-center gap-1 pl-5">
-          <ConstraintBadge
-            label="PRIMARY"
-            active={col.isPrimaryKey}
-            variant="amber"
-            onClick={() =>
-              updateColumn(tableId, col.id, {
-                isPrimaryKey: !col.isPrimaryKey,
-                ...(!col.isPrimaryKey ? { isUnique: true, isNullable: false } : {}),
-              })
-            }
-          />
-          <ConstraintBadge
-            label="NULL"
-            active={col.isNullable}
-            disabled={col.isPrimaryKey}
-            onClick={() =>
-              updateColumn(tableId, col.id, {
-                isNullable: !col.isNullable,
-              })
-            }
-          />
-          <ConstraintBadge
-            label="UNIQUE"
-            active={col.isUnique}
-            disabled={col.isPrimaryKey}
-            variant="blue"
-            onClick={() => updateColumn(tableId, col.id, { isUnique: !col.isUnique })}
-          />
-        </div>
-      </div>
-    </div>
-  );
+export interface ColumnFocus {
+  tableId: string;
+  columnId: string;
+  note: boolean;
+  selectName: boolean;
 }
 
 function TableMenu({
@@ -278,6 +141,9 @@ function TableItem({
   onToggle,
   onRename,
   onRenameEnd,
+  editing,
+  onEdit,
+  onGoToColumn,
 }: {
   table: Table;
   isOpen: boolean;
@@ -285,6 +151,9 @@ function TableItem({
   onToggle: () => void;
   onRename: () => void;
   onRenameEnd: () => void;
+  editing: ColumnFocus | null;
+  onEdit: (focus: ColumnFocus | null) => void;
+  onGoToColumn: (tableId: string, columnId: string) => void;
 }) {
   const { t } = useTranslation();
   const updateTable = useSchemaStore((s) => s.updateTable);
@@ -303,8 +172,9 @@ function TableItem({
   }, [isRenaming, isOpen]);
 
   const handleAddColumn = () => {
+    const id = genId();
     addColumn(table.id, {
-      id: genId(),
+      id,
       name: `column_${table.columns.length + 1}`,
       type: "varchar",
       isPrimaryKey: false,
@@ -314,7 +184,10 @@ function TableItem({
       isAutoIncrement: false,
       defaultValue: null,
     });
+    onEdit({ tableId: table.id, columnId: id, note: false, selectName: true });
   };
+  const edit = (columnId: string, note: boolean) =>
+    onEdit({ tableId: table.id, columnId, note, selectName: false });
 
   return (
     <div className={isOpen ? "bg-surface-muted/50" : ""}>
@@ -397,10 +270,29 @@ function TableItem({
             </div>
           </div>
 
-          <div className="mx-1 space-y-px">
-            {table.columns.map((col) => (
-              <ColumnRow key={col.id} col={col} tableId={table.id} />
-            ))}
+          <div>
+            {table.columns.map((col) =>
+              editing?.columnId === col.id ? (
+                <ColumnEditor
+                  key={col.id}
+                  table={table}
+                  column={col}
+                  selectName={editing.selectName}
+                  noteOpen={editing.note}
+                  onNoteOpenChange={(note) => edit(col.id, note)}
+                  onGoToColumn={onGoToColumn}
+                  onClose={() => onEdit(null)}
+                />
+              ) : (
+                <ColumnRow
+                  key={col.id}
+                  table={table}
+                  column={col}
+                  onEdit={() => edit(col.id, false)}
+                  onEditNote={() => edit(col.id, true)}
+                />
+              ),
+            )}
           </div>
 
           <div className="mx-3 mt-1">
@@ -430,6 +322,14 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
   const { t } = useTranslation();
   const tables = useSchemaStore((s) => s.schema.tables);
   const [renamingTableId, setRenamingTableId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ColumnFocus | null>(null);
+  // The canvas opens tables too: whatever opens another table closes the
+  // column editor, except a jump to a column of that table.
+  const [shownTableId, setShownTableId] = useState(openTableId);
+  if (shownTableId !== openTableId) {
+    setShownTableId(openTableId);
+    if (editing && editing.tableId !== openTableId) setEditing(null);
+  }
 
   const handleAddTable = () => {
     const newId = createTable();
@@ -487,6 +387,12 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
                 setRenamingTableId(table.id);
               }}
               onRenameEnd={() => setRenamingTableId(null)}
+              editing={editing?.tableId === table.id ? editing : null}
+              onEdit={setEditing}
+              onGoToColumn={(tableId, columnId) => {
+                setEditing({ tableId, columnId, note: false, selectName: false });
+                onOpenTable(tableId);
+              }}
             />
           ))
         )}
