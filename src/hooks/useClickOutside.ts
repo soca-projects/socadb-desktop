@@ -13,7 +13,7 @@ export function useClickOutside(
   useEffect(() => {
     if (!active) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (ref.current && e.target instanceof Node && !ref.current.contains(e.target)) {
         onCloseRef.current();
       }
     };

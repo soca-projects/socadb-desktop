@@ -71,7 +71,8 @@ export function NoteBubble({
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
+      const target = e.target;
+      if (!(target instanceof Node)) return;
       if (ref.current?.contains(target) || anchor.contains(target)) return;
       commitRef.current();
       onClose();
