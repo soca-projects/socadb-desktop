@@ -83,6 +83,8 @@ export function ColumnRow({ table, column, onEdit, onEditNote }: ColumnRowProps)
           <DotsThreeVertical size={13} weight="bold" />
         </button>
       </div>
+      {/* Outside the row: a click in the menu would bubble to the row's onClick
+          and open the editor. */}
       {menu && (
         <ActionMenu
           x={menu.x}

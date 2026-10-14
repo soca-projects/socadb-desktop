@@ -42,7 +42,6 @@ const TYPE_GROUPS: Record<DbType, { id: TypeGroupId; types: ColumnType[] }[]> = 
   ],
 };
 
-// Types whose name alone leaves people guessing; the menu shows a short hint.
 export const HINTED_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
   "serial",
   "bigserial",

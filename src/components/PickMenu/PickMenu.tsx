@@ -29,8 +29,6 @@ interface PickMenuProps {
   value: string;
   getGroups: (query: string) => PickGroup[];
   searchPlaceholder?: string;
-  // Set when the anchor is a text field the menu completes: the field keeps
-  // the focus, its text filters the list and its arrow keys drive it.
   query?: string;
   emptyLabel?: (query: string) => string;
   width?: number;
@@ -192,6 +190,8 @@ export function PickMenu({
   if (hidden) return null;
 
   let index = 0;
+  // With typeahead, a mousedown on the list must not take the focus from the
+  // text field: its blur would close the list before the click lands.
   return createPortal(
     <div
       ref={menuRef}
