@@ -60,6 +60,7 @@ export const ColumnZ = z.object({
   length: z.number().int().positive().optional().catch(undefined),
   precision: z.number().int().positive().optional().catch(undefined),
   scale: z.number().int().nonnegative().optional().catch(undefined),
+  unsigned: z.boolean().optional().catch(undefined),
   enumId: z.string().optional(),
   note: z.string().optional(),
 });
