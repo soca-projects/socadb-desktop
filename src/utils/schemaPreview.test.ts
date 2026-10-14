@@ -39,6 +39,24 @@ describe("table size", () => {
       PREVIEW_METRICS.header + 2 * PREVIEW_METRICS.padding + 2 * PREVIEW_METRICS.row,
     );
   });
+  it("adds the collapsed INDEXES line and shows type parameters", () => {
+    const t: Table = {
+      ...table("users", 0, 0, [column("a", "email", { type: "varchar", length: 120 })]),
+      indexes: [{ id: "i1", columnIds: ["a"], unique: true }],
+    };
+    expect(tableHeight(t)).toBe(
+      PREVIEW_METRICS.header +
+        2 * PREVIEW_METRICS.padding +
+        PREVIEW_METRICS.row +
+        PREVIEW_METRICS.indexes,
+    );
+    const [preview] = buildPreview(schemaOf([t])).tables;
+    expect(preview.columns[0].type).toBe("varchar(120)");
+    expect(preview.indexes).toEqual({
+      y: PREVIEW_METRICS.header + 2 * PREVIEW_METRICS.padding + PREVIEW_METRICS.row,
+      count: 1,
+    });
+  });
   it("widens for long names", () => {
     const t = table("users", 0, 0, [
       column("a", "a_really_long_column_name_for_testing"),

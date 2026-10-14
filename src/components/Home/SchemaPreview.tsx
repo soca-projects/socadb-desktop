@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { Schema } from "../../types/schema";
 import { buildPreview, PREVIEW_METRICS } from "../../utils/schemaPreview";
 import { getColorVariants } from "../../utils/tableColors";
@@ -8,6 +9,7 @@ const MONO = "IBM Plex Mono, ui-monospace, monospace";
 const LINE = { vectorEffect: "non-scaling-stroke" } as const;
 
 export const SchemaPreview = memo(function SchemaPreview({ schema }: { schema: Schema }) {
+  const { t } = useTranslation();
   const isDark = useThemeStore((s) => s.theme === "dark");
   const preview = useMemo(() => buildPreview(schema), [schema]);
 
@@ -108,6 +110,29 @@ export const SchemaPreview = memo(function SchemaPreview({ schema }: { schema: S
                 </text>
               </g>
             ))}
+            {table.indexes && (
+              <g>
+                <line
+                  x1={table.x}
+                  x2={table.x + table.width}
+                  y1={table.indexes.y}
+                  y2={table.indexes.y}
+                  strokeWidth={1}
+                  style={{ ...LINE, stroke: "var(--color-border-light)" }}
+                />
+                <text
+                  x={table.x + 14}
+                  y={table.indexes.y + PREVIEW_METRICS.indexes / 2}
+                  dominantBaseline="central"
+                  fontSize={10}
+                  fontWeight={600}
+                  letterSpacing="0.06em"
+                  style={{ fill: "var(--color-fg-tertiary)" }}
+                >
+                  {t("canvas.indexes").toUpperCase()} {table.indexes.count}
+                </text>
+              </g>
+            )}
             <rect
               x={table.x}
               y={table.y}
