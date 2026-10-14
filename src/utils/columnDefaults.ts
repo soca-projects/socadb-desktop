@@ -28,15 +28,25 @@ export function createDefaultIdColumn(dbType: DbType): Column {
       };
 }
 
-const EXPRESSION_DEFAULT =
-  /^(?:current_timestamp|current_date|current_time|localtimestamp|localtime|null|[a-z_][\w.]*\(.*\))$/is;
+// A default without a kind (older files, the agent, text just typed) holds
+// either a bare value or an expression: a keyword like CURRENT_USER, a function
+// call, a cast, or an expression in parentheses. USER stays a value, as 'user'
+// is a common role, and so does text like (none). A value already in quotes is
+// written as is.
+const EXPRESSION_DEFAULTS = [
+  /^(?:current_user|session_user|current_role|current_schema|current_catalog|null)$/i,
+  /^(?:current_timestamp|current_date|current_time|localtimestamp|localtime)(?:\s*$|\s*[-+]|\s+on\s+update\s)/i,
+  /^[a-z_][\w.]*\(/i,
+  /^\(\s*(?:[a-z_][\w.]*\(|'|-?\d|null\b|true\b|false\b|current_|localtime).*\)$/is,
+  /^(?:'.*'|.*\)|-?\d+(?:\.\d+)?|current_\w+)\s*::\s*[a-z_]/is,
+];
 
-// Files saved before defaultKind existed hold either a bare value or an
-// expression. A value someone already wrapped in quotes is written as is.
 export function defaultKindOf(column: Column): DefaultKind {
   if (column.defaultKind) return column.defaultKind;
   const value = column.defaultValue?.trim() ?? "";
-  return /^'.*'$/s.test(value) || EXPRESSION_DEFAULT.test(value) ? "expression" : "value";
+  return /^'.*'$/s.test(value) || EXPRESSION_DEFAULTS.some((p) => p.test(value))
+    ? "expression"
+    : "value";
 }
 
 const NUMBER_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([

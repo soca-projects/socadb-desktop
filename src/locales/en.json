@@ -455,7 +455,9 @@
     "saveFailed": "Failed to save: {{error}}",
     "openFailed": "Failed to open file: {{error}}",
     "autoLayoutFailed": "Auto layout failed: {{error}}",
-    "invalidFile": "This file is not a valid schema."
+    "invalidFile": "This file is not a valid schema.",
+    "exportSqlIssues_one": "SQL exported with 1 adjustment to keep it valid",
+    "exportSqlIssues_other": "SQL exported with {{count}} adjustments to keep it valid"
   },
   "fileFilter": {
     "sql": "SQL File",
@@ -503,5 +505,14 @@
     "get_schema": "read schema",
     "get_table": "read table",
     "get_editor_state": "read editor state"
+  },
+  "exportIssues": {
+    "emptyEnum": "Enum {{name}} has no values yet.",
+    "defaultDroppedEnum": "Default of {{table}}.{{column}} left out: it isn't one of the enum's values.",
+    "defaultDroppedSerial": "Default of {{table}}.{{column}} left out: a serial column numbers itself.",
+    "indexSkipped": "{{name}} on {{table}} left out: {{column}} can't be indexed in this database.",
+    "keyTooLong": "{{name}} on {{table}} left out: its key is over MySQL's 3072 bytes.",
+    "noteShortened": "Note on {{target}} shortened to MySQL's limit.",
+    "more": "And {{count}} more."
   }
 }

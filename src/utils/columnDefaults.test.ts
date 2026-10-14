@@ -50,11 +50,40 @@ describe("defaultKindOf", () => {
     "NULL",
     "nextval('loans_id_seq')",
     "'quoted by hand'",
+    "(uuid())",
+    "'{}'::jsonb",
+    "now() + interval '30 days'",
+    "json_array()",
+    "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    "current_user",
+    "SESSION_USER",
+    "current_schema",
+    "now()::date",
+    "0::bigint",
+    "CURRENT_DATE::text",
+    "CURRENT_TIMESTAMP + INTERVAL '30 days'",
+    "current_date + 7",
+    "(CURRENT_DATE + INTERVAL 1 DAY)",
+    "(1 + 2)",
   ])("reads %s as an expression", (value) => {
     expect(defaultKindOf(withDefault(value))).toBe("expression");
   });
 
-  it.each(["pending", "0", "true", "now", "a (b)"])("reads %s as a value", (value) => {
+  it.each([
+    "pending",
+    "0",
+    "true",
+    "now",
+    "a (b)",
+    "user",
+    "::1",
+    "fe80::1",
+    "2001:db8::abcd",
+    "v2::beta",
+    "(none)",
+    "(not set)",
+    "Admin::User",
+  ])("reads %s as a value", (value) => {
     expect(defaultKindOf(withDefault(value))).toBe("value");
   });
 

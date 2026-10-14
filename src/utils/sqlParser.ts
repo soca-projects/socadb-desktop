@@ -4,6 +4,7 @@ import type {
   Relation,
   DbType,
   ColumnType,
+  DefaultKind,
   ReferentialAction,
 } from "../types/schema";
 import { genId } from "./id";
@@ -264,14 +265,20 @@ function parseColumnDef(def: string): Column | null {
   const isUnique = /\bUNIQUE\b/i.test(rest) || isPrimaryKey;
 
   let defaultValue: string | null = null;
+  let defaultKind: DefaultKind | undefined;
   const defaultMatch = rest.match(/DEFAULT\s+('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\S+)/i);
   if (defaultMatch) {
     defaultValue = defaultMatch[1];
+    defaultKind = "expression";
+    // Backslash escapes mean something in MySQL and nothing in PostgreSQL: such
+    // a default keeps its quotes and goes back out as written.
     if (
-      (defaultValue.startsWith("'") && defaultValue.endsWith("'")) ||
-      (defaultValue.startsWith('"') && defaultValue.endsWith('"'))
+      !defaultValue.includes("\\") &&
+      ((defaultValue.startsWith("'") && defaultValue.endsWith("'")) ||
+        (defaultValue.startsWith('"') && defaultValue.endsWith('"')))
     ) {
       defaultValue = defaultValue.slice(1, -1);
+      defaultKind = "value";
     }
   }
 
@@ -285,6 +292,7 @@ function parseColumnDef(def: string): Column | null {
     isUnique,
     isAutoIncrement,
     defaultValue,
+    ...(defaultKind ? { defaultKind } : {}),
   };
 }
 

@@ -164,6 +164,47 @@ describe("dispatchMcpAction", () => {
       const { schema } = useSchemaStore.getState();
       expect(schema.tables[0].columns[0].isUnique).toBe(true);
     });
+
+    it("drops a default kind picked for the previous default", async () => {
+      await dispatchMcpAction("create_table", {
+        name: "users",
+        columns: [{ name: "role", type: "varchar" }],
+      });
+      const { schema } = useSchemaStore.getState();
+      const table = schema.tables[0];
+      useSchemaStore.getState().updateColumn(table.id, table.columns[0].id, {
+        defaultValue: "reader",
+        defaultKind: "value",
+      });
+      await dispatchMcpAction("update_column", {
+        table: "users",
+        column: "role",
+        updates: { defaultValue: "'{}'::jsonb" },
+      });
+      expect(
+        useSchemaStore.getState().schema.tables[0].columns[0].defaultKind,
+      ).toBeUndefined();
+    });
+
+    it("keeps the default kind when the agent repeats the same default", async () => {
+      await dispatchMcpAction("create_table", {
+        name: "users",
+        columns: [{ name: "created_by", type: "varchar" }],
+      });
+      const table = useSchemaStore.getState().schema.tables[0];
+      useSchemaStore.getState().updateColumn(table.id, table.columns[0].id, {
+        defaultValue: "CURRENT_USER",
+        defaultKind: "expression",
+      });
+      await dispatchMcpAction("update_column", {
+        table: "users",
+        column: "created_by",
+        updates: { isNullable: false, defaultValue: "CURRENT_USER" },
+      });
+      expect(useSchemaStore.getState().schema.tables[0].columns[0].defaultKind).toBe(
+        "expression",
+      );
+    });
   });
 
   describe("delete_column", () => {
