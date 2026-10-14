@@ -2,7 +2,7 @@ import { useState, type MouseEvent } from "react";
 import { DotsThreeIcon as DotsThree } from "@phosphor-icons/react";
 import type { DbType, Schema } from "../../types/schema";
 import { useInView } from "../../hooks/useInView";
-import { HomeCardMenu, type HomeMenuItem } from "./HomeCardMenu";
+import { ActionMenu, type ActionMenuItem } from "../ActionMenu/ActionMenu";
 import { SchemaPreview } from "./SchemaPreview";
 
 const MENU_WIDTH = 224;
@@ -20,7 +20,7 @@ interface HomeCardProps {
   badge: { label: string; tone: "accent" | "muted" } | null;
   openLabel: string;
   menuLabel: string;
-  menuItems: HomeMenuItem[];
+  menuItems: ActionMenuItem[];
   onOpen: () => void;
 }
 
@@ -112,7 +112,7 @@ export function HomeCard({
         </button>
       )}
       {menu && (
-        <HomeCardMenu
+        <ActionMenu
           x={menu.x}
           y={menu.y}
           label={menuLabel}

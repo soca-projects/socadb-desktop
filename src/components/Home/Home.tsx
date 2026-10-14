@@ -11,7 +11,7 @@ import {
 import { Toolbar } from "../Toolbar/Toolbar";
 import { ImportModal } from "../ImportModal/ImportModal";
 import { HomeCard } from "./HomeCard";
-import type { HomeMenuItem } from "./HomeCardMenu";
+import type { ActionMenuItem } from "../ActionMenu/ActionMenu";
 import { HomeEmpty } from "./HomeEmpty";
 import { MissingFiles } from "./MissingFiles";
 import { RenameSchemaModal } from "./RenameSchemaModal";
@@ -115,7 +115,7 @@ export function Home({ onOpenSettings }: HomeProps) {
       .filter(Boolean)
       .join(" · ");
 
-  const entryMenu = (entry: HomeEntry, isCurrent: boolean): HomeMenuItem[] => [
+  const entryMenu = (entry: HomeEntry, isCurrent: boolean): ActionMenuItem[] => [
     { label: t("home.action.open"), onSelect: () => openHomeEntry(entry.path) },
     { label: t(REVEAL_KEY), onSelect: () => void revealHomeEntry(entry.path) },
     ...(entry.state === "present"
