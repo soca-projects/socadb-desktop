@@ -107,13 +107,14 @@ export function PickMenu({
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
+      const target = e.target;
+      if (!(target instanceof Node)) return;
       if (menuRef.current?.contains(target) || anchor.contains(target)) return;
       onClose();
     };
     // The anchor moves when the panel scrolls; closing beats a drifting menu.
     const onScroll = (e: Event) => {
-      if (!menuRef.current?.contains(e.target as Node)) onClose();
+      if (!(e.target instanceof Node) || !menuRef.current?.contains(e.target)) onClose();
     };
     document.addEventListener("mousedown", onDown);
     window.addEventListener("scroll", onScroll, true);
