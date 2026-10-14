@@ -44,6 +44,10 @@ pub fn file_stem() -> &'static str {
 
 // Registered from setup rather than on the builder: a plugin that fails to
 // start on the builder aborts the launch, and a log is never worth that.
+#[expect(
+    clippy::print_stderr,
+    reason = "when the logger fails to start, stderr is the only output left"
+)]
 pub fn init(app: &tauri::AppHandle) {
     use tauri::Manager;
     let to_file = app
