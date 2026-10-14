@@ -4,8 +4,10 @@ import { CaretUpIcon as CaretUp } from "@phosphor-icons/react";
 import {
   derivedIndexName,
   indexColumnNames,
+  isIndexable,
   toggleIndexColumn,
 } from "../../utils/indexHelpers";
+import { useSchemaStore } from "../../stores/schemaStore";
 import type { Table, TableIndex } from "../../types/schema";
 import { ConstraintBadge } from "./ConstraintBadge";
 
@@ -25,6 +27,7 @@ export function IndexEditor({
   onClose,
 }: IndexEditorProps) {
   const { t } = useTranslation();
+  const dbType = useSchemaStore((s) => s.schema.dbType);
   const nameId = useId();
   const [card, setCard] = useState<HTMLDivElement | null>(null);
   const [name, setName] = useState(index.name ?? "");
@@ -75,18 +78,21 @@ export function IndexEditor({
       <div className="flex flex-wrap gap-1">
         {table.columns.map((column) => {
           const order = index.columnIds.indexOf(column.id);
+          const blocked = order < 0 && !isIndexable(column.type, dbType);
           return (
             <button
               key={column.id}
               type="button"
               aria-pressed={order >= 0}
+              disabled={blocked}
+              title={blocked ? t("sidePanel.notIndexable") : undefined}
               onClick={() =>
                 onChange({ columnIds: toggleIndexColumn(index.columnIds, column.id) })
               }
               className={`inline-flex items-center gap-1 rounded-[4px] border px-[5px] py-px font-mono text-[11px] leading-[1.4] transition-colors ${
                 order >= 0
                   ? "border-accent/30 bg-accent/10 text-accent"
-                  : "border-border text-tertiary hover:border-border-hover hover:text-secondary"
+                  : "border-border text-tertiary hover:border-border-hover hover:text-secondary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-tertiary"
               }`}
             >
               {order >= 0 && <b className="font-semibold">{order + 1}</b>}

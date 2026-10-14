@@ -46,3 +46,14 @@ export function litColumnIds(
   if (!litId) return null;
   return indexes.find((i) => i.id === litId)?.columnIds ?? null;
 }
+
+// MySQL needs a prefix length to index TEXT and BLOB and cannot index JSON;
+// PostgreSQL's json type has no default btree operator class.
+const UNINDEXABLE: Record<DbType, ReadonlySet<string>> = {
+  mysql: new Set(["text", "mediumtext", "longtext", "blob", "json"]),
+  postgresql: new Set(["json"]),
+};
+
+export function isIndexable(type: string, dbType: DbType): boolean {
+  return !UNINDEXABLE[dbType].has(type);
+}

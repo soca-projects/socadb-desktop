@@ -3,6 +3,7 @@ import type { Column, Table, TableIndex } from "../types/schema";
 import {
   derivedIndexName,
   indexColumnNames,
+  isIndexable,
   litColumnIds,
   toggleIndexColumn,
   unindexedForeignKeys,
@@ -106,5 +107,17 @@ describe("litColumnIds", () => {
   it("lights nothing once the hovered index is gone", () => {
     expect(litColumnIds([], "i1")).toBeNull();
     expect(litColumnIds([hovered], null)).toBeNull();
+  });
+});
+
+describe("isIndexable", () => {
+  it("refuses MySQL text, blob and json columns and PostgreSQL json", () => {
+    expect(
+      ["text", "longtext", "blob", "json"].map((t) => isIndexable(t, "mysql")),
+    ).toEqual([false, false, false, false]);
+    expect(isIndexable("varchar", "mysql")).toBe(true);
+    expect(isIndexable("json", "postgresql")).toBe(false);
+    expect(isIndexable("jsonb", "postgresql")).toBe(true);
+    expect(isIndexable("text", "postgresql")).toBe(true);
   });
 });

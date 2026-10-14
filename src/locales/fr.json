@@ -197,7 +197,8 @@
     "noDefault": "Aucun défaut",
     "setByAuto": "Fixé par AUTO",
     "defaultAsValue": "Écrit en SQL : DEFAULT {{sql}}. Cliquez pour en faire une fonction exécutée par la base, telle quelle.",
-    "defaultAsExpression": "Écrit en SQL : DEFAULT {{sql}}. Cliquez pour en faire un texte fixe, entre guillemets."
+    "defaultAsExpression": "Écrit en SQL : DEFAULT {{sql}}. Cliquez pour en faire un texte fixe, entre guillemets.",
+    "notIndexable": "Ce type ne peut pas être indexé dans cette base"
   },
   "typeMenu": {
     "searchTypes": "Chercher un type",
@@ -454,7 +455,9 @@
     "saveFailed": "Échec de l'enregistrement : {{error}}",
     "openFailed": "Impossible d'ouvrir le fichier : {{error}}",
     "autoLayoutFailed": "Échec de la disposition auto : {{error}}",
-    "invalidFile": "Ce fichier n'est pas un schéma valide."
+    "invalidFile": "Ce fichier n'est pas un schéma valide.",
+    "exportSqlIssues_one": "SQL exporté avec 1 ajustement pour rester valide",
+    "exportSqlIssues_other": "SQL exporté avec {{count}} ajustements pour rester valide"
   },
   "fileFilter": {
     "sql": "Fichier SQL",
@@ -502,5 +505,14 @@
     "get_schema": "schéma lu",
     "get_table": "table lue",
     "get_editor_state": "état de l'éditeur lu"
+  },
+  "exportIssues": {
+    "emptyEnum": "L'enum {{name}} n'a encore aucune valeur.",
+    "defaultDroppedEnum": "Défaut de {{table}}.{{column}} omis : ce n'est pas une valeur de l'enum.",
+    "defaultDroppedSerial": "Défaut de {{table}}.{{column}} omis : une colonne serial se numérote seule.",
+    "indexSkipped": "{{name}} sur {{table}} omis : {{column}} ne peut pas être indexée dans cette base.",
+    "keyTooLong": "{{name}} sur {{table}} omis : sa clé dépasse les 3072 octets de MySQL.",
+    "noteShortened": "Note sur {{target}} raccourcie à la limite de MySQL.",
+    "more": "Et {{count}} de plus."
   }
 }

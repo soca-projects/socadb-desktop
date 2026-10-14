@@ -173,6 +173,8 @@ const handlers: Record<string, ActionHandler> = {
     if (!col) return success(false);
     const { type: rawType, ...rest } = updates;
     const columnUpdates: Partial<Column> = { ...rest };
+    if (rest.defaultValue !== undefined && rest.defaultValue !== col.defaultValue)
+      columnUpdates.defaultKind = undefined;
     if (rawType !== undefined) {
       columnUpdates.type = VALID_COLUMN_TYPES.has(rawType)
         ? (rawType as Column["type"])

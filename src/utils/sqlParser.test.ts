@@ -160,6 +160,28 @@ describe("parseCreateTable", () => {
     expect(result.table.columns[0].defaultValue).toBe("active");
   });
 
+  it("records whether a default was a quoted value or an expression", () => {
+    const sql =
+      "CREATE TABLE t (a VARCHAR(20) DEFAULT 'x', b CHAR(36) DEFAULT (uuid()), c INT)";
+    const result = parseCreateTable(sql);
+    expect(result).not.toBeNull();
+    if (!result) return;
+    const [a, b, c] = result.table.columns;
+    expect(a).toMatchObject({ defaultValue: "x", defaultKind: "value" });
+    expect(b).toMatchObject({ defaultValue: "(uuid())", defaultKind: "expression" });
+    expect(c).not.toHaveProperty("defaultKind");
+  });
+
+  it("keeps the quotes of a default with a backslash", () => {
+    const result = parseCreateTable(
+      String.raw`CREATE TABLE t (p VARCHAR(20) DEFAULT 'C:\\temp')`,
+    );
+    expect(result?.table.columns[0]).toMatchObject({
+      defaultValue: String.raw`'C:\\temp'`,
+      defaultKind: "expression",
+    });
+  });
+
   it("normalizes TINYINT(1) to boolean", () => {
     const sql = "CREATE TABLE t (is_active TINYINT(1))";
     const result = parseCreateTable(sql);

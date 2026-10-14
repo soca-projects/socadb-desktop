@@ -148,13 +148,28 @@ export function dropEnumsLeftUnused(
 
 const NO_ENUMS: SchemaEnum[] = [];
 
+// A table can take an enum's name after the enum was named (a rename, the
+// agent): PostgreSQL would then refuse CREATE TYPE, so the enum moves aside.
+function renameEnumsTakenByTables(enums: SchemaEnum[], tables: Table[]): SchemaEnum[] {
+  const tableNames = new Set(tables.map((t) => t.name));
+  if (!enums.some((e) => tableNames.has(e.name))) return enums;
+  const kept = enums.filter((e) => !tableNames.has(e.name));
+  return enums.map((e) => {
+    if (!tableNames.has(e.name)) return e;
+    const renamed = { ...e, name: uniqueEnumName(e.name, kept, [...tableNames]) };
+    kept.push(renamed);
+    return renamed;
+  });
+}
+
 export function normalizeSchema(schema: Schema, prev?: Schema): Schema {
   const current = schema.enums ?? NO_ENUMS;
   const linked = linkEnumColumns(schema.tables, current);
   const tables = pruneColumnFields(pruneIndexes(linked.tables), schema.dbType);
-  const enums = prev
-    ? dropEnumsLeftUnused(prev.tables, tables, linked.enums)
-    : linked.enums;
+  const enums = renameEnumsTakenByTables(
+    prev ? dropEnumsLeftUnused(prev.tables, tables, linked.enums) : linked.enums,
+    tables,
+  );
   if (tables === schema.tables && enums === current) return schema;
   return enums === current ? { ...schema, tables } : { ...schema, tables, enums };
 }

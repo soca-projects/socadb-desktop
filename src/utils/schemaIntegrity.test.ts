@@ -219,6 +219,19 @@ describe("normalizeSchema", () => {
     expect(normalizeSchema(s)).toBe(s);
   });
 
+  it("renames an enum that a table took the name of", () => {
+    const s = schema(
+      [
+        table("t1", "users", [col("c1", "role", "enum", { enumId: "e1" })]),
+        table("t2", "user_role", [col("c2", "id", "serial")]),
+      ],
+      [{ id: "e1", name: "user_role", values: ["admin"] }],
+    );
+    expect(normalizeSchema(s).enums).toEqual([
+      { id: "e1", name: "user_role_2", values: ["admin"] },
+    ]);
+  });
+
   it("does not add an enums key to a schema that has none", () => {
     const prev = schema([table("t1", "loans", [col("c1", "id", "serial")])]);
     const next = schema([table("t1", "loans_v2", [col("c1", "id", "serial")])]);
