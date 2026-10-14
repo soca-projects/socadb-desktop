@@ -1,6 +1,7 @@
 import { useSchemaStore } from "../stores/schemaStore";
 import { genId } from "./id";
 import { computeAutoLayout } from "./autoLayout";
+import { useViewStore } from "../stores/viewStore";
 import { createTable } from "./schemaActions";
 import {
   findTableByName,
@@ -232,7 +233,11 @@ const handlers: Record<string, ActionHandler> = {
     const store = useSchemaStore.getState();
     const { schema } = store;
     try {
-      const positions = await computeAutoLayout(schema.tables, schema.relations);
+      const positions = await computeAutoLayout(
+        schema.tables,
+        schema.relations,
+        useViewStore.getState().indexesOpen,
+      );
       store.updateTablePositions(positions);
       return success(true);
     } catch {

@@ -1,10 +1,12 @@
 import type { Schema, Table } from "../types/schema";
+import { typeLabel } from "./columnTypes";
 
 // TableNode's rendered sizes, so a miniature looks like the canvas.
 export const PREVIEW_METRICS = {
   header: 40,
   row: 30,
   padding: 4,
+  indexes: 28,
   minWidth: 220,
   sidePadding: 14,
 } as const;
@@ -34,6 +36,7 @@ export interface PreviewTable {
   height: number;
   headerPath: string;
   columns: PreviewColumn[];
+  indexes: { y: number; count: number } | null;
 }
 
 export interface PreviewModel {
@@ -52,15 +55,16 @@ export function tableWidth(table: Table): number {
       8 +
       c.name.length * NAME_CHAR +
       12 +
-      c.type.length * TYPE_CHAR +
+      typeLabel(c).length * TYPE_CHAR +
       16,
   );
   return Math.ceil(Math.max(minWidth, header, ...rows));
 }
 
 export function tableHeight(table: Table): number {
-  const { header, row, padding } = PREVIEW_METRICS;
-  return header + 2 * padding + table.columns.length * row;
+  const { header, row, padding, indexes } = PREVIEW_METRICS;
+  const section = table.indexes?.length ? indexes : 0;
+  return header + 2 * padding + table.columns.length * row + section;
 }
 
 function headerPath(x: number, y: number, width: number): string {
@@ -125,10 +129,16 @@ export function buildPreview(schema: Schema): PreviewModel {
       columns: table.columns.map((c, i) => ({
         id: c.id,
         name: c.name,
-        type: c.type,
+        type: typeLabel(c),
         y: y + header + padding + i * row + row / 2,
         key: c.isPrimaryKey ? "primary" : c.isForeignKey ? "foreign" : null,
       })),
+      indexes: table.indexes?.length
+        ? {
+            y: y + header + 2 * padding + table.columns.length * row,
+            count: table.indexes.length,
+          }
+        : null,
     };
   });
   const byId = new Map(tables.map((t) => [t.id, t]));

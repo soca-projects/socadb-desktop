@@ -22,7 +22,11 @@ export function handleRedo() {
 export async function handleAutoLayout() {
   try {
     const { schema, updateTablePositions } = useSchemaStore.getState();
-    const positions = await computeAutoLayout(schema.tables, schema.relations);
+    const positions = await computeAutoLayout(
+      schema.tables,
+      schema.relations,
+      useViewStore.getState().indexesOpen,
+    );
     updateTablePositions(positions);
   } catch (e) {
     logError("layout.auto.failed", e);

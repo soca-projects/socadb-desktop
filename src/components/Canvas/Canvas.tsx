@@ -27,7 +27,7 @@ import { formatShortcut } from "../../utils/platform";
 import { NARROW_WINDOW_QUERY } from "../../utils/layout";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
-import type { Table, Relation } from "../../types/schema";
+import type { DbType, Relation, SchemaEnum, Table } from "../../types/schema";
 
 const nodeTypes = { table: TableNode };
 const edgeTypes = { relation: RelationEdge };
@@ -74,15 +74,17 @@ function ViewportCompensator({
   return null;
 }
 
-function tablesToNodes(tables: Table[]) {
+const NO_ENUMS: SchemaEnum[] = [];
+
+function tablesToNodes(tables: Table[], enums: SchemaEnum[], dbType: DbType) {
   return tables.map((table) => ({
     id: table.id,
     type: "table" as const,
     position: table.position,
     data: {
-      label: table.name,
-      columns: table.columns,
-      color: table.color,
+      table,
+      enums: enums.filter((e) => table.columns.some((c) => c.enumId === e.id)),
+      dbType,
     },
   }));
 }
@@ -114,6 +116,8 @@ interface CanvasProps {
 export function Canvas({ onOpenSettings }: CanvasProps) {
   const tables = useSchemaStore((s) => s.schema.tables);
   const relations = useSchemaStore((s) => s.schema.relations);
+  const enums = useSchemaStore((s) => s.schema.enums ?? NO_ENUMS);
+  const dbType = useSchemaStore((s) => s.schema.dbType);
   const updateTable = useSchemaStore((s) => s.updateTable);
   const deleteTable = useSchemaStore((s) => s.deleteTable);
   const addRelation = useSchemaStore((s) => s.addRelation);
@@ -190,7 +194,10 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   const [lastStoreNodes, setLastStoreNodes] = useState<Node[]>([]);
   const [lastStoreEdges, setLastStoreEdges] = useState<Edge[]>([]);
 
-  const storeNodes = useMemo(() => tablesToNodes(tables), [tables]);
+  const storeNodes = useMemo(
+    () => tablesToNodes(tables, enums, dbType),
+    [tables, enums, dbType],
+  );
   const storeEdges = useMemo(() => relationsToEdges(relations), [relations]);
 
   if (storeNodes !== lastStoreNodes) {

@@ -36,3 +36,13 @@ export function unindexedForeignKeys(table: Table, dbType: DbType): Column[] {
     (c) => c.isForeignKey && !c.isUnique && c !== firstKey && !leading.has(c.id),
   );
 }
+
+// The canvas keeps the hovered index's id, not a copy of its columns: an index
+// removed or reordered under the pointer fires no mouseleave.
+export function litColumnIds(
+  indexes: TableIndex[],
+  litId: string | null,
+): string[] | null {
+  if (!litId) return null;
+  return indexes.find((i) => i.id === litId)?.columnIds ?? null;
+}

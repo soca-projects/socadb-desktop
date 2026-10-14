@@ -3,6 +3,7 @@ import type { Column, Table, TableIndex } from "../types/schema";
 import {
   derivedIndexName,
   indexColumnNames,
+  litColumnIds,
   toggleIndexColumn,
   unindexedForeignKeys,
 } from "./indexHelpers";
@@ -88,5 +89,22 @@ describe("unindexedForeignKeys", () => {
 
   it("never hints in MySQL, which indexes foreign keys itself", () => {
     expect(unindexedForeignKeys(loans(), "mysql")).toEqual([]);
+  });
+});
+
+describe("litColumnIds", () => {
+  const hovered: TableIndex = { id: "i1", columnIds: ["a", "b"], unique: false };
+
+  it("follows the hovered index as it is now", () => {
+    expect(litColumnIds([hovered], "i1")).toEqual(["a", "b"]);
+    expect(litColumnIds([{ ...hovered, columnIds: ["b", "a"] }], "i1")).toEqual([
+      "b",
+      "a",
+    ]);
+  });
+
+  it("lights nothing once the hovered index is gone", () => {
+    expect(litColumnIds([], "i1")).toBeNull();
+    expect(litColumnIds([hovered], null)).toBeNull();
   });
 });

@@ -122,7 +122,10 @@
     "redo": "Redo",
     "autoLayout": "Auto layout",
     "deleteRelation": "Delete relation",
-    "exitFocusMode": "Press <kbd>{{shortcut}}</kbd> to exit focus mode"
+    "exitFocusMode": "Press <kbd>{{shortcut}}</kbd> to exit focus mode",
+    "indexes": "Indexes",
+    "unique": "unique",
+    "noValues": "No values yet"
   },
   "contextMenu": {
     "rename": "Rename",
