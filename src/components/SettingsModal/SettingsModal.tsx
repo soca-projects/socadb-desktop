@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useId, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../Modal/Modal";
 import {
@@ -35,7 +36,6 @@ import {
 } from "../../utils/startupPreference";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
-import { ask } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import { CopyableCommand } from "./CopyableCommand";
 import { IntegrationsSection } from "./IntegrationsSection";
@@ -303,6 +303,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const providers = useChatStore((s) => s.providers);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const deleteAllHintId = useId();
+  const deleteAllTitleId = useId();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const [section, setSection] = useState<Section>("agents");
   const [startup, setStartup] = useState(getStartupPreference);
@@ -316,19 +318,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     [providers],
   );
 
-  const handleDeleteAllConversations = useCallback(async () => {
-    const confirmed = await ask(t("settings.deleteAllConfirm"), {
-      kind: "warning",
-      okLabel: t("settings.deleteAll"),
-      cancelLabel: t("settings.cancel"),
-    });
-    if (confirmed) {
-      useChatStore.getState().deleteAllConversations();
-    }
-  }, [t]);
-
   return (
-    <Modal onClose={onClose} maxWidth="max-w-3xl">
+    <Modal onClose={onClose} maxWidth="max-w-3xl" dismissible={!confirmingDelete}>
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <h2 className="text-[15px] font-semibold text-primary">{t("settings.title")}</h2>
         <button
@@ -394,7 +385,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <button
                 type="button"
-                onClick={handleDeleteAllConversations}
+                onClick={() => setConfirmingDelete(true)}
                 disabled={isStreaming}
                 aria-describedby={isStreaming ? deleteAllHintId : undefined}
                 className="rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50 disabled:hover:bg-transparent dark:text-red-400"
@@ -407,6 +398,47 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 </span>
               )}
             </div>
+            {/* Portalled: the settings dialog's fade-in transform would trap a
+                fixed overlay inside it. */}
+            {confirmingDelete &&
+              createPortal(
+                <Modal
+                  onClose={() => setConfirmingDelete(false)}
+                  zIndex={60}
+                  ariaLabelledBy={deleteAllTitleId}
+                >
+                  <div className="p-6">
+                    <h2
+                      id={deleteAllTitleId}
+                      className="text-base font-semibold text-primary"
+                    >
+                      {t("settings.deleteAllConfirm")}
+                    </h2>
+                    <div className="mt-6 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        autoFocus
+                        onClick={() => setConfirmingDelete(false)}
+                        className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-secondary transition-all hover:bg-surface-muted"
+                      >
+                        {t("settings.cancel")}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isStreaming}
+                        onClick={() => {
+                          useChatStore.getState().deleteAllConversations();
+                          setConfirmingDelete(false);
+                        }}
+                        className="rounded-lg bg-red-600 px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-red-600/90 active:scale-[0.98] disabled:opacity-50"
+                      >
+                        {t("settings.deleteAll")}
+                      </button>
+                    </div>
+                  </div>
+                </Modal>,
+                document.body,
+              )}
           </div>
 
           {section === "integrations" && <IntegrationsSection />}
