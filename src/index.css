@@ -178,3 +178,11 @@ select:focus-visible,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A table's note and enum hover cards must cover the tables drawn after it.
+   Only while a card shows: a table raised on any hover would cover a selected
+   edge's toolbar lying over it. The canvas controls stay above anyway: React
+   Flow panels sit over the viewport. */
+.react-flow__node:has(.group\/hover:hover) {
+  z-index: 1001 !important;
+}
