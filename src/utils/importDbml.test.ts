@@ -181,19 +181,61 @@ describe("parseDbmlSchema", () => {
 });
 
 describe("parseDbmlSchema dialects", () => {
-  it("reads a file without a database as the current schema's", () => {
+  it("reads a portable file as the current schema's", () => {
     const pg = parseDbmlSchema(
-      "Table t { id int\n at datetime\n n mediumint }",
+      "Table t { id int\n name varchar\n at timestamp }",
       "postgresql",
     );
     expect(pg.detectedDbType).toBeNull();
     expect(pg.tables[0].columns.map((c) => c.type)).toEqual([
       "integer",
+      "text",
       "timestamp",
-      "integer",
     ]);
-    const mysql = parseDbmlSchema("Table t { id integer\n at timestamptz }", "mysql");
-    expect(mysql.tables[0].columns.map((c) => c.type)).toEqual(["int", "timestamp"]);
+    const mysql = parseDbmlSchema("Table t { id integer\n price decimal(8,2) }", "mysql");
+    expect(mysql.tables[0].columns.map((c) => c.type)).toEqual(["int", "decimal"]);
+  });
+
+  it("guesses the database from the types when the file doesn't name it", () => {
+    const of = (body: string) => parseDbmlSchema(`Table t {\n${body}\n}`).detectedDbType;
+    expect(of("id int unsigned\n at datetime")).toBe("mysql");
+    expect(of('size "bigint unsigned"')).toBe("mysql");
+    expect(of("id serial\n data jsonb")).toBe("postgresql");
+    expect(of("tags text[]")).toBe("postgresql");
+    expect(of("id int\n name varchar(80)")).toBeNull();
+  });
+
+  it("doesn't count types written whatever the database", () => {
+    const of = (body: string) => parseDbmlSchema(`Table t {\n${body}\n}`).detectedDbType;
+    expect(of("id int\n at datetime\n ref uuid\n ratio double")).toBeNull();
+    expect(of("id serial\n size mediumint")).toBe("mysql");
+  });
+
+  it("doesn't guess for a file written for another database", () => {
+    const of = (body: string) => parseDbmlSchema(`Table t {\n${body}\n}`).detectedDbType;
+    expect(of("name nvarchar(50)\n flag tinyint")).toBeNull();
+    expect(of("code varchar2(10)\n data jsonb")).toBeNull();
+    expect(of("status tinyint\n total money")).toBeNull();
+  });
+
+  it("doesn't take an enum's name for a type", () => {
+    const of = (dbml: string) => parseDbmlSchema(dbml).detectedDbType;
+    expect(of("Enum interval { month year }\nTable t { billing interval }")).toBeNull();
+    expect(of("Enum year { first second }\nTable t { y year }")).toBeNull();
+  });
+
+  it("reads the types of partials too", () => {
+    expect(
+      parseDbmlSchema("TablePartial p { id bigserial }\nTable t { ~p }").detectedDbType,
+    ).toBe("postgresql");
+  });
+
+  it("doesn't guess when the file names a database SocaDB doesn't support", () => {
+    expect(
+      parseDbmlSchema(
+        "Project p { database_type: 'SQL Server' }\nTable t { at datetime }",
+      ).detectedDbType,
+    ).toBeNull();
   });
 
   it("reads MySQL's increment, unsigned and inline enums", () => {
