@@ -12,7 +12,7 @@ import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
 import { chatSendErrorText } from "../../utils/chatErrors";
 import { useSchemaStore } from "../../stores/schemaStore";
-import { serializeRelation } from "../../utils/schemaQueries";
+import { buildSystemPrompt } from "../../utils/agentPrompt";
 import {
   getAvailableModels,
   getModelDisplayName,
@@ -34,37 +34,6 @@ import {
   CHAT_PANEL_DEFAULT_WIDTH,
   CHAT_PANEL_DEFAULT_HEIGHT,
 } from "../../utils/layout";
-
-function buildSystemPrompt(): string {
-  const { schema } = useSchemaStore.getState();
-
-  const tables = schema.tables.map((t) => {
-    const cols = t.columns.map((c) => c.name).join(", ");
-    return `- ${t.name} (${t.columns.length} cols: ${cols})`;
-  });
-
-  const relations = schema.relations.map((r) => {
-    const sr = serializeRelation(schema, r);
-    return `- ${sr.from.table}.${sr.from.column} → ${sr.to.table}.${sr.to.column} (${sr.type})`;
-  });
-
-  return `You are a database schema design assistant in SocaDB.
-
-## Context
-- Database: ${schema.dbType}
-- Schema: "${schema.name}"
-- Tables: ${schema.tables.length}
-${tables.length > 0 ? "\n" + tables.join("\n") : ""}
-${relations.length > 0 ? "\n## Relations\n" + relations.join("\n") : ""}
-
-## Rules
-- Use the SocaDB MCP tools to modify the schema (create_table, add_column, create_relation, etc.)
-- Use get_table to inspect column details (types, constraints) before modifying a table
-- Respect the dbType and use compatible column types
-- After creating or modifying multiple tables, call auto_layout to reorganize the canvas
-- Answer in the user's language
-- Be concise`;
-}
 
 type ResizeAxis = "both" | "vertical" | "horizontal";
 
@@ -188,7 +157,7 @@ export function ChatPanel() {
       addUserMessage(content);
       startAssistantMessage();
 
-      const systemPrompt = buildSystemPrompt();
+      const systemPrompt = buildSystemPrompt(useSchemaStore.getState().schema);
       try {
         await sendChatMessage({
           message: content,
