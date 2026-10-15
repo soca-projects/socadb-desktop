@@ -31,6 +31,21 @@ function describeImportIssue(issue: ImportIssue): string {
         table: issue.table,
         column: issue.column,
       });
+    case "joinTable":
+      return i18next.t("importIssues.joinTable", {
+        table: issue.table,
+        from: issue.from,
+        to: issue.to,
+      });
+    case "groupSkipped":
+      return i18next.t("importIssues.groupSkipped", { name: issue.name });
+    case "useSkipped":
+      return i18next.t("importIssues.useSkipped", { path: issue.path });
+    case "blockSkipped":
+      return i18next.t("importIssues.blockSkipped", {
+        name: issue.name,
+        line: issue.line,
+      });
   }
 }
 

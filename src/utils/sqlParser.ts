@@ -297,7 +297,7 @@ export function resolveForeignKeys(
 
 // SocaDB has no schemas: auth.users and public.users both become tables, the
 // one outside the default schema named after its schema.
-function renameDuplicates(drafts: TableDraft[]) {
+export function renameDuplicates(drafts: TableDraft[]) {
   const taken = new Set(drafts.map((d) => d.table.name.toLowerCase()));
   for (const draft of drafts) {
     const twins = drafts.filter((d) => sameName(d.table.name, draft.table.name));
@@ -311,7 +311,7 @@ function renameDuplicates(drafts: TableDraft[]) {
     for (let i = 2; taken.has(name.toLowerCase()); i++) name = `${base}_${i}`;
     taken.add(name.toLowerCase());
     draft.table.name = name;
-    for (const issue of draft.issues) issue.table = name;
+    for (const issue of draft.issues) if ("table" in issue) issue.table = name;
   }
 }
 

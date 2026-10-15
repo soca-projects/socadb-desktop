@@ -87,7 +87,7 @@
       "open": "Ouvrir un fichier",
       "openHint": "Un fichier .soca déjà sur votre ordinateur",
       "import": "Importer",
-      "importHint": "Un fichier SQL exporté d'une base ou d'un autre outil"
+      "importHint": "Un fichier SQL ou DBML exporté d'une base ou d'un autre outil"
     },
     "rename": {
       "title": "Renommer le schéma",
@@ -269,6 +269,8 @@
     "sqlDescription": "Importer depuis un fichier {{dbType}} DDL",
     "jsonLabel": "JSON",
     "jsonDescription": "Importer depuis un fichier JSON",
+    "dbmlLabel": "DBML",
+    "dbmlDescription": "Importer depuis un fichier DBML",
     "conflictTitle": "Conflit de type de base de données",
     "conflictDescriptionStart": "Le fichier importé utilise",
     "conflictDescriptionMiddle": "mais votre schéma actuel est en",
@@ -457,7 +459,8 @@
     "autoLayoutFailed": "Échec de la disposition auto : {{error}}",
     "invalidFile": "Ce fichier n'est pas un schéma valide.",
     "exportSqlIssues_one": "SQL exporté avec 1 ajustement pour rester valide",
-    "exportSqlIssues_other": "SQL exporté avec {{count}} ajustements pour rester valide"
+    "exportSqlIssues_other": "SQL exporté avec {{count}} ajustements pour rester valide",
+    "dbmlSyntax": "Impossible de lire ce fichier DBML : la ligne {{line}} n'est pas du DBML valide."
   },
   "fileFilter": {
     "sql": "Fichier SQL",
@@ -527,6 +530,10 @@
     "expressionSkipped": "Index {{name}} sur {{table}} omis : il porte sur une expression.",
     "indexCondition": "Index {{name}} sur {{table}} importé sans sa condition WHERE.",
     "generatedColumn": "{{table}}.{{column}} importée sans sa valeur calculée.",
+    "joinTable": "Relation plusieurs-à-plusieurs entre {{from}} et {{to}} : table de liaison {{table}} créée.",
+    "groupSkipped": "Groupe de tables {{name}} omis.",
+    "useSkipped": "Tables de {{path}} omises : SocaDB lit un fichier DBML à la fois.",
+    "blockSkipped": "Ligne {{line}} omise : SocaDB ne connaît pas « {{name}} ».",
     "unnamed": "sans nom"
   }
 }
