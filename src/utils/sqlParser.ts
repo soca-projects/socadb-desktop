@@ -1,109 +1,44 @@
-import type {
-  Table,
-  Column,
-  Relation,
-  DbType,
-  ColumnType,
-  DefaultKind,
-  ReferentialAction,
-} from "../types/schema";
+import type { DbType, Relation, SchemaEnum, Table } from "../types/schema";
 import { genId } from "./id";
-
-export interface PendingFk {
-  fromTable: string;
-  fromColumn: string;
-  toTable: string;
-  toColumn: string;
-  onDelete: ReferentialAction;
-  onUpdate: ReferentialAction;
-}
-
-export function stripComments(sql: string): string {
-  let result = sql.replace(/--[^\n]*/g, "");
-  result = result.replace(/\/\*[\s\S]*?\*\//g, "");
-  return result;
-}
-
-export function splitStatements(sql: string): string[] {
-  const statements: string[] = [];
-  let current = "";
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-
-  for (let i = 0; i < sql.length; i++) {
-    const ch = sql[i];
-    const prev = i > 0 ? sql[i - 1] : "";
-
-    if (ch === "'" && !inDoubleQuote && prev !== "\\") {
-      inSingleQuote = !inSingleQuote;
-    } else if (ch === '"' && !inSingleQuote && prev !== "\\") {
-      inDoubleQuote = !inDoubleQuote;
-    }
-
-    if (ch === ";" && !inSingleQuote && !inDoubleQuote) {
-      const trimmed = current.trim();
-      if (trimmed) statements.push(trimmed);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-
-  const trimmed = current.trim();
-  if (trimmed) statements.push(trimmed);
-
-  return statements;
-}
-
-function stripQuotes(name: string): string {
-  const trimmed = name.trim();
-  if (
-    (trimmed.startsWith("`") && trimmed.endsWith("`")) ||
-    (trimmed.startsWith('"') && trimmed.endsWith('"'))
-  ) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-}
-
-function splitTopLevelCommas(body: string): string[] {
-  const parts: string[] = [];
-  let current = "";
-  let depth = 0;
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-
-  for (let i = 0; i < body.length; i++) {
-    const ch = body[i];
-    const prev = i > 0 ? body[i - 1] : "";
-
-    if (ch === "'" && !inDoubleQuote && prev !== "\\") {
-      inSingleQuote = !inSingleQuote;
-    } else if (ch === '"' && !inSingleQuote && prev !== "\\") {
-      inDoubleQuote = !inDoubleQuote;
-    }
-
-    if (!inSingleQuote && !inDoubleQuote) {
-      if (ch === "(") depth++;
-      else if (ch === ")") depth--;
-    }
-
-    if (ch === "," && depth === 0 && !inSingleQuote && !inDoubleQuote) {
-      parts.push(current.trim());
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-
-  const trimmed = current.trim();
-  if (trimmed) parts.push(trimmed);
-
-  return parts;
-}
+import { uniqueEnumName } from "./schemaIntegrity";
+import {
+  applyDefault,
+  columnList,
+  enumValues,
+  makeSerial,
+  parseColumn,
+} from "./sqlColumns";
+import type { ImportIssue } from "./sqlColumns";
+import { readLiteral } from "./sqlDefaults";
+import {
+  matchingParen,
+  readName,
+  sameName,
+  sameSchema,
+  splitTopLevel,
+  stripComments,
+  withoutStrings,
+} from "./sqlScan";
+import {
+  applyKeyDef,
+  applyTableElement,
+  draftCtx,
+  findColumn,
+  findDraft,
+  findTable,
+  finishIndexes,
+  newCtx,
+  parseTable,
+  pick,
+} from "./sqlTables";
+import type { Ctx, KeyDef, PendingFk, TableDraft } from "./sqlTables";
 
 export function detectDbType(sql: string): DbType | null {
-  const upper = sql.toUpperCase();
+  // Comments and strings say nothing about the dialect: a Prisma warning or a
+  // note in backticks would otherwise read as MySQL. MySQL's # comments go too,
+  // which stripComments only removes once it knows the dialect.
+  const code = withoutStrings(stripComments(sql.replace(/^[ \t]*#[^\n]*/gm, "")));
+  const upper = code.toUpperCase();
 
   const mysqlSignals = [
     /`/g,
@@ -123,6 +58,13 @@ export function detectDbType(sql: string): DbType | null {
     /\bJSONB\b/g,
     /\bUUID\b/g,
     /\bCHARACTER\s+VARYING\b/g,
+    /\bCREATE\s+TYPE\b/g,
+    /\bCOMMENT\s+ON\b/g,
+    /\bALTER\s+TABLE\s+ONLY\b/g,
+    /\bNEXTVAL\s*\(/g,
+    /::/g,
+    /\bPG_CATALOG\b/g,
+    /\bOWNER\s+TO\b/g,
   ];
 
   let mysqlScore = 0;
@@ -132,9 +74,12 @@ export function detectDbType(sql: string): DbType | null {
     const matches = upper.match(re);
     if (matches) mysqlScore += matches.length;
   }
+  // MySQL's conditional comments are gone with the comments, yet only mysqldump
+  // writes them.
+  mysqlScore += sql.match(/\/\*!\d+/g)?.length ?? 0;
 
-  if (!sql.includes("`")) {
-    const dqMatches = sql.match(/"/g);
+  if (!code.includes("`")) {
+    const dqMatches = code.match(/"/g);
     if (dqMatches && dqMatches.length >= 2) pgScore += 1;
   }
 
@@ -148,327 +93,191 @@ export function detectDbType(sql: string): DbType | null {
   return null;
 }
 
-const TYPE_ALIASES: Record<string, ColumnType> = {
-  int: "int",
-  integer: "integer",
-  bigint: "bigint",
-  tinyint: "tinyint",
-  smallint: "smallint",
-  mediumint: "mediumint",
-  float: "float",
-  real: "real",
-  double: "double",
-  "double precision": "double precision",
-  decimal: "decimal",
-  numeric: "numeric",
-  varchar: "varchar",
-  "character varying": "varchar",
-  char: "char",
-  character: "char",
-  text: "text",
-  mediumtext: "mediumtext",
-  longtext: "longtext",
-  boolean: "boolean",
-  bool: "boolean",
-  tinyint1: "boolean",
-  date: "date",
-  time: "time",
-  datetime: "datetime",
-  timestamp: "timestamp",
-  timestamptz: "timestamptz",
-  "timestamp with time zone": "timestamptz",
-  "timestamp without time zone": "timestamp",
-  json: "json",
-  jsonb: "jsonb",
-  enum: "enum",
-  blob: "blob",
-  bytea: "bytea",
-  uuid: "uuid",
-  serial: "serial",
-  bigserial: "bigserial",
-};
-
-function normalizeColumnType(rawType: string): ColumnType {
-  const withParens = rawType.trim().toLowerCase();
-  if (withParens === "tinyint(1)") return "boolean";
-
-  const base = rawType
-    .replace(/\(.*\)/, "")
-    .trim()
-    .toLowerCase();
-
-  return TYPE_ALIASES[base] ?? "varchar";
-}
-
-function parseReferentialAction(value: string): ReferentialAction {
-  const upper = value.toUpperCase().trim();
-  if (upper === "CASCADE") return "CASCADE";
-  if (upper === "SET NULL") return "SET NULL";
-  if (upper === "RESTRICT") return "RESTRICT";
-  return "NO ACTION";
-}
-
-function extractReferentialActions(def: string): {
-  onDelete: ReferentialAction;
-  onUpdate: ReferentialAction;
-} {
-  let onDelete: ReferentialAction = "NO ACTION";
-  let onUpdate: ReferentialAction = "NO ACTION";
-
-  const deleteMatch = def.match(
-    /ON\s+DELETE\s+(CASCADE|SET\s+NULL|RESTRICT|NO\s+ACTION)/i,
-  );
-  if (deleteMatch) onDelete = parseReferentialAction(deleteMatch[1]);
-
-  const updateMatch = def.match(
-    /ON\s+UPDATE\s+(CASCADE|SET\s+NULL|RESTRICT|NO\s+ACTION)/i,
-  );
-  if (updateMatch) onUpdate = parseReferentialAction(updateMatch[1]);
-
-  return { onDelete, onUpdate };
-}
-
-function parseColumnDef(def: string): Column | null {
-  const upper = def.toUpperCase().trim();
-
-  if (
-    upper.startsWith("PRIMARY KEY") ||
-    upper.startsWith("UNIQUE") ||
-    upper.startsWith("FOREIGN KEY") ||
-    upper.startsWith("CONSTRAINT") ||
-    upper.startsWith("KEY ") ||
-    upper.startsWith("INDEX ")
-  ) {
-    return null;
-  }
-
-  const match = def.match(/^(`[^`]+`|"[^"]+"|[\w]+)\s+(.+)$/s);
-  if (!match) return null;
-
-  const name = stripQuotes(match[1]);
-  const rest = match[2];
-
-  const typeMatch = rest.match(
-    /^((?:`[^`]+`|"[^"]+"|[^,])*?)(?:\s+(?:NOT\s+NULL|NULL|DEFAULT|AUTO_INCREMENT|PRIMARY\s+KEY|UNIQUE|REFERENCES|CHECK|COMMENT|GENERATED|ON\s+UPDATE)|\s*$)/i,
-  );
-  const rawType = typeMatch ? typeMatch[1].trim() : rest.split(/\s+/)[0];
-  const cleanType = rawType.replace(/\s+UNSIGNED/i, "");
-
-  const type = normalizeColumnType(cleanType);
-  const upperRest = rest.toUpperCase();
-
-  const isAutoIncrement =
-    upperRest.includes("AUTO_INCREMENT") || type === "serial" || type === "bigserial";
-
-  const isPrimaryKey = /\bPRIMARY\s+KEY\b/i.test(rest);
-  const isNullable = !upperRest.includes("NOT NULL") && !isPrimaryKey;
-  const isUnique = /\bUNIQUE\b/i.test(rest) || isPrimaryKey;
-
-  let defaultValue: string | null = null;
-  let defaultKind: DefaultKind | undefined;
-  const defaultMatch = rest.match(/DEFAULT\s+('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\S+)/i);
-  if (defaultMatch) {
-    defaultValue = defaultMatch[1];
-    defaultKind = "expression";
-    // Backslash escapes mean something in MySQL and nothing in PostgreSQL: such
-    // a default keeps its quotes and goes back out as written.
-    if (
-      !defaultValue.includes("\\") &&
-      ((defaultValue.startsWith("'") && defaultValue.endsWith("'")) ||
-        (defaultValue.startsWith('"') && defaultValue.endsWith('"')))
-    ) {
-      defaultValue = defaultValue.slice(1, -1);
-      defaultKind = "value";
-    }
-  }
-
+function parseEnumType(statement: string, ctx: Ctx): SchemaEnum | null {
+  const head = /^CREATE\s+TYPE\s+/i.exec(statement);
+  const name = head && readName(statement.slice(head[0].length));
+  if (!head || !name) return null;
+  const rest = statement.slice(head[0].length + name.length);
+  const body = /^\s*AS\s+ENUM\s*\(/i.exec(rest);
+  if (!body) return null;
+  const open = body[0].length - 1;
+  const close = matchingParen(rest, open, ctx.dialect);
+  if (close < 0) return null;
   return {
     id: genId(),
+    name: name.last,
+    values: enumValues(rest.slice(open + 1, close), ctx.dialect),
+  };
+}
+
+const CREATE_INDEX =
+  /^CREATE\s+(?:(UNIQUE|FULLTEXT|SPATIAL)\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?/i;
+
+function applyCreateIndex(statement: string, ctx: Ctx) {
+  const head = CREATE_INDEX.exec(statement);
+  if (!head) return;
+  let rest = statement.slice(head[0].length);
+  let name: string | undefined;
+  if (!/^ON\s/i.test(rest)) {
+    const read = readName(rest);
+    if (!read) return;
+    name = read.last;
+    rest = rest.slice(read.length).trim();
+  }
+  const on = /^ON\s+(?:ONLY\s+)?/i.exec(rest);
+  const tableName = on && readName(rest.slice(on[0].length));
+  const draft = tableName && findTable(ctx, tableName);
+  if (!on || !tableName || !draft) return;
+  rest = rest.slice(on[0].length + tableName.length).replace(/^\s*USING\s+\w+/i, "");
+  const open = rest.indexOf("(");
+  if (open < 0 || rest.slice(0, open).trim()) return;
+  const close = matchingParen(rest, open, ctx.dialect);
+  if (close < 0) return;
+  const kind = head[1]?.toLowerCase();
+  const key: KeyDef = {
+    kind: kind === "unique" || kind === "fulltext" || kind === "spatial" ? kind : "index",
     name,
-    type,
-    isPrimaryKey,
-    isForeignKey: false,
-    isNullable,
-    isUnique,
-    isAutoIncrement,
-    defaultValue,
-    ...(defaultKind ? { defaultKind } : {}),
+    ...columnList(rest.slice(open + 1, close), ctx),
+    after: rest.slice(close + 1),
   };
-}
-
-export function parseCreateTable(statement: string): {
-  table: Table;
-  pendingFks: PendingFk[];
-} | null {
-  const match = statement.match(
-    /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(`[^`]+`|"[^"]+"|[\w.]+)\s*\(([\s\S]+)\)/i,
-  );
-  if (!match) return null;
-
-  const rawName = match[1];
-  const nameParts = rawName.split(".");
-  const tableName = stripQuotes(nameParts[nameParts.length - 1]);
-  const body = match[2];
-
-  const definitions = splitTopLevelCommas(body);
-  const columns: Column[] = [];
-  const pendingFks: PendingFk[] = [];
-  const primaryKeyColumns: string[] = [];
-  const uniqueColumns: string[] = [];
-
-  for (const def of definitions) {
-    const trimmed = def.trim();
-    const upper = trimmed.toUpperCase();
-
-    if (
-      upper.startsWith("PRIMARY KEY") ||
-      /^CONSTRAINT\s+\S+\s+PRIMARY\s+KEY/i.test(upper)
-    ) {
-      const pkMatch = trimmed.match(/PRIMARY\s+KEY\s*\(([^)]+)\)/i);
-      if (pkMatch) {
-        const cols = pkMatch[1].split(",").map((c) => stripQuotes(c.trim()));
-        primaryKeyColumns.push(...cols);
-      }
-      continue;
-    }
-
-    if (
-      (upper.startsWith("UNIQUE") && !upper.startsWith("UNIQUE KEY")) ||
-      /^CONSTRAINT\s+\S+\s+UNIQUE/i.test(upper)
-    ) {
-      const uqMatch = trimmed.match(/UNIQUE\s*(?:KEY\s*(?:\S+\s*)?)?\(([^)]+)\)/i);
-      if (uqMatch) {
-        const cols = uqMatch[1].split(",").map((c) => stripQuotes(c.trim()));
-        uniqueColumns.push(...cols);
-      }
-      continue;
-    }
-
-    if (upper.startsWith("UNIQUE KEY")) {
-      const uqMatch = trimmed.match(/UNIQUE\s+KEY\s+\S+\s*\(([^)]+)\)/i);
-      if (uqMatch) {
-        const cols = uqMatch[1].split(",").map((c) => stripQuotes(c.trim()));
-        uniqueColumns.push(...cols);
-      }
-      continue;
-    }
-
-    if (
-      upper.startsWith("FOREIGN KEY") ||
-      /^CONSTRAINT\s+\S+\s+FOREIGN\s+KEY/i.test(upper)
-    ) {
-      const fkMatch = trimmed.match(
-        /FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+(`[^`]+`|"[^"]+"|[\w.]+)\s*\(([^)]+)\)/i,
-      );
-      if (fkMatch) {
-        const fromCol = stripQuotes(fkMatch[1].trim());
-        const refParts = fkMatch[2].split(".");
-        const toTable = stripQuotes(refParts[refParts.length - 1]);
-        const toCol = stripQuotes(fkMatch[3].trim());
-        const { onDelete, onUpdate } = extractReferentialActions(trimmed);
-        pendingFks.push({
-          fromTable: tableName,
-          fromColumn: fromCol,
-          toTable,
-          toColumn: toCol,
-          onDelete,
-          onUpdate,
-        });
-      }
-      continue;
-    }
-
-    if (
-      upper.startsWith("KEY ") ||
-      upper.startsWith("INDEX ") ||
-      upper.startsWith("CONSTRAINT")
-    ) {
-      continue;
-    }
-
-    const column = parseColumnDef(trimmed);
-    if (column) {
-      columns.push(column);
-    }
-  }
-
-  for (const pkName of primaryKeyColumns) {
-    const col = columns.find((c) => c.name.toLowerCase() === pkName.toLowerCase());
-    if (col) {
-      col.isPrimaryKey = true;
-      col.isNullable = false;
-      col.isUnique = true;
-    }
-  }
-
-  for (const uqName of uniqueColumns) {
-    const col = columns.find((c) => c.name.toLowerCase() === uqName.toLowerCase());
-    if (col) {
-      col.isUnique = true;
-    }
-  }
-
-  const table: Table = {
-    id: genId(),
-    name: tableName,
-    position: { x: 0, y: 0 },
-    columns,
-  };
-
-  return { table, pendingFks };
-}
-
-export function parseAlterTableFks(statement: string): PendingFk[] {
-  const fks: PendingFk[] = [];
-
-  const match = statement.match(/ALTER\s+TABLE\s+(`[^`]+`|"[^"]+"|[\w.]+)\s+([\s\S]+)/i);
-  if (!match) return fks;
-
-  const rawTableName = match[1];
-  const nameParts = rawTableName.split(".");
-  const tableName = stripQuotes(nameParts[nameParts.length - 1]);
-  const body = match[2];
-
-  const fkPattern =
-    /ADD\s+(?:CONSTRAINT\s+(?:`[^`]+`|"[^"]+"|[\w]+)\s+)?FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+(`[^`]+`|"[^"]+"|[\w.]+)\s*\(([^)]+)\)([^,;]*)/gi;
-
-  let fkMatch;
-  while ((fkMatch = fkPattern.exec(body)) !== null) {
-    const fromCol = stripQuotes(fkMatch[1].trim());
-    const refParts = fkMatch[2].split(".");
-    const toTable = stripQuotes(refParts[refParts.length - 1]);
-    const toCol = stripQuotes(fkMatch[3].trim());
-    const rest = fkMatch[4] || "";
-    const { onDelete, onUpdate } = extractReferentialActions(rest);
-    fks.push({
-      fromTable: tableName,
-      fromColumn: fromCol,
-      toTable,
-      toColumn: toCol,
-      onDelete,
-      onUpdate,
+  applyKeyDef(draft, key, name, draftCtx(ctx, draft));
+  const skippedAlready =
+    key.expression || key.kind === "fulltext" || key.kind === "spatial";
+  if (!skippedAlready && /\bWHERE\b/i.test(key.after))
+    draft.issues.push({
+      kind: "indexCondition",
+      table: draft.table.name,
+      name: name ?? "",
     });
-  }
-
-  return fks;
 }
 
-export function resolveForeignKeys(tables: Table[], pendingFks: PendingFk[]): Relation[] {
+// phpMyAdmin sets AUTO_INCREMENT with MODIFY, after the tables.
+function replaceColumn(draft: TableDraft, def: string, renames: boolean, ctx: Ctx) {
+  let text = def;
+  let oldName: string | undefined;
+  if (renames) {
+    const old = readName(text);
+    if (!old) return;
+    oldName = old.last;
+    text = text.slice(old.length).trim();
+  }
+  const parsed = parseColumn(text, draft.table.name, draftCtx(ctx, draft));
+  if (!parsed) return;
+  const index = draft.table.columns.findIndex((c) =>
+    sameName(c.name, oldName ?? parsed.column.name),
+  );
+  if (index < 0) return;
+  const old = draft.table.columns[index];
+  const created = ctx.enums.find(
+    (e) => e.id === parsed.column.enumId && e.id !== old.enumId,
+  );
+  const previous = ctx.enums.find((e) => e.id === old.enumId);
+  if (created && previous) {
+    previous.values = created.values;
+    ctx.enums.splice(ctx.enums.indexOf(created), 1);
+    parsed.column.enumId = previous.id;
+  }
+  draft.table.columns[index] = {
+    ...parsed.column,
+    id: old.id,
+    isPrimaryKey: old.isPrimaryKey || parsed.column.isPrimaryKey,
+    isUnique: old.isUnique || parsed.column.isUnique,
+    isNullable: parsed.column.isNullable && !old.isPrimaryKey,
+  };
+  if (oldName && !sameName(oldName, parsed.column.name))
+    renameInForeignKeys(ctx, draft, oldName, parsed.column.name);
+}
+
+function renameInForeignKeys(ctx: Ctx, draft: TableDraft, from: string, to: string) {
+  for (const fk of ctx.drafts.flatMap((d) => d.pendingFks)) {
+    if (draft.pendingFks.includes(fk) && sameName(fk.fromColumn, from))
+      fk.fromColumn = to;
+    const target = findDraft(ctx.drafts, {
+      last: fk.toTable,
+      schema: fk.toSchema ?? null,
+    });
+    if (target === draft && fk.toColumn !== null && sameName(fk.toColumn, from))
+      fk.toColumn = to;
+  }
+}
+
+function applyAlterTable(statement: string, ctx: Ctx) {
+  const head = /^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?/i.exec(statement);
+  const name = head && readName(statement.slice(head[0].length));
+  const draft = name && findTable(ctx, name);
+  if (!head || !name || !draft) return;
+  const actions = statement.slice(head[0].length + name.length);
+  for (const action of splitTopLevel(actions, ",", ctx.dialect)) {
+    const add = /^ADD\s+/i.exec(action);
+    if (add) {
+      applyTableElement(draft, action.slice(add[0].length), draftCtx(ctx, draft));
+      continue;
+    }
+    const redefine = /^(MODIFY|CHANGE)\s+(?:COLUMN\s+)?/i.exec(action);
+    if (redefine) {
+      const renames = redefine[1].toUpperCase() === "CHANGE";
+      replaceColumn(draft, action.slice(redefine[0].length), renames, ctx);
+      continue;
+    }
+    const alter = /^ALTER\s+(?:COLUMN\s+)?/i.exec(action);
+    const column = alter && readName(action.slice(alter[0].length));
+    const col = column && findColumn(draft.table, column.last);
+    if (!alter || !column || !col) continue;
+    const change = action.slice(alter[0].length + column.length).trim();
+    const setDefault = /^SET\s+DEFAULT\s+/i.exec(change);
+    if (setDefault) applyDefault(col, change.slice(setDefault[0].length), ctx);
+    else if (/^ADD\s+GENERATED\b[\s\S]*\bIDENTITY\b/i.test(change)) makeSerial(col);
+    else if (/^SET\s+NOT\s+NULL\b/i.test(change)) col.isNullable = false;
+  }
+}
+
+function applyCommentOn(statement: string, ctx: Ctx) {
+  const head = /^COMMENT\s+ON\s+(TABLE|COLUMN)\s+/i.exec(statement);
+  const target = head && readName(statement.slice(head[0].length));
+  if (!head || !target) return;
+  const after = statement.slice(head[0].length + target.length);
+  const is = /^\s*IS\s+/i.exec(after);
+  if (!is) return;
+  const note = readLiteral(after.slice(is[0].length), ctx.dialect);
+  const onColumn = head[1].toUpperCase() === "COLUMN";
+  const tableParts = onColumn ? target.parts.slice(0, -1) : target.parts;
+  const last = tableParts[tableParts.length - 1];
+  const schema = tableParts[tableParts.length - 2] ?? null;
+  const draft = last ? findTable(ctx, { last, schema }) : undefined;
+  const owner = draft && (onColumn ? findColumn(draft.table, target.last) : draft.table);
+  if (!owner) return;
+  if (note) owner.note = note;
+  else delete owner.note;
+}
+
+interface TableLookup {
+  schemaOf?: (table: Table) => string | null;
+  primaryKeyOf?: (table: Table) => string[];
+}
+
+export function resolveForeignKeys(
+  tables: Table[],
+  pendingFks: PendingFk[],
+  {
+    schemaOf = () => null,
+    primaryKeyOf = (t) => t.columns.filter((c) => c.isPrimaryKey).map((c) => c.id),
+  }: TableLookup = {},
+): Relation[] {
   const relations: Relation[] = [];
+  const find = (name: string, schema: string | null | undefined) =>
+    pick(tables, (t) => t.name, schemaOf, name, schema ?? null);
 
   for (const fk of pendingFks) {
-    const fromTable = tables.find(
-      (t) => t.name.toLowerCase() === fk.fromTable.toLowerCase(),
-    );
-    const toTable = tables.find((t) => t.name.toLowerCase() === fk.toTable.toLowerCase());
+    const fromTable = fk.fromTableRef ?? find(fk.fromTable, fk.fromSchema);
+    const toTable = find(fk.toTable, fk.toSchema);
     if (!fromTable || !toTable) continue;
 
-    const fromColumn = fromTable.columns.find(
-      (c) => c.name.toLowerCase() === fk.fromColumn.toLowerCase(),
-    );
-    const toColumn = toTable.columns.find(
-      (c) => c.name.toLowerCase() === fk.toColumn.toLowerCase(),
-    );
+    const fromColumn = findColumn(fromTable, fk.fromColumn);
+    const keyId = fk.toColumn === null ? primaryKeyOf(toTable)[fk.position ?? 0] : null;
+    const toColumn =
+      fk.toColumn === null
+        ? toTable.columns.find((c) => c.id === keyId)
+        : findColumn(toTable, fk.toColumn);
     if (!fromColumn || !toColumn) continue;
 
     fromColumn.isForeignKey = true;
@@ -484,4 +293,123 @@ export function resolveForeignKeys(tables: Table[], pendingFks: PendingFk[]): Re
   }
 
   return relations;
+}
+
+// SocaDB has no schemas: auth.users and public.users both become tables, the
+// one outside the default schema named after its schema.
+function renameDuplicates(drafts: TableDraft[]) {
+  const taken = new Set(drafts.map((d) => d.table.name.toLowerCase()));
+  for (const draft of drafts) {
+    const twins = drafts.filter((d) => sameName(d.table.name, draft.table.name));
+    const keeper = twins.find((d) => sameSchema(d.schema, null)) ?? twins[0];
+    if (twins.length < 2 || draft === keeper) continue;
+    const base =
+      draft.schema && !sameSchema(draft.schema, keeper.schema)
+        ? `${draft.schema}_${draft.table.name}`
+        : draft.table.name;
+    let name = base;
+    for (let i = 2; taken.has(name.toLowerCase()); i++) name = `${base}_${i}`;
+    taken.add(name.toLowerCase());
+    draft.table.name = name;
+    for (const issue of draft.issues) issue.table = name;
+  }
+}
+
+export interface ParsedSql {
+  tables: Table[];
+  relations: Relation[];
+  enums: SchemaEnum[];
+  issues: ImportIssue[];
+  attempted: number;
+}
+
+// MySQL's inline enums are named once the tables are final: a dropped table
+// would otherwise hold the name, and a renamed one keep its old prefix.
+function nameInlineEnums(ctx: Ctx, tables: Table[]): SchemaEnum[] {
+  const kept = ctx.enums.filter((e) => !ctx.inlineEnums.has(e.id));
+  const tableNames = tables.map((t) => t.name);
+  for (const table of tables) {
+    for (const column of table.columns) {
+      const inline = ctx.enums.find(
+        (e) => e.id === column.enumId && ctx.inlineEnums.has(e.id) && !kept.includes(e),
+      );
+      if (!inline) continue;
+      inline.name = uniqueEnumName(`${table.name}_${column.name}`, kept, tableNames);
+      kept.push(inline);
+    }
+  }
+  return ctx.enums.filter((e) => kept.includes(e));
+}
+
+const CREATE_TABLE_STATEMENT =
+  /^CREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:UNLOGGED\s+)?TABLE\b/i;
+
+function repeatsTable(draft: TableDraft, statement: string, ctx: Ctx): boolean {
+  return (
+    /^[^(]*\bIF\s+NOT\s+EXISTS\b/i.test(statement) &&
+    ctx.drafts.some(
+      (d) =>
+        sameName(d.table.name, draft.table.name) && sameSchema(d.schema, draft.schema),
+    )
+  );
+}
+
+function dropTables(statement: string, ctx: Ctx) {
+  const head = /^DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?/i.exec(statement);
+  if (!head) return;
+  for (const part of splitTopLevel(statement.slice(head[0].length), ",", ctx.dialect)) {
+    const name = readName(part);
+    const draft = name && findTable(ctx, name);
+    if (draft && sameSchema(draft.schema, name.schema ?? ctx.currentSchema))
+      ctx.drafts.splice(ctx.drafts.indexOf(draft), 1);
+  }
+}
+
+// Types come first, whatever their order in the file: a column may use one
+// before its CREATE TYPE. The rest runs in file order, as the database would,
+// so a table dropped and created again is the second one. Foreign keys resolve
+// at the end, since they can name a table created further down.
+export function parseStatements(statements: string[], dialect: DbType | null): ParsedSql {
+  const ctx = newCtx(dialect);
+  for (const statement of statements) {
+    const created = parseEnumType(statement, ctx);
+    if (created) ctx.enums.push(created);
+  }
+  let failed = 0;
+  for (const statement of statements) {
+    const use = /^USE\s+/i.exec(statement);
+    if (use) ctx.currentSchema = readName(statement.slice(use[0].length))?.last ?? null;
+    else if (CREATE_TABLE_STATEMENT.test(statement)) {
+      const draft = parseTable(statement, ctx);
+      if (!draft) failed++;
+      else if (!repeatsTable(draft, statement, ctx)) ctx.drafts.push(draft);
+    } else if (/^DROP\s+TABLE\b/i.test(statement)) dropTables(statement, ctx);
+    else if (/^ALTER\s+TABLE\b/i.test(statement)) applyAlterTable(statement, ctx);
+    else if (CREATE_INDEX.test(statement)) applyCreateIndex(statement, ctx);
+    else if (/^COMMENT\s+ON\b/i.test(statement)) applyCommentOn(statement, ctx);
+  }
+  const tables = ctx.drafts.map((d) => d.table);
+  const drafts = new Map(ctx.drafts.map((d) => [d.table, d]));
+  const relations = resolveForeignKeys(
+    tables,
+    ctx.drafts.flatMap((d) => d.pendingFks),
+    {
+      schemaOf: (t) => drafts.get(t)?.schema ?? null,
+      primaryKeyOf: (t) => {
+        const declared = drafts.get(t)?.primaryKey ?? [];
+        return declared.length
+          ? declared
+          : t.columns.filter((c) => c.isPrimaryKey).map((c) => c.id);
+      },
+    },
+  );
+  renameDuplicates(ctx.drafts);
+  tables.forEach(finishIndexes);
+  return {
+    tables,
+    relations,
+    enums: nameInlineEnums(ctx, tables),
+    issues: ctx.drafts.flatMap((d) => d.issues),
+    attempted: tables.length + failed,
+  };
 }

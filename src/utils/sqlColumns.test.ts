@@ -1,0 +1,153 @@
+import { describe, it, expect } from "vitest";
+import { parseStatements } from "./sqlParser";
+import type { DbType } from "../types/schema";
+
+describe("columns", () => {
+  const columns = (body: string, dialect: DbType | null = null) =>
+    parseStatements([`CREATE TABLE t (${body})`], dialect);
+
+  it("reads lengths, precision and scale", () => {
+    const [name, price, rate, email, bio] = columns(
+      "name VARCHAR(120), price DECIMAL(10, 2), rate NUMERIC(8), email character varying(200), bio character varying",
+      "postgresql",
+    ).tables[0].columns;
+    expect(name).toMatchObject({ type: "varchar", length: 120 });
+    expect(price).toMatchObject({ type: "numeric", precision: 10, scale: 2 });
+    expect(rate).toMatchObject({ type: "numeric", precision: 8 });
+    expect(rate).not.toHaveProperty("scale");
+    expect(email).toMatchObject({ type: "varchar", length: 200 });
+    expect(bio.type).toBe("text");
+  });
+
+  it("reads multi-word and dialect-specific type names", () => {
+    const pg = columns(
+      "a timestamp(3) with time zone, b timestamp without time zone, c double precision, d int, e int8",
+      "postgresql",
+    ).tables[0].columns.map((c) => c.type);
+    expect(pg).toEqual([
+      "timestamptz",
+      "timestamp",
+      "double precision",
+      "integer",
+      "bigint",
+    ]);
+    const my = columns(
+      "a int(11) unsigned, b decimal(10,2) unsigned zerofill, c tinyint(4), d integer, e tinyint(1)",
+      "mysql",
+    ).tables[0].columns;
+    expect(my.map((c) => c.type)).toEqual([
+      "int",
+      "decimal",
+      "tinyint",
+      "int",
+      "boolean",
+    ]);
+    expect(my.map((c) => c.unsigned ?? false)).toEqual([true, true, false, false, false]);
+  });
+
+  it("turns unknown types into varchar and reports them", () => {
+    const { tables, issues } = columns("tags text[], geo point, n INT", "postgresql");
+    expect(tables[0].columns.map((c) => c.type)).toEqual([
+      "varchar",
+      "varchar",
+      "integer",
+    ]);
+    expect(issues).toEqual([
+      { kind: "typeGuessed", table: "t", column: "tags", type: "text[]" },
+      { kind: "typeGuessed", table: "t", column: "geo", type: "point" },
+    ]);
+  });
+
+  it("reads MySQL enum values", () => {
+    const { tables, enums } = columns("mood enum('happy','it''s fine','a,b')", "mysql");
+    expect(enums).toEqual([
+      { id: expect.any(String), name: "t_mood", values: ["happy", "it's fine", "a,b"] },
+    ]);
+    expect(tables[0].columns[0]).toMatchObject({ type: "enum", enumId: enums[0].id });
+  });
+
+  it("reads ENUM('') as an enum without values, the way the export writes one", () => {
+    expect(columns("mood enum('')", "mysql").enums[0].values).toEqual([]);
+  });
+
+  it("links columns to a PostgreSQL enum type, whatever the order", () => {
+    const { tables, enums } = parseStatements(
+      [
+        "CREATE TABLE t (feeling public.mood DEFAULT 'happy'::public.mood, other \"Mood\")",
+        "CREATE TYPE public.mood AS ENUM ('happy', 'it''s fine')",
+      ],
+      "postgresql",
+    );
+    expect(enums.map((e) => [e.name, e.values])).toEqual([
+      ["mood", ["happy", "it's fine"]],
+    ]);
+    expect(tables[0].columns[0]).toMatchObject({
+      type: "enum",
+      enumId: enums[0].id,
+      defaultValue: "happy",
+      defaultKind: "value",
+    });
+    expect(tables[0].columns[1].enumId).toBe(enums[0].id);
+  });
+
+  it("does not read constraints inside a comment or a default", () => {
+    const [email, bio, status] = columns(
+      "email varchar(200) NOT NULL COMMENT 'Login e-mail, not null, unique', bio text COMMENT 'default x', status varchar(20) DEFAULT 'NOT NULL'",
+      "mysql",
+    ).tables[0].columns;
+    expect(email).toMatchObject({
+      isNullable: false,
+      isUnique: false,
+      note: "Login e-mail, not null, unique",
+    });
+    expect(bio).toMatchObject({ defaultValue: null, note: "default x" });
+    expect(status).toMatchObject({ isNullable: true, defaultValue: "NOT NULL" });
+  });
+
+  it("reads a default up to the next constraint, ON UPDATE included", () => {
+    const [updated, expires, plain] = columns(
+      "updated_at timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'x', expires_at timestamp DEFAULT CURRENT_TIMESTAMP + INTERVAL 30 DAY NOT NULL, title varchar(10) DEFAULT NULL",
+      "mysql",
+    ).tables[0].columns;
+    expect(updated).toMatchObject({
+      defaultValue: "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+      defaultKind: "expression",
+      isNullable: true,
+    });
+    expect(expires).toMatchObject({
+      defaultValue: "CURRENT_TIMESTAMP + INTERVAL 30 DAY",
+      isNullable: false,
+    });
+    expect(plain.defaultValue).toBeNull();
+    expect(plain).not.toHaveProperty("defaultKind");
+  });
+
+  it("reports CHECK and generated columns, and reads identity columns as serial", () => {
+    const { tables, issues } = columns(
+      "id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY, big bigint GENERATED BY DEFAULT AS IDENTITY, status varchar(20) CHECK (status <> ''), full_name text GENERATED ALWAYS AS (status || 'x') STORED NOT NULL",
+      "postgresql",
+    );
+    const [id, big, status, fullName] = tables[0].columns;
+    expect(id).toMatchObject({
+      type: "serial",
+      isAutoIncrement: true,
+      isPrimaryKey: true,
+    });
+    expect(big).toMatchObject({ type: "bigserial", isAutoIncrement: true });
+    expect(status.isNullable).toBe(true);
+    expect(fullName.isNullable).toBe(false);
+    expect(issues).toEqual([
+      { kind: "checkSkipped", table: "t" },
+      { kind: "generatedColumn", table: "t", column: "full_name" },
+    ]);
+  });
+
+  it("reads a PostgreSQL column named key as a column", () => {
+    const { tables, issues } = columns(
+      "key varchar(50) NOT NULL, value text",
+      "postgresql",
+    );
+    expect(tables[0].columns.map((c) => c.name)).toEqual(["key", "value"]);
+    expect(issues).toEqual([]);
+  });
+});

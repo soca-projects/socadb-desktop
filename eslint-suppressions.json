@@ -74,11 +74,6 @@
       "count": 3
     }
   },
-  "src/utils/importSql.ts": {
-    "@typescript-eslint/consistent-type-assertions": {
-      "count": 1
-    }
-  },
   "src/utils/languagePersistence.ts": {
     "@typescript-eslint/consistent-type-assertions": {
       "count": 1
