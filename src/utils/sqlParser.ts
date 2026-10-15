@@ -33,11 +33,35 @@ import {
 } from "./sqlTables";
 import type { Ctx, KeyDef, PendingFk, TableDraft } from "./sqlTables";
 
+const OTHER_DATABASE = [
+  /\bN?VARCHAR2\b/g,
+  /\bNVARCHAR\b/g,
+  /\bNUMBER\s*\(/g,
+  /\bUNIQUEIDENTIFIER\b/g,
+  /\bDATETIME2\b/g,
+  /\bIDENTITY\s*\(\s*\d/g,
+  /\bGETDATE\s*\(/g,
+  /\bAUTOINCREMENT\b/g,
+  /\[[A-Z_][\w ]*\]/g,
+  /^[ \t]*GO[ \t]*\r?$/gm,
+];
+
+const FUNCTION_BODY = /\b(AS|DO)\s+\$(\w*)\$[\s\S]*?\$\2\$/gi;
+
 export function detectDbType(sql: string): DbType | null {
+  const header =
+    /^--[^\n]*generated using DBML[^\n]*\r?\n--[ \t]*Database:[ \t]*(PostgreSQL|MySQL)[ \t]*\r?$/im.exec(
+      sql,
+    );
+  if (header) return header[1].toLowerCase() === "mysql" ? "mysql" : "postgresql";
+  if (/^[ \t]*DELIMITER[ \t]+\S+[ \t]*\r?$/im.test(sql)) return "mysql";
+  const bodies = sql.match(FUNCTION_BODY)?.length ?? 0;
   // Comments and strings say nothing about the dialect: a Prisma warning or a
   // note in backticks would otherwise read as MySQL. MySQL's # comments go too,
   // which stripComments only removes once it knows the dialect.
-  const code = withoutStrings(stripComments(sql.replace(/^[ \t]*#[^\n]*/gm, "")));
+  const code = withoutStrings(
+    stripComments(sql.replace(FUNCTION_BODY, "$1 ''").replace(/^[ \t]*#[^\n]*/gm, "")),
+  );
   const upper = code.toUpperCase();
 
   const mysqlSignals = [
@@ -65,10 +89,12 @@ export function detectDbType(sql: string): DbType | null {
     /::/g,
     /\bPG_CATALOG\b/g,
     /\bOWNER\s+TO\b/g,
+    /\bAS\s+IDENTITY\b/g,
+    /\bLANGUAGE\s+PLPGSQL\b/g,
   ];
 
   let mysqlScore = 0;
-  let pgScore = 0;
+  let pgScore = bodies;
 
   for (const re of mysqlSignals) {
     const matches = upper.match(re);
@@ -77,6 +103,10 @@ export function detectDbType(sql: string): DbType | null {
   // MySQL's conditional comments are gone with the comments, yet only mysqldump
   // writes them.
   mysqlScore += sql.match(/\/\*!\d+/g)?.length ?? 0;
+  mysqlScore +=
+    (upper.match(/\bENUM\s*\(/g)?.length ?? 0) -
+    (upper.match(/\bAS\s+ENUM\s*\(/g)?.length ?? 0);
+  pgScore += upper.replace(/"[^"\n]*"/g, '""').match(/\w\s*\[\s*\d*\s*\]/g)?.length ?? 0;
 
   if (!code.includes("`")) {
     const dqMatches = code.match(/"/g);
@@ -88,6 +118,8 @@ export function detectDbType(sql: string): DbType | null {
     if (matches) pgScore += matches.length;
   }
 
+  const other = OTHER_DATABASE.reduce((n, re) => n + (upper.match(re)?.length ?? 0), 0);
+  if (other > 0 && other >= Math.max(mysqlScore, pgScore)) return null;
   if (mysqlScore > pgScore) return "mysql";
   if (pgScore > mysqlScore) return "postgresql";
   return null;
