@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { XIcon as X, BracketsCurlyIcon as BracketsCurly } from "@phosphor-icons/react";
+import {
+  XIcon as X,
+  BracketsCurlyIcon as BracketsCurly,
+  FileCodeIcon as FileCode,
+} from "@phosphor-icons/react";
 import { Modal } from "../Modal/Modal";
 import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
 import { MysqlIcon } from "../../assets/icons/MysqlIcon";
@@ -11,6 +15,7 @@ import { useSchemaStore, createEmptySchema } from "../../stores/schemaStore";
 import { useViewStore } from "../../stores/viewStore";
 import { parseSqlDdl, adaptColumnsToDbType } from "../../utils/importSql";
 import { parseJsonSchema } from "../../utils/importJson";
+import { parseDbmlSchema } from "../../utils/importDbml";
 import { getNextTableColor } from "../../utils/tableColors";
 import { handleAutoLayout } from "../../utils/schemaActions";
 import { logError, logInfo, logWarn } from "../../utils/log";
@@ -18,7 +23,7 @@ import { describeImportIssues } from "../../utils/importReport";
 import type { ImportIssue } from "../../utils/sqlColumns";
 import type { DbType, Table, Relation, SchemaEnum } from "../../types/schema";
 
-type ImportFormat = "sql" | "json";
+type ImportFormat = "sql" | "dbml" | "json";
 type ImportMode = "replace" | "merge";
 
 interface ConflictState {
@@ -86,7 +91,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
   const assignColors = (tables: Table[]): Table[] => {
     const colored: Table[] = [];
     for (const table of tables) {
-      const color = getNextTableColor(colored);
+      const color = table.color ?? getNextTableColor(colored);
       colored.push({ ...table, color });
     }
     return colored;
@@ -112,17 +117,18 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
 
   const handleImport = async () => {
     try {
-      const filters =
-        format === "sql"
-          ? [
-              {
-                name: t("import.sqlLabel", {
-                  dbType: dbType === "mysql" ? "MySQL" : "PostgreSQL",
-                }),
-                extensions: ["sql"],
-              },
-            ]
-          : [{ name: t("import.jsonLabel"), extensions: ["json"] }];
+      const filters = {
+        sql: [
+          {
+            name: t("import.sqlLabel", {
+              dbType: dbType === "mysql" ? "MySQL" : "PostgreSQL",
+            }),
+            extensions: ["sql"],
+          },
+        ],
+        dbml: [{ name: t("import.dbmlLabel"), extensions: ["dbml"] }],
+        json: [{ name: t("import.jsonLabel"), extensions: ["json"] }],
+      }[format];
 
       const selected = await open({
         multiple: false,
@@ -132,10 +138,13 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       if (!selected) return;
 
       const content = await readTextFile(selected);
+      const currentDbType = useSchemaStore.getState().schema.dbType;
       const { tables, relations, enums, detectedDbType, attempted, issues } =
         format === "sql"
-          ? parseSqlDdl(content, useSchemaStore.getState().schema.dbType)
-          : { ...parseJsonSchema(content), issues: [] };
+          ? parseSqlDdl(content, currentDbType)
+          : format === "dbml"
+            ? parseDbmlSchema(content, currentDbType)
+            : { ...parseJsonSchema(content), issues: [] };
 
       if (tables.length === 0) {
         logWarn("import.no_tables", "No table found in the file", { format, attempted });
@@ -216,7 +225,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       }
       existingNames.add(name.toLowerCase());
 
-      const color = getNextTableColor(allTables);
+      const color = table.color ?? getNextTableColor(allTables);
       const result = { ...table, name, color };
       allTables.push(result);
       return result;
@@ -351,6 +360,12 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       icon: dbType === "mysql" ? <MysqlIcon size={24} /> : <PostgresqlIcon size={24} />,
     },
     {
+      type: "dbml",
+      label: t("import.dbmlLabel"),
+      description: t("import.dbmlDescription"),
+      icon: <FileCode size={24} />,
+    },
+    {
       type: "json",
       label: t("import.jsonLabel"),
       description: t("import.jsonDescription"),
@@ -382,7 +397,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-3 gap-3">
           {formatCards.map((card) => (
             <button
               key={card.type}

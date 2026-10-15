@@ -11,6 +11,10 @@ const ALL: ImportIssue[] = [
   { kind: "indexSkipped", table: "people", name: "", reason: "expression" },
   { kind: "indexCondition", table: "people", name: "people_active" },
   { kind: "generatedColumn", table: "people", column: "full_name" },
+  { kind: "joinTable", table: "people_tags", from: "people", to: "tags" },
+  { kind: "groupSkipped", name: "people_group" },
+  { kind: "useSkipped", path: "./people.dbml" },
+  { kind: "blockSkipped", name: "people", line: 3 },
 ];
 
 describe("describeImportIssues", () => {
@@ -29,6 +33,6 @@ describe("describeImportIssues", () => {
     expect(text).toContain("tags");
     expect(text).toContain("people_bio_ft");
     expect(text).not.toContain("people_geo");
-    expect(text.endsWith("And 4 more.")).toBe(true);
+    expect(text.endsWith("And 8 more.")).toBe(true);
   });
 });

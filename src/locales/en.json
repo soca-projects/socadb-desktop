@@ -87,7 +87,7 @@
       "open": "Open a file",
       "openHint": "A .soca file already on your computer",
       "import": "Import",
-      "importHint": "A SQL file exported from a database or another tool"
+      "importHint": "A SQL or DBML file exported from a database or another tool"
     },
     "rename": {
       "title": "Rename schema",
@@ -269,6 +269,8 @@
     "sqlDescription": "Import from a {{dbType}} DDL file",
     "jsonLabel": "JSON",
     "jsonDescription": "Import from JSON file",
+    "dbmlLabel": "DBML",
+    "dbmlDescription": "Import from a DBML file",
     "conflictTitle": "Database type conflict",
     "conflictDescriptionStart": "The imported file uses",
     "conflictDescriptionMiddle": "but your current schema is",
@@ -457,7 +459,8 @@
     "autoLayoutFailed": "Auto layout failed: {{error}}",
     "invalidFile": "This file is not a valid schema.",
     "exportSqlIssues_one": "SQL exported with 1 adjustment to keep it valid",
-    "exportSqlIssues_other": "SQL exported with {{count}} adjustments to keep it valid"
+    "exportSqlIssues_other": "SQL exported with {{count}} adjustments to keep it valid",
+    "dbmlSyntax": "Can't read this DBML file: line {{line}} isn't valid DBML."
   },
   "fileFilter": {
     "sql": "SQL File",
@@ -527,6 +530,10 @@
     "expressionSkipped": "Index {{name}} on {{table}} left out: it indexes an expression.",
     "indexCondition": "Index {{name}} on {{table}} imported without its WHERE condition.",
     "generatedColumn": "{{table}}.{{column}} imported without its generated value.",
+    "joinTable": "Many-to-many between {{from}} and {{to}}: join table {{table}} created.",
+    "groupSkipped": "Table group {{name}} left out.",
+    "useSkipped": "Tables from {{path}} left out: SocaDB reads one DBML file at a time.",
+    "blockSkipped": "Line {{line}} left out: SocaDB doesn't know “{{name}}”.",
     "unnamed": "without a name"
   }
 }

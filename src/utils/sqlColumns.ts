@@ -24,7 +24,11 @@ export type ImportIssue =
       reason: "fulltext" | "spatial" | "expression";
     }
   | { kind: "indexCondition"; table: string; name: string }
-  | { kind: "generatedColumn"; table: string; column: string };
+  | { kind: "generatedColumn"; table: string; column: string }
+  | { kind: "joinTable"; table: string; from: string; to: string }
+  | { kind: "groupSkipped"; name: string }
+  | { kind: "useSkipped"; path: string }
+  | { kind: "blockSkipped"; name: string; line: number };
 
 export interface ParseCtx {
   dialect: DbType | null;
@@ -87,6 +91,31 @@ function columnTypeOf(
   const fields: ColumnTypeFields = { type, ...typeParams(type, read.args) };
   if (read.unsigned && MYSQL_NUMERIC_TYPES.has(type)) fields.unsigned = true;
   return fields;
+}
+
+export function columnOfType(
+  name: string,
+  read: ReadType,
+  table: string,
+  ctx: ParseCtx,
+): Column {
+  const column: Column = {
+    id: genId(),
+    name,
+    isPrimaryKey: false,
+    isForeignKey: false,
+    isNullable: true,
+    isUnique: false,
+    isAutoIncrement: false,
+    defaultValue: null,
+    ...columnTypeOf(read, table, name, ctx),
+  };
+  if (column.type === "serial" || column.type === "bigserial")
+    column.isAutoIncrement = true;
+  // MySQL's SERIAL is BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE.
+  if (read.base === "serial" && ctx.dialect === "mysql")
+    Object.assign(column, { isAutoIncrement: true, isNullable: false, isUnique: true });
+  return column;
 }
 
 export function typeParams(
@@ -209,23 +238,7 @@ export function parseColumn(
   const read = readType(afterName, ctx.dialect);
   if (!read) return null;
 
-  const column: Column = {
-    id: genId(),
-    name: name.last,
-    isPrimaryKey: false,
-    isForeignKey: false,
-    isNullable: true,
-    isUnique: false,
-    isAutoIncrement: false,
-    defaultValue: null,
-    ...columnTypeOf(read, tableName, name.last, ctx),
-  };
-  if (column.type === "serial" || column.type === "bigserial")
-    column.isAutoIncrement = true;
-  // MySQL's SERIAL is BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE.
-  if (read.base === "serial" && ctx.dialect === "mysql")
-    Object.assign(column, { isAutoIncrement: true, isNullable: false, isUnique: true });
-
+  const column = columnOfType(name.last, read, tableName, ctx);
   const rest = afterName.slice(read.length);
   const tokens = tokenize(rest, ctx.dialect);
   let references: Reference | null = null;
