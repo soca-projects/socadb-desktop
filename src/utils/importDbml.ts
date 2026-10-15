@@ -60,6 +60,82 @@ function dialectOf(databaseType: string | null): DbType | null {
   return null;
 }
 
+const MYSQL_TYPES = new Set([
+  "tinyint",
+  "mediumint",
+  "tinytext",
+  "mediumtext",
+  "longtext",
+  "tinyblob",
+  "mediumblob",
+  "longblob",
+  "year",
+]);
+
+const POSTGRESQL_TYPES = new Set([
+  "bigserial",
+  "smallserial",
+  "serial4",
+  "serial8",
+  "int2",
+  "int4",
+  "int8",
+  "float4",
+  "float8",
+  "timestamptz",
+  "timetz",
+  "timestamp with time zone",
+  "time with time zone",
+  "jsonb",
+  "bytea",
+  "double precision",
+  "character varying",
+  "interval",
+  "inet",
+  "cidr",
+  "macaddr",
+]);
+
+const OTHER_DATABASE_TYPES = new Set([
+  "nvarchar",
+  "nchar",
+  "ntext",
+  "datetime2",
+  "datetimeoffset",
+  "smalldatetime",
+  "uniqueidentifier",
+  "varchar2",
+  "nvarchar2",
+  "number",
+  "clob",
+  "nclob",
+  "money",
+  "smallmoney",
+  "bit",
+  "image",
+  "rowversion",
+]);
+
+function dialectFromTypes(file: DbmlFile): DbType | null {
+  const enums = new Set(file.enums.map((e) => e.name.toLowerCase()));
+  let mysql = 0;
+  let postgresql = 0;
+  for (const table of [...file.tables, ...file.partials]) {
+    for (const item of table.items) {
+      if (item.kind !== "column") continue;
+      const text = /^"([^"]*)"$/.exec(item.column.type)?.[1] ?? item.column.type;
+      const read = readType(text, null);
+      if (!read || enums.has(read.base)) continue;
+      if (OTHER_DATABASE_TYPES.has(read.base)) return null;
+      if (read.unsigned || MYSQL_TYPES.has(read.base)) mysql++;
+      if (read.array || POSTGRESQL_TYPES.has(read.base)) postgresql++;
+    }
+  }
+  if (mysql > postgresql) return "mysql";
+  if (postgresql > mysql) return "postgresql";
+  return null;
+}
+
 function readColumnType(text: string, ctx: Ctx): ReadType {
   const quoted = /^"([^"]*)"$/.exec(text)?.[1];
   const source =
@@ -407,7 +483,8 @@ function resolveRefs(entries: Entry[], refs: PendingRef[], linker: Linker) {
 }
 
 function convert(file: DbmlFile, fallbackDbType: DbType | null): SqlImportResult {
-  const detectedDbType = dialectOf(file.databaseType);
+  const detectedDbType =
+    file.databaseType === null ? dialectFromTypes(file) : dialectOf(file.databaseType);
   const ctx = newCtx(detectedDbType ?? fallbackDbType);
   ctx.enums = file.enums.map(
     (e): SchemaEnum => ({ id: genId(), name: e.name, values: e.values }),
