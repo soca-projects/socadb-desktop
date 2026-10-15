@@ -46,6 +46,8 @@ interface SchemaState {
   importTables: (tables: Table[], relations: Relation[], enums?: SchemaEnum[]) => void;
 }
 
+export const UNDO_LIMIT = 50;
+
 export function createEmptySchema(
   name = "Untitled",
   dbType: DbType = "postgresql",
@@ -353,7 +355,7 @@ export const useSchemaStore = create<SchemaState>()(
     }),
     {
       partialize: ({ schema }) => ({ schema }),
-      limit: 50,
+      limit: UNDO_LIMIT,
     },
   ),
 );

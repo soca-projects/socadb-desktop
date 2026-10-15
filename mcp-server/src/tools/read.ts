@@ -20,7 +20,7 @@ export function registerReadTools(server: McpServer) {
     "get_schema",
     {
       description:
-        "Get the complete database schema including all tables, columns, and relations",
+        "Get the complete database schema: tables with notes, columns (type parameters, default and its kind, enum values, note) and indexes, relations, and PostgreSQL enum types",
       inputSchema: {},
     },
     async () => ok(await send("get_schema")),
@@ -29,7 +29,7 @@ export function registerReadTools(server: McpServer) {
   server.registerTool(
     "get_table",
     {
-      description: "Get a specific table by name with all its columns",
+      description: "Get a specific table by name with its note, columns and indexes",
       inputSchema: {
         name: z.string().describe("The table name to look up"),
       },

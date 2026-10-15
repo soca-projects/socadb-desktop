@@ -84,15 +84,22 @@ function columnTypeOf(
   // PostgreSQL's varchar without a length has no limit, which is text.
   if (type === "varchar" && read.args === null && ctx.dialect === "postgresql")
     return { type: "text" };
-  const params = /^\s*(\d+)\s*(?:,\s*(\d+)\s*)?$/.exec(read.args ?? "");
-  const fields: ColumnTypeFields = { type };
-  if (params && LENGTH_TYPES.has(type)) fields.length = Number(params[1]);
-  if (params && PRECISION_TYPES.has(type)) {
-    fields.precision = Number(params[1]);
-    if (params[2] !== undefined) fields.scale = Number(params[2]);
-  }
+  const fields: ColumnTypeFields = { type, ...typeParams(type, read.args) };
   if (read.unsigned && MYSQL_NUMERIC_TYPES.has(type)) fields.unsigned = true;
   return fields;
+}
+
+export function typeParams(
+  type: ColumnType,
+  args: string | null,
+): Pick<Column, "length" | "precision" | "scale"> {
+  const params = /^\s*(\d+)\s*(?:,\s*(\d+)\s*)?$/.exec(args ?? "");
+  if (!params) return {};
+  if (LENGTH_TYPES.has(type)) return { length: Number(params[1]) };
+  if (!PRECISION_TYPES.has(type)) return {};
+  return params[2] === undefined
+    ? { precision: Number(params[1]) }
+    : { precision: Number(params[1]), scale: Number(params[2]) };
 }
 
 const SERIAL_OF: Partial<Record<ColumnType, ColumnType>> = {

@@ -115,25 +115,38 @@ export const SchemaZ = z.object({
   enums: z.array(SchemaEnumZ).optional(),
 });
 
-export const McpColumnInputZ = z.object({
-  name: z.string(),
+const McpColumnFieldsZ = z.object({
   type: z.string().optional(),
   isPrimaryKey: z.boolean().optional(),
   isNullable: z.boolean().optional(),
   isUnique: z.boolean().optional(),
   isAutoIncrement: z.boolean().optional(),
+  unsigned: z.boolean().optional(),
+  length: z.number().int().positive().optional(),
+  precision: z.number().int().positive().optional(),
+  scale: z.number().int().nonnegative().optional(),
   defaultValue: z.string().nullable().optional(),
+  defaultKind: z.enum(["value", "expression"]).optional(),
+  enumValues: z.array(z.string()).optional(),
+  enumName: z.string().optional(),
+});
+
+export const McpColumnInputZ = McpColumnFieldsZ.extend({
+  name: z.string(),
+  note: z.string().optional(),
 });
 
 export const McpCreateTableZ = z.object({
   name: z.string(),
   columns: z.array(McpColumnInputZ).optional(),
+  note: z.string().optional(),
 });
 
 export const McpUpdateTableZ = z.object({
   name: z.string(),
   newName: z.string().optional(),
   color: z.string().optional(),
+  note: z.string().nullable().optional(),
 });
 
 export const McpTableNameZ = z.object({
@@ -145,14 +158,9 @@ export const McpAddColumnZ = z.object({
   column: McpColumnInputZ,
 });
 
-export const McpColumnUpdateZ = z.object({
+export const McpColumnUpdateZ = McpColumnFieldsZ.extend({
   name: z.string().optional(),
-  type: z.string().optional(),
-  isPrimaryKey: z.boolean().optional(),
-  isNullable: z.boolean().optional(),
-  isUnique: z.boolean().optional(),
-  isAutoIncrement: z.boolean().optional(),
-  defaultValue: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
 });
 
 export const McpUpdateColumnZ = z.object({
@@ -164,6 +172,18 @@ export const McpUpdateColumnZ = z.object({
 export const McpDeleteColumnZ = z.object({
   table: z.string(),
   column: z.string(),
+});
+
+export const McpAddIndexZ = z.object({
+  table: z.string(),
+  columns: z.array(z.string()).min(1),
+  unique: z.boolean().optional(),
+  name: z.string().optional(),
+});
+
+export const McpDeleteIndexZ = z.object({
+  table: z.string(),
+  name: z.string(),
 });
 
 export const McpRelationEndpointsZ = z.object({

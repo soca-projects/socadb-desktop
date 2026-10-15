@@ -59,14 +59,16 @@ describe("dispatchMcpAction", () => {
       expect(result.ok).toBe(false);
     });
 
-    it("defaults unknown column type to varchar", async () => {
+    it("refuses a type the database lacks, listing the valid ones", async () => {
       const result = await dispatchMcpAction("create_table", {
         name: "test",
         columns: [{ name: "col", type: "INVALID_TYPE" }],
       });
-      expect(result.ok).toBe(true);
-      const { schema } = useSchemaStore.getState();
-      expect(schema.tables[0].columns[0].type).toBe("varchar");
+      expect(result).toMatchObject({ ok: false });
+      if (result.ok) return;
+      expect(result.error).toContain("PostgreSQL");
+      expect(result.error).toContain("timestamptz");
+      expect(useSchemaStore.getState().schema.tables).toHaveLength(0);
     });
   });
 
@@ -312,5 +314,517 @@ describe("dispatchMcpAction", () => {
         expect(result.error).toContain("Unknown action");
       }
     });
+  });
+});
+
+describe("what the agent writes beyond names and types", () => {
+  beforeEach(() => resetStore());
+  const table = (name: string) => {
+    const found = useSchemaStore.getState().schema.tables.find((t) => t.name === name);
+    if (!found) throw new Error(`no table ${name}`);
+    return found;
+  };
+  const column = (tableName: string, name: string) => {
+    const found = table(tableName).columns.find((c) => c.name === name);
+    if (!found) throw new Error(`no column ${name}`);
+    return found;
+  };
+  const enumOf = (tableName: string, name: string) =>
+    useSchemaStore
+      .getState()
+      .schema.enums?.find((e) => e.id === column(tableName, name).enumId);
+
+  it("reads types as SQL writes them, per database", async () => {
+    resetStore("postgresql");
+    await dispatchMcpAction("create_table", {
+      name: "items",
+      columns: [
+        { name: "title", type: "varchar(120)" },
+        { name: "price", type: "NUMERIC(10, 2)" },
+        { name: "count", type: "int" },
+        { name: "label", type: "character varying", length: 40 },
+      ],
+    });
+    expect(column("items", "title")).toMatchObject({ type: "varchar", length: 120 });
+    expect(column("items", "price")).toMatchObject({
+      type: "numeric",
+      precision: 10,
+      scale: 2,
+    });
+    expect(column("items", "count").type).toBe("integer");
+    expect(column("items", "label")).toMatchObject({ type: "varchar", length: 40 });
+
+    resetStore("mysql");
+    await dispatchMcpAction("create_table", {
+      name: "items",
+      columns: [{ name: "count", type: "int unsigned" }],
+    });
+    expect(column("items", "count")).toMatchObject({ type: "int", unsigned: true });
+    const refused = await dispatchMcpAction("add_column", {
+      table: "items",
+      column: { name: "token", type: "uuid" },
+    });
+    expect(refused).toMatchObject({ ok: false });
+  });
+
+  it("writes notes on tables and columns, and removes them with null", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "users",
+      note: "Everyone who signed up.",
+      columns: [{ name: "email", type: "varchar", note: "Login." }],
+    });
+    expect(table("users").note).toBe("Everyone who signed up.");
+    expect(column("users", "email").note).toBe("Login.");
+    await dispatchMcpAction("update_table", { name: "users", note: null });
+    await dispatchMcpAction("update_column", {
+      table: "users",
+      column: "email",
+      updates: { note: null },
+    });
+    expect(table("users").note).toBeUndefined();
+    expect(column("users", "email").note).toBeUndefined();
+  });
+
+  it("keeps the default kind the agent gives", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "events",
+      columns: [
+        {
+          name: "at",
+          type: "timestamp",
+          defaultValue: "now()",
+          defaultKind: "expression",
+        },
+      ],
+    });
+    expect(column("events", "at").defaultKind).toBe("expression");
+    await dispatchMcpAction("update_column", {
+      table: "events",
+      column: "at",
+      updates: { defaultValue: "pending", defaultKind: "value" },
+    });
+    expect(column("events", "at")).toMatchObject({
+      defaultValue: "pending",
+      defaultKind: "value",
+    });
+  });
+
+  it("creates MySQL enums from ENUM(...) or enumValues", async () => {
+    resetStore("mysql");
+    await dispatchMcpAction("create_table", {
+      name: "posts",
+      columns: [
+        { name: "status", type: "enum('draft','published')", defaultValue: "draft" },
+        { name: "mood", enumValues: ["calm", "busy"], enumName: "ignored" },
+      ],
+    });
+    expect(enumOf("posts", "status")?.values).toEqual(["draft", "published"]);
+    expect(column("posts", "status")).toMatchObject({
+      type: "enum",
+      defaultValue: "draft",
+    });
+    expect(enumOf("posts", "mood")).toMatchObject({
+      name: "posts_mood",
+      values: ["calm", "busy"],
+    });
+  });
+
+  it("names PostgreSQL enums and lets columns share one by name", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "posts",
+      columns: [
+        {
+          name: "status",
+          type: "enum",
+          enumName: "post_status",
+          enumValues: ["draft", "live"],
+        },
+      ],
+    });
+    await dispatchMcpAction("create_table", {
+      name: "drafts",
+      columns: [{ name: "status", type: "enum", enumName: "post_status" }],
+    });
+    const shared = enumOf("posts", "status");
+    expect(shared).toMatchObject({ name: "post_status", values: ["draft", "live"] });
+    expect(column("drafts", "status").enumId).toBe(shared?.id);
+    expect(useSchemaStore.getState().schema.enums).toHaveLength(1);
+
+    await dispatchMcpAction("update_column", {
+      table: "drafts",
+      column: "status",
+      updates: { enumValues: ["draft", "live", "archived"] },
+    });
+    expect(enumOf("posts", "status")?.values).toEqual(["draft", "live", "archived"]);
+  });
+
+  it("drops an enum no column uses once the column changes type", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "posts",
+      columns: [{ name: "status", enumValues: ["a", "b"] }],
+    });
+    await dispatchMcpAction("update_column", {
+      table: "posts",
+      column: "status",
+      updates: { type: "varchar(20)" },
+    });
+    expect(column("posts", "status")).toMatchObject({ type: "varchar", length: 20 });
+    expect(useSchemaStore.getState().schema.enums ?? []).toHaveLength(0);
+  });
+
+  it("shows notes, enums and indexes in get_table", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "posts",
+      note: "Articles.",
+      columns: [
+        { name: "title", type: "varchar(80)" },
+        { name: "status", enumName: "post_status", enumValues: ["draft"] },
+      ],
+    });
+    await dispatchMcpAction("add_index", {
+      table: "posts",
+      columns: ["title", "status"],
+    });
+    const result = await dispatchMcpAction("get_table", { name: "posts" });
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        note: "Articles.",
+        columns: [
+          { name: "title", length: 80 },
+          { name: "status", enum: { name: "post_status", values: ["draft"] } },
+        ],
+        indexes: [
+          { name: "posts_title_status_idx", columns: ["title", "status"], unique: false },
+        ],
+      },
+    });
+  });
+});
+
+describe("add_index and delete_index", () => {
+  beforeEach(async () => {
+    resetStore("mysql");
+    await dispatchMcpAction("create_table", {
+      name: "posts",
+      columns: [
+        { name: "id", type: "int", isPrimaryKey: true },
+        { name: "author_id", type: "int" },
+        { name: "slug", type: "varchar(80)" },
+        { name: "body", type: "text" },
+      ],
+    });
+  });
+  const posts = () => useSchemaStore.getState().schema.tables[0];
+
+  it("adds an index on several columns and deletes it by its derived name", async () => {
+    const added = await dispatchMcpAction("add_index", {
+      table: "posts",
+      columns: ["author_id", "slug"],
+      unique: true,
+    });
+    expect(added).toEqual({ ok: true, data: "index" });
+    expect(posts().indexes).toEqual([
+      {
+        id: expect.any(String),
+        columnIds: [posts().columns[1].id, posts().columns[2].id],
+        unique: true,
+      },
+    ]);
+    const deleted = await dispatchMcpAction("delete_index", {
+      table: "posts",
+      name: "posts_author_id_slug_key",
+    });
+    expect(deleted).toEqual({ ok: true, data: true });
+    expect(posts().indexes).toEqual([]);
+  });
+
+  it("makes a one-column unique index the column's UNIQUE flag", async () => {
+    const result = await dispatchMcpAction("add_index", {
+      table: "posts",
+      columns: ["slug"],
+      unique: true,
+    });
+    expect(result).toEqual({ ok: true, data: "column" });
+    expect(posts().columns[2].isUnique).toBe(true);
+    expect(posts().indexes ?? []).toEqual([]);
+  });
+
+  it("refuses columns the database can't index, unknown columns and taken names", async () => {
+    const text = await dispatchMcpAction("add_index", {
+      table: "posts",
+      columns: ["body"],
+    });
+    expect(text).toMatchObject({ ok: false });
+    const missing = await dispatchMcpAction("add_index", {
+      table: "posts",
+      columns: ["nope"],
+    });
+    expect(missing).toMatchObject({ ok: false });
+    await dispatchMcpAction("add_index", {
+      table: "posts",
+      columns: ["slug"],
+      name: "by_slug",
+    });
+    const taken = await dispatchMcpAction("add_index", {
+      table: "posts",
+      columns: ["author_id"],
+      name: "by_slug",
+    });
+    expect(taken).toMatchObject({ ok: false });
+    const unknown = await dispatchMcpAction("delete_index", {
+      table: "posts",
+      name: "nope",
+    });
+    expect(unknown).toEqual({ ok: true, data: false });
+  });
+});
+
+describe("primary keys the agent creates", () => {
+  beforeEach(() => resetStore());
+  const columns = () => useSchemaStore.getState().schema.tables[0].columns;
+
+  it("are not null, and unique when they are the only key column", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "loans",
+      columns: [
+        { name: "id", type: "uuid", isPrimaryKey: true },
+        { name: "note", type: "text" },
+      ],
+    });
+    expect(columns()[0]).toMatchObject({ isNullable: false, isUnique: true });
+    expect(columns()[1]).toMatchObject({ isNullable: true, isUnique: false });
+  });
+
+  it("are not unique one by one in a composite key", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "pairs",
+      columns: [
+        { name: "a", type: "integer", isPrimaryKey: true },
+        { name: "b", type: "integer", isPrimaryKey: true },
+      ],
+    });
+    expect(columns().map((c) => [c.isNullable, c.isUnique])).toEqual([
+      [false, false],
+      [false, false],
+    ]);
+    await dispatchMcpAction("add_column", {
+      table: "pairs",
+      column: { name: "c", type: "integer", isPrimaryKey: true },
+    });
+    expect(columns()[2]).toMatchObject({ isNullable: false, isUnique: false });
+  });
+
+  it("become not null when update_column makes them a key", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "t",
+      columns: [{ name: "code", type: "varchar(8)" }],
+    });
+    await dispatchMcpAction("update_column", {
+      table: "t",
+      column: "code",
+      updates: { isPrimaryKey: true },
+    });
+    expect(columns()[0]).toMatchObject({ isPrimaryKey: true, isNullable: false });
+  });
+});
+
+describe("agent review cases", () => {
+  beforeEach(() => resetStore());
+  const schema = () => useSchemaStore.getState().schema;
+  const column = (tableName: string, name: string) => {
+    const found = schema()
+      .tables.find((t) => t.name === tableName)
+      ?.columns.find((c) => c.name === name);
+    if (!found) throw new Error(`no column ${tableName}.${name}`);
+    return found;
+  };
+  const enumOf = (tableName: string, name: string) =>
+    schema().enums?.find((e) => e.id === column(tableName, name).enumId);
+
+  it("splits a column off a shared enum when it gets a new name", async () => {
+    for (const name of ["a", "b"]) {
+      await dispatchMcpAction("create_table", {
+        name,
+        columns: [
+          { name: "s", enumName: "status", enumValues: ["x", "y"], defaultValue: "x" },
+        ],
+      });
+    }
+    await dispatchMcpAction("update_column", {
+      table: "b",
+      column: "s",
+      updates: { enumName: "b_status", enumValues: ["m", "n"] },
+    });
+    expect(enumOf("a", "s")).toMatchObject({ name: "status", values: ["x", "y"] });
+    expect(column("a", "s").defaultValue).toBe("x");
+    expect(enumOf("b", "s")).toMatchObject({ name: "b_status", values: ["m", "n"] });
+  });
+
+  it("makes one undo step of one agent call", async () => {
+    useSchemaStore.temporal.getState().clear();
+    const before = useSchemaStore.temporal.getState().pastStates.length;
+    await dispatchMcpAction("create_table", {
+      name: "posts",
+      note: "Articles.",
+      columns: [
+        { name: "status", enumName: "post_status", enumValues: ["draft"] },
+        { name: "kind", enumName: "post_kind", enumValues: ["a"] },
+      ],
+    });
+    expect(useSchemaStore.temporal.getState().pastStates.length).toBe(before + 1);
+    useSchemaStore.temporal.getState().undo();
+    expect(schema().tables).toHaveLength(0);
+    expect(schema().enums ?? []).toHaveLength(0);
+  });
+
+  it("applies the editor's rules when the agent changes a type", async () => {
+    resetStore("mysql");
+    await dispatchMcpAction("create_table", { name: "a" });
+    await dispatchMcpAction("update_column", {
+      table: "a",
+      column: "id",
+      updates: { type: "varchar(36)" },
+    });
+    expect(column("a", "id")).toMatchObject({
+      type: "varchar",
+      length: 36,
+      isAutoIncrement: false,
+    });
+    await dispatchMcpAction("add_column", {
+      table: "a",
+      column: { name: "code", type: "varchar(10)", isAutoIncrement: true },
+    });
+    expect(column("a", "code").isAutoIncrement).toBe(false);
+  });
+
+  it("drops a default the shared enum doesn't allow", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "a",
+      columns: [{ name: "s", enumName: "st", enumValues: ["x", "y"] }],
+    });
+    await dispatchMcpAction("create_table", {
+      name: "b",
+      columns: [{ name: "s", enumValues: ["p", "q"], defaultValue: "p" }],
+    });
+    await dispatchMcpAction("update_column", {
+      table: "b",
+      column: "s",
+      updates: { enumName: "st" },
+    });
+    expect(column("b", "s")).toMatchObject({
+      enumId: enumOf("a", "s")?.id,
+      defaultValue: null,
+    });
+  });
+
+  it("reads enumName alone as an enum in PostgreSQL and ignores it in MySQL", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "orders",
+      columns: [{ name: "status", enumName: "order_status", enumValues: ["new"] }],
+    });
+    await dispatchMcpAction("add_column", {
+      table: "orders",
+      column: { name: "previous", enumName: "order_status" },
+    });
+    expect(column("orders", "previous").enumId).toBe(enumOf("orders", "status")?.id);
+
+    resetStore("mysql");
+    await dispatchMcpAction("create_table", {
+      name: "a",
+      columns: [{ name: "s", type: "varchar(20)", defaultValue: "zz" }],
+    });
+    await dispatchMcpAction("update_column", {
+      table: "a",
+      column: "s",
+      updates: { enumName: "whatever" },
+    });
+    expect(column("a", "s")).toMatchObject({ type: "varchar", defaultValue: "zz" });
+  });
+
+  it("refuses a column listed twice and an index that already exists", async () => {
+    await dispatchMcpAction("create_table", {
+      name: "u",
+      columns: [
+        { name: "email", type: "varchar(80)" },
+        { name: "name", type: "text" },
+      ],
+    });
+    const twice = await dispatchMcpAction("add_index", {
+      table: "u",
+      columns: ["email", "email"],
+    });
+    expect(twice).toMatchObject({ ok: false });
+    await dispatchMcpAction("add_index", { table: "u", columns: ["email", "name"] });
+    const again = await dispatchMcpAction("add_index", {
+      table: "u",
+      columns: ["email", "name"],
+    });
+    expect(again).toMatchObject({ ok: false });
+  });
+
+  it("refuses repeated enum values and reads double-quoted ones", async () => {
+    const repeated = await dispatchMcpAction("create_table", {
+      name: "a",
+      columns: [{ name: "s", enumValues: ["x", "x"] }],
+    });
+    expect(repeated).toMatchObject({ ok: false });
+    await dispatchMcpAction("create_table", {
+      name: "b",
+      columns: [{ name: "s", type: 'enum("a","b")' }],
+    });
+    expect(enumOf("b", "s")?.values).toEqual(["a", "b"]);
+  });
+
+  it("refuses an enum named like a table in PostgreSQL", async () => {
+    await dispatchMcpAction("create_table", { name: "users" });
+    const result = await dispatchMcpAction("create_table", {
+      name: "accounts",
+      columns: [{ name: "kind", enumName: "users", enumValues: ["a"] }],
+    });
+    expect(result).toMatchObject({ ok: false });
+    expect(schema().tables.map((t) => t.name)).toEqual(["users"]);
+  });
+});
+
+describe("second agent review cases", () => {
+  beforeEach(() => resetStore());
+  const names = () => useSchemaStore.getState().schema.tables.map((t) => t.name);
+
+  it("keeps the history in order when a call arrives during auto_layout", async () => {
+    await dispatchMcpAction("create_table", { name: "a" });
+    useSchemaStore.temporal.getState().clear();
+    const layout = dispatchMcpAction("auto_layout", {});
+    await dispatchMcpAction("create_table", { name: "b" });
+    await layout;
+    const { undo } = useSchemaStore.temporal.getState();
+    undo();
+    expect(names()).toEqual(["a", "b"]);
+    undo();
+    expect(names()).toEqual(["a"]);
+    undo();
+    expect(names()).toEqual(["a"]);
+  });
+
+  it("turns AUTO_INCREMENT off on a column created as an enum", async () => {
+    resetStore("mysql");
+    await dispatchMcpAction("create_table", {
+      name: "t",
+      columns: [{ name: "s", type: "int", enumValues: ["x"], isAutoIncrement: true }],
+    });
+    expect(useSchemaStore.getState().schema.tables[0].columns[0]).toMatchObject({
+      type: "enum",
+      isAutoIncrement: false,
+    });
+  });
+
+  it("lets a MySQL enum have a table's name, since MySQL ignores it", async () => {
+    resetStore("mysql");
+    await dispatchMcpAction("create_table", { name: "users" });
+    const result = await dispatchMcpAction("add_column", {
+      table: "users",
+      column: { name: "kind", enumValues: ["a"], enumName: "users" },
+    });
+    expect(result).toMatchObject({ ok: true });
   });
 });

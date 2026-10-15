@@ -79,11 +79,6 @@
       "count": 1
     }
   },
-  "src/utils/mcpActions.ts": {
-    "@typescript-eslint/consistent-type-assertions": {
-      "count": 2
-    }
-  },
   "src/utils/themePersistence.ts": {
     "@typescript-eslint/consistent-type-assertions": {
       "count": 1
