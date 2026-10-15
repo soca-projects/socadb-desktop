@@ -664,6 +664,20 @@ describe("what the databases enforce", () => {
     expect(sql).toContain("`edited_at` DATETIME NOT NULL DEFAULT now() on update now()");
   });
 
+  it("writes an empty text default brought by an import", () => {
+    const tables = [
+      table("posts", [
+        col("t", "title", "varchar", { defaultValue: "", defaultKind: "value" }),
+      ]),
+    ];
+    expect(generatePostgresqlDdl(schemaOf("postgresql", tables))).toContain(
+      `"title" VARCHAR(255) NOT NULL DEFAULT ''`,
+    );
+    expect(generateMysqlDdl(schemaOf("mysql", tables))).toContain(
+      "`title` VARCHAR(255) NOT NULL DEFAULT ''",
+    );
+  });
+
   it("writes CURRENT_USER as the function it is", () => {
     const tables = [
       table("notes", [

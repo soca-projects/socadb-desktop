@@ -119,7 +119,7 @@ function fitsEnum(col: Column, values: string[]): boolean {
 }
 
 function keptDefault(ctx: Ctx, table: Table, col: Column): boolean {
-  if (!col.defaultValue?.trim()) return false;
+  if (defaultSql(col) === null) return false;
   const drop = (reason: "enum" | "serial") => {
     ctx.issues.push({
       kind: "defaultDropped",

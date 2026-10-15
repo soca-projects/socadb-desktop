@@ -116,4 +116,8 @@ describe("defaultSql", () => {
     expect(sql({ defaultValue: null })).toBeNull();
     expect(sql({ defaultValue: "  " })).toBeNull();
   });
+
+  it("writes an empty text default an import marked as a value", () => {
+    expect(sql({ type: "varchar", defaultValue: "", defaultKind: "value" })).toBe("''");
+  });
 });
