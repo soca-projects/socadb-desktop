@@ -512,7 +512,19 @@
     "defaultDroppedSerial": "Default of {{table}}.{{column}} left out: a serial column numbers itself.",
     "indexSkipped": "{{name}} on {{table}} left out: {{column}} can't be indexed in this database.",
     "keyTooLong": "{{name}} on {{table}} left out: its key is over MySQL's 3072 bytes.",
-    "noteShortened": "Note on {{target}} shortened to MySQL's limit.",
+    "noteShortened": "Note on {{target}} shortened to MySQL's limit."
+  },
+  "issues": {
     "more": "And {{count}} more."
+  },
+  "importIssues": {
+    "typeGuessed": "{{table}}.{{column}}: type {{type}} unknown, imported as varchar.",
+    "checkSkipped": "A CHECK constraint on {{table}} left out.",
+    "fulltextSkipped": "Full-text index {{name}} on {{table}} left out.",
+    "spatialSkipped": "Spatial index {{name}} on {{table}} left out.",
+    "expressionSkipped": "Index {{name}} on {{table}} left out: it indexes an expression.",
+    "indexCondition": "Index {{name}} on {{table}} imported without its WHERE condition.",
+    "generatedColumn": "{{table}}.{{column}} imported without its generated value.",
+    "unnamed": "without a name"
   }
 }

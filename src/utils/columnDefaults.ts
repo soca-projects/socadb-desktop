@@ -60,6 +60,8 @@ const NUMBER_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
 ]);
 
 export function defaultSql(column: Column): string | null {
+  // An import can bring DEFAULT '', which the editor has no way to type.
+  if (column.defaultValue === "" && column.defaultKind === "value") return "''";
   const value = column.defaultValue?.trim();
   if (!value) return null;
   if (defaultKindOf(column) === "expression") return value;
