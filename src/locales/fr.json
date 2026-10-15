@@ -512,7 +512,19 @@
     "defaultDroppedSerial": "Défaut de {{table}}.{{column}} omis : une colonne serial se numérote seule.",
     "indexSkipped": "{{name}} sur {{table}} omis : {{column}} ne peut pas être indexée dans cette base.",
     "keyTooLong": "{{name}} sur {{table}} omis : sa clé dépasse les 3072 octets de MySQL.",
-    "noteShortened": "Note sur {{target}} raccourcie à la limite de MySQL.",
+    "noteShortened": "Note sur {{target}} raccourcie à la limite de MySQL."
+  },
+  "issues": {
     "more": "Et {{count}} de plus."
+  },
+  "importIssues": {
+    "typeGuessed": "{{table}}.{{column}} : type {{type}} inconnu, importé en varchar.",
+    "checkSkipped": "Une contrainte CHECK sur {{table}} omise.",
+    "fulltextSkipped": "Index plein texte {{name}} sur {{table}} omis.",
+    "spatialSkipped": "Index spatial {{name}} sur {{table}} omis.",
+    "expressionSkipped": "Index {{name}} sur {{table}} omis : il porte sur une expression.",
+    "indexCondition": "Index {{name}} sur {{table}} importé sans sa condition WHERE.",
+    "generatedColumn": "{{table}}.{{column}} importée sans sa valeur calculée.",
+    "unnamed": "sans nom"
   }
 }

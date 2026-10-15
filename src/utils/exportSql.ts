@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
 import i18next from "../i18n";
 import { logError } from "./log";
+import { summarizeIssues } from "./issueSummary";
 import type {
   Schema,
   SchemaEnum,
@@ -530,8 +531,6 @@ export function buildPostgresqlDdl(schema: Schema): DdlResult {
 export const generatePostgresqlDdl = (schema: Schema): string =>
   buildPostgresqlDdl(schema).sql;
 
-const SHOWN_ISSUES = 3;
-
 function describeIssue(issue: ExportIssue): string {
   switch (issue.kind) {
     case "emptyEnum":
@@ -561,14 +560,6 @@ function describeIssue(issue: ExportIssue): string {
   }
 }
 
-function describeIssues(issues: ExportIssue[]): string {
-  const lines = issues.slice(0, SHOWN_ISSUES).map(describeIssue);
-  if (issues.length > SHOWN_ISSUES) {
-    lines.push(i18next.t("exportIssues.more", { count: issues.length - SHOWN_ISSUES }));
-  }
-  return lines.join(" ");
-}
-
 export async function exportSql() {
   try {
     const { schema } = useSchemaStore.getState();
@@ -586,7 +577,7 @@ export async function exportSql() {
     await writeTextFile(path, sql);
     if (issues.length) {
       toast.warning(i18next.t("toast.exportSqlIssues", { count: issues.length }), {
-        description: describeIssues(issues),
+        description: summarizeIssues(issues, describeIssue),
         duration: 10_000,
       });
     }

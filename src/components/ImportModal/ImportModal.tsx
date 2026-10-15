@@ -14,6 +14,8 @@ import { parseJsonSchema } from "../../utils/importJson";
 import { getNextTableColor } from "../../utils/tableColors";
 import { handleAutoLayout } from "../../utils/schemaActions";
 import { logError, logInfo, logWarn } from "../../utils/log";
+import { describeImportIssues } from "../../utils/importReport";
+import type { ImportIssue } from "../../utils/sqlColumns";
 import type { DbType, Table, Relation, SchemaEnum } from "../../types/schema";
 
 type ImportFormat = "sql" | "json";
@@ -26,6 +28,15 @@ interface ConflictState {
   fileDbType: DbType;
   currentDbType: DbType;
   skipped: number;
+  issues: ImportIssue[];
+}
+
+interface ImportSummary {
+  tables: number;
+  relations: number;
+  skipped: number;
+  adapted?: number;
+  issues: readonly ImportIssue[];
 }
 
 interface ImportModalProps {
@@ -44,24 +55,32 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
   const [mode, setMode] = useState<ImportMode>("replace");
   const [conflict, setConflict] = useState<ConflictState | null>(null);
 
-  const showImportSummary = (
-    tableCount: number,
-    relationCount: number,
-    skipped: number,
-    adaptedColumns = 0,
-  ) => {
-    let text = t("toast.importComplete", { count: tableCount });
-    if (relationCount > 0) {
-      text += t("toast.importRelations", { count: relationCount });
+  const showImportSummary = ({
+    tables,
+    relations,
+    skipped,
+    adapted = 0,
+    issues,
+  }: ImportSummary) => {
+    let text = t("toast.importComplete", { count: tables });
+    if (relations > 0) {
+      text += t("toast.importRelations", { count: relations });
     }
     text += ".";
     if (skipped > 0) {
       text += " " + t("toast.importSkipped", { count: skipped });
     }
-    if (adaptedColumns > 0) {
-      text += " " + t("toast.importAdapted", { count: adaptedColumns });
+    if (adapted > 0) {
+      text += " " + t("toast.importAdapted", { count: adapted });
     }
-    toast.success(text);
+    if (issues.length > 0) {
+      toast.warning(text, {
+        description: describeImportIssues(issues),
+        duration: 10_000,
+      });
+    } else {
+      toast.success(text);
+    }
   };
 
   const assignColors = (tables: Table[]): Table[] => {
@@ -113,8 +132,10 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       if (!selected) return;
 
       const content = await readTextFile(selected);
-      const { tables, relations, enums, detectedDbType, attempted } =
-        format === "sql" ? parseSqlDdl(content) : parseJsonSchema(content);
+      const { tables, relations, enums, detectedDbType, attempted, issues } =
+        format === "sql"
+          ? parseSqlDdl(content, useSchemaStore.getState().schema.dbType)
+          : { ...parseJsonSchema(content), issues: [] };
 
       if (tables.length === 0) {
         logWarn("import.no_tables", "No table found in the file", { format, attempted });
@@ -144,6 +165,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
             fileDbType: detectedDbType,
             currentDbType,
             skipped,
+            issues,
           });
           return;
         }
@@ -156,9 +178,15 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
         tables: tables.length,
         relations: relations.length,
         skipped,
+        issues: issues.length,
         fromHome,
       });
-      showImportSummary(tables.length, relations.length, skipped);
+      showImportSummary({
+        tables: tables.length,
+        relations: relations.length,
+        skipped,
+        issues,
+      });
       onClose();
     } catch (e) {
       logError("import.failed", e, { format });
@@ -207,11 +235,12 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       conflict.fileDbType,
       useSchemaStore.getState().schema.name,
     );
-    showImportSummary(
-      conflict.tables.length,
-      conflict.relations.length,
-      conflict.skipped,
-    );
+    showImportSummary({
+      tables: conflict.tables.length,
+      relations: conflict.relations.length,
+      skipped: conflict.skipped,
+      issues: conflict.issues,
+    });
     onClose();
   };
 
@@ -222,12 +251,13 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       conflict.currentDbType,
     );
     mergeIntoSchema(adapted, conflict.relations, conflict.enums);
-    showImportSummary(
-      conflict.tables.length,
-      conflict.relations.length,
-      conflict.skipped,
-      adaptedCount,
-    );
+    showImportSummary({
+      tables: conflict.tables.length,
+      relations: conflict.relations.length,
+      skipped: conflict.skipped,
+      adapted: adaptedCount,
+      issues: conflict.issues,
+    });
     onClose();
   };
 
