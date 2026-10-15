@@ -1,4 +1,6 @@
 import type { Schema, Table, Column, Relation, SchemaEnum } from "../types/schema";
+import { defaultKindOf } from "./columnDefaults";
+import { derivedIndexName, indexColumnNames } from "./indexHelpers";
 
 export function findTableById(schema: Schema, id: string): Table | undefined {
   return schema.tables.find((t) => t.id === id);
@@ -24,16 +26,49 @@ export function getRelationsFromTable(schema: Schema, tableId: string): Relation
   return schema.relations.filter((r) => r.from.tableId === tableId);
 }
 
-export function serializeColumn(c: Column) {
+export function serializeColumn(schema: Schema, c: Column) {
+  const enumType =
+    c.type === "enum" && c.enumId ? findEnumById(schema, c.enumId) : undefined;
   return {
     name: c.name,
     type: c.type,
+    ...(c.length !== undefined ? { length: c.length } : {}),
+    ...(c.precision !== undefined ? { precision: c.precision } : {}),
+    ...(c.scale !== undefined ? { scale: c.scale } : {}),
+    ...(c.unsigned ? { unsigned: true } : {}),
+    ...(enumType
+      ? {
+          enum:
+            schema.dbType === "postgresql"
+              ? { name: enumType.name, values: enumType.values }
+              : { values: enumType.values },
+        }
+      : {}),
     isPrimaryKey: c.isPrimaryKey,
     isForeignKey: c.isForeignKey,
     isNullable: c.isNullable,
     isUnique: c.isUnique,
     isAutoIncrement: c.isAutoIncrement,
     defaultValue: c.defaultValue,
+    ...(c.defaultValue !== null ? { defaultKind: defaultKindOf(c) } : {}),
+    ...(c.note ? { note: c.note } : {}),
+  };
+}
+
+export function serializeTable(schema: Schema, t: Table) {
+  return {
+    name: t.name,
+    ...(t.note ? { note: t.note } : {}),
+    columns: t.columns.map((c) => serializeColumn(schema, c)),
+    ...(t.indexes?.length
+      ? {
+          indexes: t.indexes.map((i) => ({
+            name: i.name ?? derivedIndexName(t, i),
+            columns: indexColumnNames(t, i),
+            unique: i.unique,
+          })),
+        }
+      : {}),
   };
 }
 

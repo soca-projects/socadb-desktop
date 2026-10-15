@@ -6,6 +6,7 @@ import {
   findColumnByName,
   getRelationsFromTable,
   serializeColumn,
+  serializeTable,
   serializeRelation,
   isWorthResuming,
 } from "./schemaQueries";
@@ -136,11 +137,95 @@ describe("getRelationsFromTable", () => {
 
 describe("serializeColumn", () => {
   it("strips internal id", () => {
-    const serialized = serializeColumn(col1);
+    const serialized = serializeColumn(schema, col1);
     expect(serialized).not.toHaveProperty("id");
     expect(serialized.name).toBe("id");
     expect(serialized.type).toBe("uuid");
     expect(serialized.isPrimaryKey).toBe(true);
+  });
+});
+
+describe("serializing for the agent", () => {
+  const enriched = (dbType: "mysql" | "postgresql"): Schema => ({
+    ...createEmptySchema("s", dbType),
+    enums: [{ id: "e1", name: "post_status", values: ["draft", "published"] }],
+    tables: [
+      {
+        id: "t",
+        name: "posts",
+        note: "One row per post.",
+        position: { x: 0, y: 0 },
+        columns: [
+          {
+            ...col1,
+            id: "a",
+            name: "title",
+            type: "varchar",
+            length: 120,
+            note: "Shown in lists.",
+            defaultValue: null,
+          },
+          {
+            ...col1,
+            id: "b",
+            name: "price",
+            type: "decimal",
+            precision: 8,
+            scale: 2,
+            unsigned: true,
+            isPrimaryKey: false,
+          },
+          {
+            ...col1,
+            id: "c",
+            name: "status",
+            type: "enum",
+            enumId: "e1",
+            defaultValue: "draft",
+            defaultKind: "value",
+            isPrimaryKey: false,
+          },
+        ],
+        indexes: [
+          { id: "i1", columnIds: ["a", "c"], unique: false },
+          { id: "i2", columnIds: ["b"], unique: true, name: "price_key" },
+        ],
+      },
+    ],
+  });
+
+  it("gives type parameters, notes, default kinds and enum values", () => {
+    const schema = enriched("postgresql");
+    const [title, price, status] = schema.tables[0].columns.map((c) =>
+      serializeColumn(schema, c),
+    );
+    expect(title).toMatchObject({ length: 120, note: "Shown in lists." });
+    expect(price).toMatchObject({ precision: 8, scale: 2, unsigned: true });
+    expect(status).toMatchObject({
+      enum: { name: "post_status", values: ["draft", "published"] },
+      defaultValue: "draft",
+      defaultKind: "value",
+    });
+    expect(title).not.toHaveProperty("defaultKind");
+    expect(title).not.toHaveProperty("enum");
+  });
+
+  it("leaves out the enum name in MySQL, where enums have none of their own", () => {
+    const schema = enriched("mysql");
+    expect(serializeColumn(schema, schema.tables[0].columns[2]).enum).toEqual({
+      values: ["draft", "published"],
+    });
+  });
+
+  it("gives a table's note and indexes with their names", () => {
+    const schema = enriched("postgresql");
+    expect(serializeTable(schema, schema.tables[0])).toMatchObject({
+      note: "One row per post.",
+      indexes: [
+        { name: "posts_title_status_idx", columns: ["title", "status"], unique: false },
+        { name: "price_key", columns: ["price"], unique: true },
+      ],
+    });
   });
 });
 
