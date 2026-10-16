@@ -497,6 +497,28 @@ export const LOG_CODES = {
     meaning: "Import threw while reading or parsing the file.",
     check: "The message; ctx.format says which parser.",
   },
+  "import.batch.done": {
+    level: "info",
+    meaning: "A multi-file import ended; ctx has how it ended and counts per status.",
+    check: "ctx.ended: done, stopped or folder_refused; failed and warned counts.",
+  },
+  "import.batch.file_failed": {
+    level: "warn",
+    meaning: "One file of a multi-file import wasn't imported.",
+    check:
+      "ctx.reason: unknown_format, unreadable, not_schema, dbml_syntax or no_tables.",
+  },
+  "import.batch.folder_refused": {
+    level: "warn",
+    meaning: "SocaDB can't write to the folder chosen for imported schemas.",
+    check:
+      "macOS privacy (Files and Folders) for Downloads, Documents or Desktop, permissions, or a read-only volume.",
+  },
+  "import.batch.write_failed": {
+    level: "error",
+    meaning: "A .soca file couldn't be written during a multi-file import.",
+    check: "Disk full or a file system error after the name was reserved.",
+  },
   "updater.available": {
     level: "info",
     meaning: "An update was found; msg is its version.",

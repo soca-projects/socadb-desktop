@@ -6,21 +6,25 @@ import {
   openAndApplySchema,
   openRecentFile,
 } from "../utils/fileOperations";
+import { importDraft } from "../utils/homeImport";
 import { closeSchema } from "../utils/schemaActions";
-import { useViewStore } from "../stores/viewStore";
 
-type PendingAction = "new" | "open" | "open-recent" | "close" | "import" | null;
+type PendingAction = "new" | "open" | "open-recent" | "close" | "import-file" | null;
 
 export function useUnsavedChangesGuard() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const recentPathRef = useRef<string | null>(null);
+  const importPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unlistens = [
       listen("unsaved-guard-new", () => setPendingAction("new")),
       listen("unsaved-guard-open", () => setPendingAction("open")),
       listen("unsaved-guard-close", () => setPendingAction("close")),
-      listen("unsaved-guard-import", () => setPendingAction("import")),
+      listen<string>("unsaved-guard-import-file", (event) => {
+        importPathRef.current = event.payload;
+        setPendingAction("import-file");
+      }),
       listen<string>("unsaved-guard-open-recent", (event) => {
         recentPathRef.current = event.payload;
         setPendingAction("open-recent");
@@ -44,8 +48,10 @@ export function useUnsavedChangesGuard() {
       }
     } else if (action === "close") {
       closeSchema();
-    } else if (action === "import") {
-      useViewStore.getState().requestImport();
+    } else if (action === "import-file") {
+      const path = importPathRef.current;
+      importPathRef.current = null;
+      if (path) void importDraft(path);
     }
   }, []);
 

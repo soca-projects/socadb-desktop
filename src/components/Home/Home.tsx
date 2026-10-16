@@ -9,7 +9,9 @@ import {
   XIcon as X,
 } from "@phosphor-icons/react";
 import { Toolbar } from "../Toolbar/Toolbar";
-import { ImportModal } from "../ImportModal/ImportModal";
+import { DialectModal } from "../ImportFlow/DialectModal";
+import { PrepareModal } from "../ImportFlow/PrepareModal";
+import { ImportBatchModal } from "../ImportFlow/ImportBatchModal";
 import { HomeCard } from "./HomeCard";
 import type { ActionMenuItem } from "../ActionMenu/ActionMenu";
 import { HomeEmpty } from "./HomeEmpty";
@@ -18,6 +20,7 @@ import { RenameSchemaModal } from "./RenameSchemaModal";
 import { DeleteDraftModal } from "./DeleteDraftModal";
 import { useHomeEntries } from "../../hooks/useHomeEntries";
 import { useSchemaStore } from "../../stores/schemaStore";
+import { useImportFlowStore } from "../../stores/importFlowStore";
 import { useViewStore } from "../../stores/viewStore";
 import {
   currentBadge,
@@ -46,7 +49,7 @@ import {
   handleOpen,
   handleSaveAs,
 } from "../../utils/menuActions";
-import { IS_MAC, IS_WINDOWS } from "../../utils/platform";
+import { REVEAL_LABEL_KEY } from "../../utils/platform";
 import { closeSchema } from "../../utils/schemaActions";
 import { isWorthResuming } from "../../utils/schemaQueries";
 import { HomeSortZ } from "../../utils/zodSchemas";
@@ -56,11 +59,6 @@ const GROUP_LABEL =
   "mb-2.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-tertiary";
 const SECONDARY =
   "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-muted";
-const REVEAL_KEY = IS_MAC
-  ? "home.action.revealMac"
-  : IS_WINDOWS
-    ? "home.action.revealWindows"
-    : "home.action.revealLinux";
 
 function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
   const cards = Array.from(
@@ -87,13 +85,13 @@ export function Home({ onOpenSettings }: HomeProps) {
   const filePath = useSchemaStore((s) => s.filePath);
   const dirty = useSchemaStore((s) => s.savedAt !== s.schema.updatedAt);
   const searchRequested = useViewStore((s) => s.searchRequested);
-  const importOpen = useViewStore((s) => s.importOpen);
+  const importPhase = useImportFlowStore((s) => s.phase);
+  const importMode = useImportFlowStore((s) => s.mode);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState(getHomeSort);
   const [renaming, setRenaming] = useState<HomeEntry | null>(null);
   const [deletingDraft, setDeletingDraft] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const closeImport = useViewStore((s) => s.closeImport);
 
   useEffect(() => {
     if (!searchRequested) return;
@@ -117,7 +115,7 @@ export function Home({ onOpenSettings }: HomeProps) {
 
   const entryMenu = (entry: HomeEntry, isCurrent: boolean): ActionMenuItem[] => [
     { label: t("home.action.open"), onSelect: () => openHomeEntry(entry.path) },
-    { label: t(REVEAL_KEY), onSelect: () => void revealHomeEntry(entry.path) },
+    { label: t(REVEAL_LABEL_KEY), onSelect: () => void revealHomeEntry(entry.path) },
     ...(entry.state === "present"
       ? [
           { label: t("home.action.rename"), onSelect: () => setRenaming(entry) },
@@ -396,7 +394,12 @@ export function Home({ onOpenSettings }: HomeProps) {
           }}
         />
       )}
-      {importOpen && <ImportModal fromHome onClose={closeImport} />}
+      {importPhase === "asking" && <DialectModal />}
+      {importPhase === "preparing" && <PrepareModal />}
+      {importMode === "batch" &&
+        ["running", "done", "stopped", "folder_refused"].includes(importPhase) && (
+          <ImportBatchModal />
+        )}
     </div>
   );
 }
