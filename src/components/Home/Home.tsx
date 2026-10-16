@@ -60,7 +60,7 @@ const GRID = "grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4";
 const GROUP_LABEL =
   "mb-2.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-tertiary";
 const SECONDARY =
-  "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-muted";
+  "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-paper-muted";
 
 function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
   const cards = Array.from(
@@ -206,7 +206,7 @@ export function Home({ onOpenSettings }: HomeProps) {
   );
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-surface">
+    <div className="flex h-screen w-screen flex-col bg-surface-paper">
       <Toolbar variant="home" onOpenSettings={onOpenSettings} />
 
       <div className="flex shrink-0 flex-col gap-3.5 px-8 pb-3.5 pt-[22px]">
@@ -219,7 +219,7 @@ export function Home({ onOpenSettings }: HomeProps) {
               <button
                 type="button"
                 onClick={handleNew}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border-2 border-sticker shadow-sticker bg-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover"
               >
                 <Plus size={14} />
                 {t("home.new")}

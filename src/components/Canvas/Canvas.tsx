@@ -124,7 +124,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
   const theme = useThemeStore((s) => s.theme);
 
-  const gridColor = theme === "dark" ? "#3A3737" : "#DBD8D9";
+  const gridColor = theme === "dark" ? "#3A3634" : "#E3DCCF";
 
   const focusMode = useFocusStore((s) => s.focusMode);
   const toggleFocusMode = useFocusStore((s) => s.toggleFocusMode);
