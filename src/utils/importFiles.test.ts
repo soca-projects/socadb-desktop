@@ -3,6 +3,7 @@ import {
   analyzeFiles,
   buildSchema,
   displayFolder,
+  dropKind,
   fileNameOf,
   FolderRefusedError,
   formatOf,
@@ -71,6 +72,8 @@ describe("analyzeFiles", () => {
     expect(by("empty.sql")?.failure?.reason).toBe("no_tables");
     expect(by("readme.md")?.failure?.reason).toBe("unknown_format");
     expect(by("gone.sql")?.failure?.reason).toBe("unreadable");
+    const [big] = await analyzeFiles(["/in/big.sql"], () => Promise.reject("too_large"));
+    expect(big.failure?.reason).toBe("too_large");
     expect(result.map((f) => f.path)).toEqual(paths);
   });
 });
@@ -375,5 +378,14 @@ describe("displayFolder", () => {
     expect(displayFolder("/Users/meg/x", "/Users/me")).toBe("/Users/meg/x");
     expect(displayFolder("C:\\Users\\me\\Docs", "C:\\Users\\me")).toBe("~\\Docs");
     expect(displayFolder("/Volumes/Archives", null)).toBe("/Volumes/Archives");
+  });
+});
+
+describe("dropKind", () => {
+  it("accepts a drop that holds at least one file SocaDB reads", () => {
+    expect(dropKind(["/d/a.png", "/d/b.SQL"])).toBe("accept");
+    expect(dropKind(["/d/shop.soca"])).toBe("accept");
+    expect(dropKind(["/d/a.png", "/d/notes.txt"])).toBe("reject");
+    expect(dropKind([])).toBeNull();
   });
 });

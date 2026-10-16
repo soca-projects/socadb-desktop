@@ -11,6 +11,7 @@ import {
 import { Toolbar } from "../Toolbar/Toolbar";
 import { DialectModal } from "../ImportFlow/DialectModal";
 import { PrepareModal } from "../ImportFlow/PrepareModal";
+import { DropOverlay } from "../ImportFlow/DropOverlay";
 import { ImportBatchModal } from "../ImportFlow/ImportBatchModal";
 import { HomeCard } from "./HomeCard";
 import type { ActionMenuItem } from "../ActionMenu/ActionMenu";
@@ -19,6 +20,7 @@ import { MissingFiles } from "./MissingFiles";
 import { RenameSchemaModal } from "./RenameSchemaModal";
 import { DeleteDraftModal } from "./DeleteDraftModal";
 import { useHomeEntries } from "../../hooks/useHomeEntries";
+import { useHomeDrop } from "../../hooks/useHomeDrop";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { useImportFlowStore } from "../../stores/importFlowStore";
 import { useViewStore } from "../../stores/viewStore";
@@ -85,6 +87,7 @@ export function Home({ onOpenSettings }: HomeProps) {
   const filePath = useSchemaStore((s) => s.filePath);
   const dirty = useSchemaStore((s) => s.savedAt !== s.schema.updatedAt);
   const searchRequested = useViewStore((s) => s.searchRequested);
+  const drop = useHomeDrop();
   const importPhase = useImportFlowStore((s) => s.phase);
   const importMode = useImportFlowStore((s) => s.mode);
   const [query, setQuery] = useState("");
@@ -394,6 +397,7 @@ export function Home({ onOpenSettings }: HomeProps) {
           }}
         />
       )}
+      {drop && <DropOverlay kind={drop} />}
       {importPhase === "asking" && <DialectModal />}
       {importPhase === "preparing" && <PrepareModal />}
       {importMode === "batch" &&

@@ -14,6 +14,7 @@ export type ImportFormat = "sql" | "dbml" | "json";
 export type FailReason =
   | "unknown_format"
   | "unreadable"
+  | "too_large"
   | "not_schema"
   | "dbml_syntax"
   | "sql_failed"
@@ -56,6 +57,13 @@ export function displayFolder(path: string, home: string | null): string {
   if (path.replace(/[/\\]+$/, "") === base) return "~";
   const rest = path.slice(base.length);
   return path.startsWith(base) && /^[/\\]/.test(rest) ? `~${rest}` : path;
+}
+
+export const isSchemaPath = (path: string) => /\.soca$/i.test(path);
+
+export function dropKind(paths: readonly string[]): "accept" | "reject" | null {
+  if (!paths.length) return null;
+  return paths.some((p) => isSchemaPath(p) || formatOf(p) !== null) ? "accept" : "reject";
 }
 
 export function stemOf(path: string): string {
@@ -117,14 +125,14 @@ export async function analyzeFiles(
     let content: string;
     try {
       content = await read(path);
-    } catch {
+    } catch (e) {
       files.push({
         path,
         name: stemOf(path),
         format,
         content: "",
         detected: null,
-        failure: { reason: "unreadable" },
+        failure: { reason: e === "too_large" ? "too_large" : "unreadable" },
       });
       continue;
     }

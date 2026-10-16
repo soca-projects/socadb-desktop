@@ -596,11 +596,18 @@
     "reason": {
       "unknown_format": "Ni SQL, ni DBML, ni JSON.",
       "unreadable": "Impossible de lire ce fichier.",
+      "too_large": "Trop volumineux pour être importé (plus de 200 Mo).",
       "not_schema": "Pas un schéma SocaDB.",
       "dbml_syntax": "DBML non valide.",
       "sql_failed": "Ce SQL n'a pas pu être lu.",
       "no_tables": "Aucune table trouvée.",
       "write_failed": "Impossible d'écrire le fichier .soca."
     }
+  },
+  "drop": {
+    "accept": "Déposez vos fichiers pour les importer",
+    "acceptHint": "Un schéma .soca par fichier SQL, DBML ou JSON. Les fichiers .soca s'ajoutent à l'accueil.",
+    "reject": "Aucun de ces fichiers ne peut être importé",
+    "rejectHint": "SocaDB lit les fichiers .sql, .dbml, .json et .soca."
   }
 }
