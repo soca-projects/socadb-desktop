@@ -42,6 +42,11 @@ export interface TableDraft {
   // PRIMARY KEY (y, x) can list columns out of table order, and REFERENCES
   // without columns follows that order.
   primaryKey: string[];
+  primaryKeyName?: string;
+  uniqueByKey?: string;
+  keyMayBeDropped?: boolean;
+  droppedKey?: string[];
+  uniqueIndexes?: { name: string; columnIds: string[]; index?: TableIndex }[];
   // Per table, so a dropped or ignored table takes its issues with it.
   issues: ImportIssue[];
 }
@@ -124,32 +129,70 @@ function columnsNamed(table: Table, names: string[]): Column[] {
   return names.map((n) => findColumn(table, n)).filter((c): c is Column => !!c);
 }
 
-function setPrimaryKey(draft: TableDraft, names: string[]) {
-  const columns = columnsNamed(draft.table, names);
-  draft.primaryKey = columns.map((c) => c.id);
+// No database accepts a second primary key: one more ADD PRIMARY KEY comes from
+// tools that write a composite key one column at a time, unless a change the
+// parser doesn't follow dropped the first one.
+export function setPrimaryKey(
+  draft: TableDraft,
+  names: string[],
+  name: string | undefined,
+) {
+  if (draft.keyMayBeDropped) dropPrimaryKey(draft);
+  delete draft.droppedKey;
+  const added = columnsNamed(draft.table, names).map((c) => c.id);
+  draft.primaryKey = [...new Set([...draft.primaryKey, ...added])];
+  if (name) draft.primaryKeyName = name;
+  const columns = draft.table.columns.filter((c) => draft.primaryKey.includes(c.id));
   for (const col of columns) {
     col.isPrimaryKey = true;
     col.isNullable = false;
-    // A composite key doesn't make each of its columns unique.
-    if (columns.length === 1) col.isUnique = true;
+  }
+  if (columns.length === 1 && !columns[0].isUnique) {
+    columns[0].isUnique = true;
+    draft.uniqueByKey = columns[0].id;
+  } else if (columns.length > 1) {
+    const unique = columns.find((c) => c.id === draft.uniqueByKey);
+    if (unique) unique.isUnique = false;
+    delete draft.uniqueByKey;
   }
 }
 
+export function dropPrimaryKey(draft: TableDraft) {
+  for (const col of draft.table.columns) {
+    if (!col.isPrimaryKey) continue;
+    col.isPrimaryKey = false;
+    if (col.id === draft.uniqueByKey) col.isUnique = false;
+  }
+  if (draft.primaryKey.length) draft.droppedKey = draft.primaryKey;
+  draft.primaryKey = [];
+  delete draft.primaryKeyName;
+  delete draft.uniqueByKey;
+  delete draft.keyMayBeDropped;
+}
+
+export function markUnique(draft: TableDraft, column: Column) {
+  column.isUnique = true;
+  if (draft.uniqueByKey === column.id) delete draft.uniqueByKey;
+}
+
 function addIndex(
-  table: Table,
+  draft: TableDraft,
   names: string[],
   unique: boolean,
   name: string | undefined,
 ) {
+  const table = draft.table;
   const columns = columnsNamed(table, names);
   if (!columns.length) return;
-  if (unique && columns.length === 1) {
-    columns[0].isUnique = true;
-    return;
+  const columnIds = columns.map((c) => c.id);
+  let index: TableIndex | undefined;
+  if (unique && columns.length === 1) markUnique(draft, columns[0]);
+  else {
+    index = { id: genId(), columnIds, unique };
+    if (name) index.name = name;
+    table.indexes = [...(table.indexes ?? []), index];
   }
-  const index: TableIndex = { id: genId(), columnIds: columns.map((c) => c.id), unique };
-  if (name) index.name = name;
-  table.indexes = [...(table.indexes ?? []), index];
+  if (unique && name) (draft.uniqueIndexes ??= []).push({ name, columnIds, index });
 }
 
 export function applyKeyDef(
@@ -167,8 +210,8 @@ export function applyKeyDef(
     });
     return;
   }
-  if (key.kind === "primary") setPrimaryKey(draft, key.names);
-  else addIndex(draft.table, key.names, key.kind === "unique", name);
+  if (key.kind === "primary") setPrimaryKey(draft, key.names, name);
+  else addIndex(draft, key.names, key.kind === "unique", name);
 }
 
 function addReference(
@@ -200,11 +243,13 @@ function copyColumns(draft: TableDraft, source: TableDraft | undefined, options:
   const including = (what: string) =>
     new RegExp(`\\bINCLUDING\\s+(?:ALL|${what})\\b`, "i").test(options);
   for (const col of source.table.columns) {
-    const copy: Column = { ...col, id: genId(), isForeignKey: false };
-    if (!including("INDEXES")) {
-      copy.isPrimaryKey = false;
-      copy.isUnique = false;
-    }
+    const copy: Column = {
+      ...col,
+      id: genId(),
+      isForeignKey: false,
+      isPrimaryKey: false,
+    };
+    if (!including("INDEXES") || col.id === source.uniqueByKey) copy.isUnique = false;
     if (!including("DEFAULTS")) {
       copy.defaultValue = null;
       delete copy.defaultKind;
@@ -212,6 +257,24 @@ function copyColumns(draft: TableDraft, source: TableDraft | undefined, options:
     if (!including("COMMENTS")) delete copy.note;
     draft.table.columns.push(copy);
   }
+  if (!including("INDEXES")) return;
+  const key = namesOf(source.table, source.primaryKey);
+  if (key.length) setPrimaryKey(draft, key, undefined);
+}
+
+function namesOf(table: Table, ids: string[]): string[] {
+  return ids.flatMap((id) => table.columns.find((c) => c.id === id)?.name ?? []);
+}
+
+function usingIndex(draft: TableDraft, name: string): string[] {
+  const found = draft.uniqueIndexes?.filter((u) => sameName(u.name, name)).pop();
+  if (!found) return [];
+  const table = draft.table;
+  if (found.index) table.indexes = table.indexes?.filter((i) => i !== found.index);
+  else
+    for (const col of table.columns)
+      if (found.columnIds.includes(col.id)) col.isUnique = false;
+  return namesOf(table, found.columnIds);
 }
 
 export function applyTableElement(draft: TableDraft, def: string, ctx: Ctx) {
@@ -226,6 +289,15 @@ export function applyTableElement(draft: TableDraft, def: string, ctx: Ctx) {
     }
   }
 
+  const using = /^(PRIMARY\s+KEY|UNIQUE)\s+USING\s+INDEX\s+/i.exec(text);
+  if (using) {
+    const index = readName(text.slice(using[0].length));
+    if (!index || /^UNIQUE/i.test(using[1])) return;
+    const found = usingIndex(draft, index.last);
+    const key = found.length ? found : namesOf(draft.table, draft.droppedKey ?? []);
+    if (key.length) setPrimaryKey(draft, key, constraintName ?? index.last);
+    return;
+  }
   const key = readKeyDef(text, ctx);
   if (key) {
     applyKeyDef(draft, key, constraintName ?? key.name, ctx);
@@ -258,6 +330,7 @@ export function applyTableElement(draft: TableDraft, def: string, ctx: Ctx) {
   if (!parsed || findColumn(draft.table, parsed.column.name)) return;
   ctx.issues.push(...scratch.issues);
   draft.table.columns.push(parsed.column);
+  if (parsed.column.isPrimaryKey) setPrimaryKey(draft, [parsed.column.name], undefined);
   if (parsed.references)
     addReference(draft, [parsed.column.name], parsed.references, ctx);
 }
