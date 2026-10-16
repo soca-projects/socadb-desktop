@@ -11,15 +11,16 @@ import { MysqlIcon } from "../../assets/icons/MysqlIcon";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
-import { useSchemaStore, createEmptySchema } from "../../stores/schemaStore";
-import { useViewStore } from "../../stores/viewStore";
+import { useSchemaStore } from "../../stores/schemaStore";
 import { parseSqlDdl, adaptColumnsToDbType } from "../../utils/importSql";
 import { parseJsonSchema } from "../../utils/importJson";
 import { parseDbmlSchema } from "../../utils/importDbml";
-import { getNextTableColor } from "../../utils/tableColors";
-import { handleAutoLayout } from "../../utils/schemaActions";
 import { logError, logInfo, logWarn } from "../../utils/log";
-import { describeImportIssues } from "../../utils/importReport";
+import {
+  mergeImport,
+  replaceWithImport,
+  showImportSummary,
+} from "../../utils/importApply";
 import type { ImportIssue } from "../../utils/sqlColumns";
 import type { DbType, Table, Relation, SchemaEnum } from "../../types/schema";
 
@@ -34,14 +35,6 @@ interface ConflictState {
   currentDbType: DbType;
   skipped: number;
   issues: ImportIssue[];
-}
-
-interface ImportSummary {
-  tables: number;
-  relations: number;
-  skipped: number;
-  adapted?: number;
-  issues: readonly ImportIssue[];
 }
 
 interface ImportModalProps {
@@ -59,61 +52,6 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
   const [format, setFormat] = useState<ImportFormat>("sql");
   const [mode, setMode] = useState<ImportMode>("replace");
   const [conflict, setConflict] = useState<ConflictState | null>(null);
-
-  const showImportSummary = ({
-    tables,
-    relations,
-    skipped,
-    adapted = 0,
-    issues,
-  }: ImportSummary) => {
-    let text = t("toast.importComplete", { count: tables });
-    if (relations > 0) {
-      text += t("toast.importRelations", { count: relations });
-    }
-    text += ".";
-    if (skipped > 0) {
-      text += " " + t("toast.importSkipped", { count: skipped });
-    }
-    if (adapted > 0) {
-      text += " " + t("toast.importAdapted", { count: adapted });
-    }
-    if (issues.length > 0) {
-      toast.warning(text, {
-        description: describeImportIssues(issues),
-        duration: 10_000,
-      });
-    } else {
-      toast.success(text);
-    }
-  };
-
-  const assignColors = (tables: Table[]): Table[] => {
-    const colored: Table[] = [];
-    for (const table of tables) {
-      const color = table.color ?? getNextTableColor(colored);
-      colored.push({ ...table, color });
-    }
-    return colored;
-  };
-
-  const replaceSchema = (
-    tables: Table[],
-    relations: Relation[],
-    enums: SchemaEnum[],
-    dbType: DbType,
-    name: string,
-  ) => {
-    const store = useSchemaStore.getState();
-    const schema = createEmptySchema(name, dbType);
-    schema.tables = assignColors(tables);
-    schema.relations = relations;
-    if (enums.length) schema.enums = enums;
-    store.setSchema(schema);
-    store.setFilePath(null);
-    useViewStore.getState().showEditor();
-    void handleAutoLayout();
-  };
 
   const handleImport = async () => {
     try {
@@ -156,7 +94,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       const skipped = attempted - tables.length;
 
       if (fromHome || mode === "replace") {
-        replaceSchema(
+        replaceWithImport(
           tables,
           relations,
           enums,
@@ -179,7 +117,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
           return;
         }
 
-        mergeIntoSchema(tables, relations, enums);
+        mergeImport(tables, relations, enums);
       }
 
       logInfo("import.done", "Import done", {
@@ -205,39 +143,9 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
     }
   };
 
-  const mergeIntoSchema = (
-    tables: Table[],
-    relations: Relation[],
-    enums: SchemaEnum[],
-  ) => {
-    const store = useSchemaStore.getState();
-    const existingNames = new Set(store.schema.tables.map((t) => t.name.toLowerCase()));
-    const allTables = [...store.schema.tables];
-
-    const renamedTables = tables.map((table) => {
-      let name = table.name;
-      if (existingNames.has(name.toLowerCase())) {
-        let counter = 2;
-        while (existingNames.has(`${table.name.toLowerCase()}_${counter}`)) {
-          counter++;
-        }
-        name = `${table.name}_${counter}`;
-      }
-      existingNames.add(name.toLowerCase());
-
-      const color = table.color ?? getNextTableColor(allTables);
-      const result = { ...table, name, color };
-      allTables.push(result);
-      return result;
-    });
-
-    store.importTables(renamedTables, relations, enums);
-    void handleAutoLayout();
-  };
-
   const handleConflictReplace = () => {
     if (!conflict) return;
-    replaceSchema(
+    replaceWithImport(
       conflict.tables,
       conflict.relations,
       conflict.enums,
@@ -259,7 +167,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       conflict.tables,
       conflict.currentDbType,
     );
-    mergeIntoSchema(adapted, conflict.relations, conflict.enums);
+    mergeImport(adapted, conflict.relations, conflict.enums);
     showImportSummary({
       tables: conflict.tables.length,
       relations: conflict.relations.length,

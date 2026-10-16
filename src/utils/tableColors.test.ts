@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  colorTables,
   normalizeTableColor,
   getNextTableColor,
   getColorVariants,
@@ -56,5 +57,18 @@ describe("getColorVariants", () => {
   it("normalizes legacy color names", () => {
     const variants = getColorVariants("rose");
     expect(variants.dot).toBe("#E11D48");
+  });
+});
+
+describe("colorTables", () => {
+  it("keeps a table's color and gives the others free ones", () => {
+    const [a, b] = colorTables([makeTable("#3498DB"), makeTable()]);
+    expect(a.color).toBe("#3498DB");
+    expect(b.color).toBe(PRESET_COLORS[0]);
+  });
+
+  it("avoids colors already used in the schema", () => {
+    const [b] = colorTables([makeTable()], [makeTable(PRESET_COLORS[0])]);
+    expect(b.color).toBe(PRESET_COLORS[1]);
   });
 });

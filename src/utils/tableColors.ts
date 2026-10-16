@@ -88,3 +88,12 @@ export function getNextTableColor(existingTables: Table[]): string {
 
   return PRESET_COLORS[existingTables.length % PRESET_COLORS.length];
 }
+
+export function colorTables(tables: Table[], existing: Table[] = []): Table[] {
+  const colored: Table[] = [];
+  for (const table of tables) {
+    const color = table.color ?? getNextTableColor([...existing, ...colored]);
+    colored.push({ ...table, color });
+  }
+  return colored;
+}
