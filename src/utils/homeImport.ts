@@ -2,7 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { dirname, homeDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import i18next from "../i18n";
@@ -12,7 +11,10 @@ import type { DbType } from "../types/schema";
 import { replaceWithImport, showImportSummary } from "./importApply";
 import {
   analyzeFiles,
+  dropKind,
   FolderRefusedError,
+  formatOf,
+  isSchemaPath,
   parseSource,
   planDialects,
   runImportBatch,
@@ -21,6 +23,8 @@ import type { BatchFile, FileOutcome } from "./importFiles";
 import { logError, logInfo, logWarn } from "./log";
 import { addRecentFile } from "./recentFiles";
 import { isWorthResuming } from "./schemaQueries";
+
+const readImportFile = (path: string) => invoke<string>("read_import_file", { path });
 
 const filters = () => [
   { name: i18next.t("import.schemaFiles"), extensions: ["sql", "dbml", "json"] },
@@ -42,20 +46,45 @@ function logFailure(file: BatchFile) {
 const BUSY = new Set(["asking", "preparing", "running", "folder_refused"]);
 let starting = false;
 
-export async function importFromHome() {
-  if (starting || BUSY.has(useImportFlowStore.getState().phase)) return;
+const importBusy = () => starting || BUSY.has(useImportFlowStore.getState().phase);
+
+export const dropHint = (paths: readonly string[]) =>
+  importBusy() ? null : dropKind(paths);
+
+async function guarded(run: () => Promise<void>) {
+  if (importBusy()) return;
   starting = true;
   try {
-    await startImport();
+    await run();
   } finally {
     starting = false;
   }
 }
 
-async function startImport() {
-  resetImportFlow();
-  const picked = await open({ multiple: true, directory: false, filters: filters() });
-  if (!picked?.length) return;
+export async function importFromHome() {
+  await guarded(async () => {
+    resetImportFlow();
+    const picked = await open({ multiple: true, directory: false, filters: filters() });
+    if (picked?.length) await importPaths(picked);
+  });
+}
+
+export async function importDropped(paths: readonly string[]) {
+  try {
+    await guarded(async () => {
+      for (const path of paths.filter(isSchemaPath)) addRecentFile(path);
+      const files = paths.filter((path) => formatOf(path) !== null);
+      if (!files.length) return;
+      resetImportFlow();
+      await importPaths(files);
+    });
+  } catch (e) {
+    logError("import.failed", e, { format: "drop" });
+    toast.error(i18next.t("toast.importFailed", { error: String(e) }));
+  }
+}
+
+async function importPaths(picked: readonly string[]) {
   if (picked.length === 1) {
     if (draftIsDirty()) void emit("unsaved-guard-import-file", picked[0]);
     else await importDraft(picked[0]);
@@ -66,7 +95,7 @@ async function startImport() {
     homeDir().catch(() => null),
   ]);
   const [folder] = dirs;
-  const files = await analyzeFiles(picked, readTextFile);
+  const files = await analyzeFiles(picked, readImportFile);
   files.forEach(logFailure);
   const plan = planDialects(files);
   const outcomes: Record<string, FileOutcome> = {};
@@ -135,7 +164,7 @@ export async function importDraft(path: string) {
 }
 
 async function askOrFinishDraft(path: string) {
-  const files = await analyzeFiles([path], readTextFile);
+  const files = await analyzeFiles([path], readImportFile);
   const [file] = files;
   if (file.failure) {
     const format = file.format ?? "unknown";

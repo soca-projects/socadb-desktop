@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
-vi.mock("@tauri-apps/plugin-fs", () => ({ readTextFile: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ emit: vi.fn(() => Promise.resolve()) }));
 vi.mock("@tauri-apps/api/path", () => ({
@@ -20,7 +19,6 @@ vi.mock("./importApply", () => ({
 vi.mock("./autoLayout", () => ({ computeAutoLayout: vi.fn(() => Promise.resolve({})) }));
 
 import { open } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { dirname } from "@tauri-apps/api/path";
@@ -33,6 +31,8 @@ import {
   changeFolder,
   chooseAnotherFolder,
   importDraft,
+  dropHint,
+  importDropped,
   importFromHome,
 } from "./homeImport";
 import type { BatchFile } from "./importFiles";
@@ -56,13 +56,14 @@ beforeEach(() => {
     filePath: null,
     savedAt: null,
   });
-  vi.mocked(readTextFile).mockResolvedValue(SQL);
   vi.mocked(dirname).mockImplementation((p) =>
     Promise.resolve(p.slice(0, p.lastIndexOf("/"))),
   );
-  vi.mocked(invoke).mockImplementation((_cmd, args) =>
-    Promise.resolve(`/out/${String((args as { name: string }).name)}.soca`),
-  );
+  vi.mocked(invoke).mockImplementation((cmd, args) => {
+    if (cmd === "read_import_file") return Promise.resolve(SQL);
+    if (cmd === "probe_schema_folder") return Promise.resolve();
+    return Promise.resolve(`/out/${String((args as { name: string }).name)}.soca`);
+  });
 });
 
 describe("importFromHome", () => {
@@ -123,7 +124,7 @@ describe("importFromHome", () => {
     vi.mocked(invoke).mockImplementation((cmd) =>
       cmd === "probe_schema_folder"
         ? Promise.reject("folder_refused")
-        : Promise.resolve("/out/x.soca"),
+        : Promise.resolve(cmd === "read_import_file" ? SQL : "/out/x.soca"),
     );
     await importFromHome();
     await vi.waitFor(() =>
@@ -146,6 +147,48 @@ describe("importFromHome", () => {
     vi.mocked(open).mockResolvedValue(null);
     await importFromHome();
     expect(useImportFlowStore.getState()).toMatchObject({ phase: "idle", files: [] });
+  });
+});
+
+describe("dropHint", () => {
+  it("shows nothing while an import already fills the window", () => {
+    expect(dropHint(["/in/a.sql"])).toBe("accept");
+    useImportFlowStore.setState({ phase: "preparing" });
+    expect(dropHint(["/in/a.sql"])).toBeNull();
+  });
+});
+
+describe("importDropped", () => {
+  it("adds dropped .soca files to the home and prepares the others", async () => {
+    await importDropped(["/in/shop.soca", "/in/a.sql", "/in/photo.png", "/in/b.sql"]);
+    expect(addRecentFile).toHaveBeenCalledWith("/in/shop.soca");
+    expect(open).not.toHaveBeenCalled();
+    expect(useImportFlowStore.getState()).toMatchObject({
+      phase: "preparing",
+      files: [
+        expect.objectContaining({ path: "/in/a.sql" }),
+        expect.objectContaining({ path: "/in/b.sql" }),
+      ],
+    });
+  });
+
+  it("reads one dropped file like one picked file", async () => {
+    await importDropped(["/in/a.sql"]);
+    expect(invoke).toHaveBeenCalledWith("read_import_file", { path: "/in/a.sql" });
+    expect(replaceWithImport).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing with files SocaDB can't read", async () => {
+    await importDropped(["/in/photo.png"]);
+    expect(addRecentFile).not.toHaveBeenCalled();
+    expect(useImportFlowStore.getState().phase).toBe("idle");
+  });
+
+  it("leaves a batch under way alone", async () => {
+    useImportFlowStore.setState({ mode: "batch", phase: "running", folder: "/out" });
+    await importDropped(["/in/shop.soca", "/in/a.sql"]);
+    expect(addRecentFile).not.toHaveBeenCalled();
+    expect(useImportFlowStore.getState().phase).toBe("running");
   });
 });
 
@@ -224,7 +267,7 @@ describe("importDraft", () => {
   it("leaves a batch under way alone", async () => {
     useImportFlowStore.setState({ mode: "batch", phase: "preparing", folder: "/in" });
     await importDraft("/in/a.sql");
-    expect(readTextFile).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalledWith("read_import_file", expect.anything());
     expect(useImportFlowStore.getState()).toMatchObject({ mode: "batch", folder: "/in" });
   });
 });

@@ -15,6 +15,11 @@ export function useUnsavedChangesGuard() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const recentPathRef = useRef<string | null>(null);
   const importPathRef = useRef<string | null>(null);
+  const pendingRef = useRef<PendingAction>(null);
+
+  useEffect(() => {
+    pendingRef.current = pendingAction;
+  }, [pendingAction]);
 
   useEffect(() => {
     const unlistens = [
@@ -22,6 +27,7 @@ export function useUnsavedChangesGuard() {
       listen("unsaved-guard-open", () => setPendingAction("open")),
       listen("unsaved-guard-close", () => setPendingAction("close")),
       listen<string>("unsaved-guard-import-file", (event) => {
+        if (pendingRef.current) return;
         importPathRef.current = event.payload;
         setPendingAction("import-file");
       }),

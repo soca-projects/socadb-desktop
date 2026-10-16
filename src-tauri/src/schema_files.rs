@@ -217,6 +217,39 @@ fn write_reserved(target: &Path, content: &str) -> Result<(), String> {
     Err("exists".into())
 }
 
+const IMPORT_EXTENSIONS: [&str; 3] = ["sql", "dbml", "json"];
+const MAX_IMPORT_BYTES: u64 = 200 * 1024 * 1024;
+
+fn read_import_within(path: &Path, limit: u64) -> Result<String, String> {
+    let target = path.canonicalize().map_err(read_error)?;
+    let supported = target
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| {
+            IMPORT_EXTENSIONS
+                .iter()
+                .any(|e| ext.eq_ignore_ascii_case(e))
+        });
+    if !supported {
+        return Err("unsupported".into());
+    }
+    if std::fs::metadata(&target).map_err(read_error)?.len() > limit {
+        return Err("too_large".into());
+    }
+    let bytes = std::fs::read(&target).map_err(read_error)?;
+    let text = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+    Ok(String::from_utf8_lossy(text).into_owned())
+}
+
+fn read_import(path: &Path) -> Result<String, String> {
+    read_import_within(path, MAX_IMPORT_BYTES)
+}
+
+#[tauri::command(async)]
+pub fn read_import_file(path: String) -> Result<String, String> {
+    read_import(Path::new(&path))
+}
+
 fn takes_files(dir: &Path) -> Result<(), String> {
     match std::fs::metadata(dir) {
         Ok(meta) if meta.is_dir() => Ok(()),
@@ -377,6 +410,62 @@ mod tests {
         let dir = temp_dir("create-long");
         let long = "x".repeat(300);
         assert_eq!(create_file(&dir, &long, "x").unwrap_err(), "invalid_name");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn import_files_are_read_by_extension_only() {
+        let dir = temp_dir("read-import");
+        for name in ["a.sql", "b.DBML", "c.json", "d.txt", "e.soca"] {
+            std::fs::write(dir.join(name), name).unwrap();
+        }
+        let read = |name: &str| read_import(&dir.join(name));
+        assert_eq!(read("a.sql").unwrap(), "a.sql");
+        assert_eq!(read("b.DBML").unwrap(), "b.DBML");
+        assert_eq!(read("c.json").unwrap(), "c.json");
+        assert_eq!(read("d.txt").unwrap_err(), "unsupported");
+        assert_eq!(read("e.soca").unwrap_err(), "unsupported");
+        assert_eq!(read("gone.sql").unwrap_err(), "not_found");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn import_files_decode_like_a_browser() {
+        let dir = temp_dir("read-decode");
+        std::fs::write(dir.join("bom.json"), b"\xEF\xBB\xBF{}").unwrap();
+        std::fs::write(
+            dir.join("latin1.sql"),
+            b"-- caf\xE9\nCREATE TABLE t (id INT);",
+        )
+        .unwrap();
+        assert_eq!(read_import(&dir.join("bom.json")).unwrap(), "{}");
+        let sql = read_import(&dir.join("latin1.sql")).unwrap();
+        assert!(sql.contains("caf\u{FFFD}") && sql.ends_with("CREATE TABLE t (id INT);"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn import_files_over_the_limit_are_refused() {
+        let dir = temp_dir("read-limit");
+        std::fs::write(dir.join("big.sql"), "x".repeat(20)).unwrap();
+        assert_eq!(
+            read_import_within(&dir.join("big.sql"), 10).unwrap_err(),
+            "too_large"
+        );
+        assert_eq!(
+            read_import_within(&dir.join("big.sql"), 20).unwrap().len(),
+            20
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn import_files_check_the_extension_of_the_link_target() {
+        let dir = temp_dir("read-link");
+        std::fs::write(dir.join("secret"), "key").unwrap();
+        std::os::unix::fs::symlink(dir.join("secret"), dir.join("x.json")).unwrap();
+        assert_eq!(read_import(&dir.join("x.json")).unwrap_err(), "unsupported");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
