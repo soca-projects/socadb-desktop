@@ -23,13 +23,16 @@ import {
   applyKeyDef,
   applyTableElement,
   draftCtx,
+  dropPrimaryKey,
   findColumn,
   findDraft,
   findTable,
   finishIndexes,
+  markUnique,
   newCtx,
   parseTable,
   pick,
+  setPrimaryKey,
 } from "./sqlTables";
 import type { Ctx, KeyDef, PendingFk, TableDraft } from "./sqlTables";
 
@@ -216,6 +219,10 @@ function replaceColumn(draft: TableDraft, def: string, renames: boolean, ctx: Ct
     isUnique: old.isUnique || parsed.column.isUnique,
     isNullable: parsed.column.isNullable && !old.isPrimaryKey,
   };
+  const column = draft.table.columns[index];
+  if (parsed.column.isUnique) markUnique(draft, column);
+  if (parsed.column.isPrimaryKey && !old.isPrimaryKey)
+    setPrimaryKey(draft, [column.name], undefined);
   if (oldName && !sameName(oldName, parsed.column.name))
     renameInForeignKeys(ctx, draft, oldName, parsed.column.name);
 }
@@ -233,16 +240,49 @@ function renameInForeignKeys(ctx: Ctx, draft: TableDraft, from: string, to: stri
   }
 }
 
+const PRIMARY_KEY_DROP =
+  /^DROP\s+(?:PRIMARY\s+KEY|(?:INDEX|KEY|CONSTRAINT)\s+[`"]?PRIMARY\b)/i;
+
+function applyDropIndex(statement: string, ctx: Ctx) {
+  const head = /^DROP\s+INDEX\s+[`"]?PRIMARY[`"]?\s+ON\s+/i.exec(statement);
+  const name = head && readName(statement.slice(head[0].length));
+  const draft = name && findTable(ctx, name);
+  if (draft) dropPrimaryKey(draft);
+}
+
 function applyAlterTable(statement: string, ctx: Ctx) {
   const head = /^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?/i.exec(statement);
   const name = head && readName(statement.slice(head[0].length));
   const draft = name && findTable(ctx, name);
   if (!head || !name || !draft) return;
   const actions = statement.slice(head[0].length + name.length);
-  for (const action of splitTopLevel(actions, ",", ctx.dialect)) {
+  const parts = splitTopLevel(actions, ",", ctx.dialect);
+  const drops = parts.filter((a) => /^DROP\b/i.test(a));
+  for (const action of [...drops, ...parts.filter((a) => !drops.includes(a))]) {
     const add = /^ADD\s+/i.exec(action);
     if (add) {
       applyTableElement(draft, action.slice(add[0].length), draftCtx(ctx, draft));
+      continue;
+    }
+    const drop = /^DROP\s+CONSTRAINT\s+(?:IF\s+EXISTS\s+)?/i.exec(action);
+    const dropped = drop && readName(action.slice(drop[0].length));
+    const keyName = draft.primaryKeyName ?? `${draft.table.name}_pkey`;
+    if (PRIMARY_KEY_DROP.test(action) || (dropped && sameName(dropped.last, keyName))) {
+      dropPrimaryKey(draft);
+      continue;
+    }
+    const rename = /^RENAME\s+CONSTRAINT\s+/i.exec(action);
+    if (rename) {
+      const from = readName(action.slice(rename[0].length));
+      const rest = from && action.slice(rename[0].length + from.length);
+      const to = rest && /^\s+TO\s+/i.exec(rest);
+      const renamed = to && readName(rest.slice(to[0].length));
+      if (from && renamed && sameName(from.last, keyName))
+        draft.primaryKeyName = renamed.last;
+      continue;
+    }
+    if (/^DROP\b/i.test(action)) {
+      draft.keyMayBeDropped = true;
       continue;
     }
     const redefine = /^(MODIFY|CHANGE)\s+(?:COLUMN\s+)?/i.exec(action);
@@ -418,6 +458,7 @@ export function parseStatements(statements: string[], dialect: DbType | null): P
     } else if (/^DROP\s+TABLE\b/i.test(statement)) dropTables(statement, ctx);
     else if (/^ALTER\s+TABLE\b/i.test(statement)) applyAlterTable(statement, ctx);
     else if (CREATE_INDEX.test(statement)) applyCreateIndex(statement, ctx);
+    else if (/^DROP\s+INDEX\b/i.test(statement)) applyDropIndex(statement, ctx);
     else if (/^COMMENT\s+ON\b/i.test(statement)) applyCommentOn(statement, ctx);
   }
   const tables = ctx.drafts.map((d) => d.table);

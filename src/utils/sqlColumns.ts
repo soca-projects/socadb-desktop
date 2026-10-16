@@ -261,7 +261,7 @@ export function parseColumn(
       k++;
     } else if (t === "PRIMARY" || t === "UNIQUE") {
       if (t === "PRIMARY") column.isPrimaryKey = true;
-      column.isUnique = true;
+      else column.isUnique = true;
       k += next === "KEY" ? 2 : 1;
     } else if (t === "REFERENCES") {
       references = readReference(rest.slice(tokens[k].start), ctx);

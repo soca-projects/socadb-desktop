@@ -249,6 +249,336 @@ describe("ALTER TABLE", () => {
     ]);
   });
 
+  it("builds one composite key from a primary key added column by column", () => {
+    const result = parse(
+      null,
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts ADD PRIMARY KEY (user_id)",
+      "ALTER TABLE posts ADD FOREIGN KEY (user_id) REFERENCES users(id)",
+    );
+    const [id, userId] = posts(result).columns;
+    expect([id, userId].map((c) => [c.isPrimaryKey, c.isUnique])).toEqual([
+      [true, false],
+      [true, false],
+    ]);
+    expect(result.relations[0].type).toBe("N:1");
+  });
+
+  it("keeps a column declared unique when the key grows around it", () => {
+    const result = parse(
+      null,
+      "ALTER TABLE posts ADD UNIQUE (id)",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts ADD PRIMARY KEY (user_id)",
+    );
+    expect(posts(result).columns[0]).toMatchObject({
+      isPrimaryKey: true,
+      isUnique: true,
+    });
+  });
+
+  it("replaces a dropped primary key", () => {
+    const result = parse(
+      "mysql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts DROP PRIMARY KEY, ADD PRIMARY KEY (user_id, title)",
+    );
+    const [id, userId, title] = posts(result).columns;
+    expect(id).toMatchObject({ isPrimaryKey: false, isUnique: false });
+    expect([userId.isPrimaryKey, title.isPrimaryKey, userId.isUnique]).toEqual([
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("drops a primary key by its constraint name", () => {
+    const named = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD CONSTRAINT posts_id_key PRIMARY KEY (id)",
+      "ALTER TABLE posts DROP CONSTRAINT posts_id_key",
+    );
+    const unnamed = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts DROP CONSTRAINT posts_pkey",
+    );
+    const renamed = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts RENAME CONSTRAINT posts_pkey TO posts_old_pkey",
+      "ALTER TABLE posts DROP CONSTRAINT posts_old_pkey",
+    );
+    for (const result of [named, unnamed, renamed])
+      expect(posts(result).columns[0]).toMatchObject({
+        isPrimaryKey: false,
+        isUnique: false,
+      });
+  });
+
+  it("goes back to adding columns to the key once it was dropped", () => {
+    const result = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts DROP COLUMN body",
+      "ALTER TABLE posts DROP CONSTRAINT posts_pkey",
+      "ALTER TABLE posts ADD PRIMARY KEY (user_id)",
+      "ALTER TABLE posts ADD PRIMARY KEY (title)",
+    );
+    const [, userId, title] = posts(result).columns;
+    expect([userId.isPrimaryKey, title.isPrimaryKey, userId.isUnique]).toEqual([
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("swaps the key for a unique index with USING INDEX", () => {
+    const composite = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "CREATE UNIQUE INDEX CONCURRENTLY posts_new_pkey ON posts (user_id, id)",
+      "ALTER TABLE posts DROP CONSTRAINT posts_pkey, ADD CONSTRAINT posts_pkey PRIMARY KEY USING INDEX posts_new_pkey",
+      "ALTER TABLE users ADD FOREIGN KEY (id) REFERENCES posts",
+    );
+    const single = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "CREATE UNIQUE INDEX posts_title_key ON posts (title)",
+      "ALTER TABLE posts DROP CONSTRAINT posts_pkey, ADD PRIMARY KEY USING INDEX posts_title_key",
+      "ALTER TABLE posts DROP CONSTRAINT posts_title_key",
+    );
+    const [id, userId] = posts(composite).columns;
+    expect([id.isPrimaryKey, userId.isPrimaryKey, id.isUnique]).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    expect(posts(composite).indexes ?? []).toEqual([]);
+    expect(composite.relations[0].to.columnId).toBe(userId.id);
+    expect(posts(single).columns[2]).toMatchObject({
+      isPrimaryKey: false,
+      isUnique: false,
+    });
+  });
+
+  it("takes the latest index of a reused name for USING INDEX", () => {
+    const single = parse(
+      "postgresql",
+      "CREATE UNIQUE INDEX posts_idx ON posts (title)",
+      "DROP INDEX posts_idx",
+      "CREATE UNIQUE INDEX posts_idx ON posts (user_id)",
+      "ALTER TABLE posts ADD CONSTRAINT posts_pkey PRIMARY KEY USING INDEX posts_idx",
+    );
+    const afterMultiColumn = parse(
+      "postgresql",
+      "CREATE INDEX posts_idx ON posts (title, body)",
+      "DROP INDEX posts_idx",
+      "CREATE UNIQUE INDEX posts_idx ON posts (user_id)",
+      "ALTER TABLE posts ADD PRIMARY KEY USING INDEX posts_idx",
+    );
+    for (const result of [single, afterMultiColumn])
+      expect(posts(result).columns.map((c) => c.isPrimaryKey)).toEqual([
+        false,
+        true,
+        false,
+        false,
+      ]);
+  });
+
+  it("keeps the old key when USING INDEX names an index it doesn't know", () => {
+    const result = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts DROP CONSTRAINT posts_pkey, ADD CONSTRAINT posts_pkey PRIMARY KEY USING INDEX posts_renamed_idx",
+      "ALTER TABLE users ADD FOREIGN KEY (id) REFERENCES posts",
+    );
+    expect(posts(result).columns[0]).toMatchObject({
+      isPrimaryKey: true,
+      isUnique: true,
+    });
+    expect(result.relations).toHaveLength(1);
+  });
+
+  it("drops before it adds within one ALTER TABLE", () => {
+    const result = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts ADD PRIMARY KEY (user_id), DROP CONSTRAINT posts_pkey",
+    );
+    const [id, userId] = posts(result).columns;
+    expect([id.isPrimaryKey, userId.isPrimaryKey, userId.isUnique]).toEqual([
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it("reads ADD UNIQUE USING INDEX as nothing new", () => {
+    const result = parse(
+      "postgresql",
+      "CREATE UNIQUE INDEX posts_title_key ON posts (title)",
+      "ALTER TABLE posts ADD UNIQUE USING INDEX posts_title_key",
+    );
+    expect(posts(result).columns.map((c) => c.name)).toEqual([
+      "id",
+      "user_id",
+      "title",
+      "body",
+    ]);
+    expect(posts(result).columns[2].isUnique).toBe(true);
+  });
+
+  it("copies a table's key with LIKE INCLUDING INDEXES", () => {
+    const { tables } = parseStatements(
+      [
+        "CREATE TABLE a (id INT PRIMARY KEY, x INT UNIQUE)",
+        "CREATE TABLE b (LIKE a INCLUDING ALL)",
+        "ALTER TABLE b DROP CONSTRAINT b_pkey",
+      ],
+      "postgresql",
+    );
+    expect(tables[1].columns.map((c) => [c.isPrimaryKey, c.isUnique])).toEqual([
+      [false, false],
+      [false, true],
+    ]);
+  });
+
+  it("keeps the key when another constraint is dropped", () => {
+    const result = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts DROP CONSTRAINT posts_title_key",
+    );
+    expect(posts(result).columns[0]).toMatchObject({
+      isPrimaryKey: true,
+      isUnique: true,
+    });
+  });
+
+  it("drops a primary key declared on its column", () => {
+    const { tables } = parseStatements(
+      ["CREATE TABLE t (i INT PRIMARY KEY)", "ALTER TABLE t DROP PRIMARY KEY"],
+      "mysql",
+    );
+    expect(tables[0].columns[0]).toMatchObject({ isPrimaryKey: false, isUnique: false });
+  });
+
+  it("keeps a uniqueness declared after the key when the key changes", () => {
+    const grown = parse(
+      null,
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts ADD UNIQUE (id)",
+      "ALTER TABLE posts ADD PRIMARY KEY (user_id)",
+    );
+    const dropped = parse(
+      "postgresql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "CREATE UNIQUE INDEX posts_id ON posts (id)",
+      "ALTER TABLE posts DROP CONSTRAINT posts_pkey",
+    );
+    const serial = parseStatements(
+      ["CREATE TABLE t (id SERIAL PRIMARY KEY)", "ALTER TABLE t DROP PRIMARY KEY"],
+      "mysql",
+    );
+    expect(posts(grown).columns[0].isUnique).toBe(true);
+    expect(posts(dropped).columns[0]).toMatchObject({
+      isPrimaryKey: false,
+      isUnique: true,
+    });
+    expect(serial.tables[0].columns[0].isUnique).toBe(true);
+  });
+
+  it("replaces the key after a change that may have dropped it", () => {
+    const afterDropColumn = parse(
+      "postgresql",
+      "ALTER TABLE users ADD PRIMARY KEY (id)",
+      "ALTER TABLE users DROP COLUMN id",
+      "ALTER TABLE users ADD PRIMARY KEY (email)",
+      "ALTER TABLE posts ADD FOREIGN KEY (user_id) REFERENCES users",
+    );
+    const afterRename = parse(
+      "postgresql",
+      "ALTER TABLE users ADD PRIMARY KEY (id)",
+      "ALTER TABLE users RENAME CONSTRAINT users_pkey TO users_old_pkey",
+      "ALTER TABLE users DROP CONSTRAINT users_old_pkey",
+      "ALTER TABLE users ADD PRIMARY KEY (email)",
+    );
+    for (const result of [afterDropColumn, afterRename]) {
+      const [id, email] = result.tables[0].columns;
+      expect([id.isPrimaryKey, id.isUnique, email.isPrimaryKey, email.isUnique]).toEqual([
+        false,
+        false,
+        true,
+        true,
+      ]);
+    }
+    expect(afterDropColumn.relations[0].to.columnId).toBe(
+      afterDropColumn.tables[0].columns[1].id,
+    );
+  });
+
+  it("drops a key removed as MySQL's PRIMARY index", () => {
+    const inAlter = parse(
+      "mysql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts DROP INDEX `PRIMARY`",
+    );
+    const asStatement = parse(
+      "mysql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "DROP INDEX `PRIMARY` ON posts",
+    );
+    const asConstraint = parse(
+      "mysql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts DROP CONSTRAINT `PRIMARY`",
+    );
+    for (const result of [inAlter, asStatement, asConstraint])
+      expect(posts(result).columns[0]).toMatchObject({
+        isPrimaryKey: false,
+        isUnique: false,
+      });
+  });
+
+  it("adds to a primary key declared on its column", () => {
+    const { tables, relations } = parseStatements(
+      [
+        "CREATE TABLE orders (id BIGINT PRIMARY KEY)",
+        "CREATE TABLE items (order_id BIGINT AUTO_INCREMENT PRIMARY KEY, product_id BIGINT)",
+        "ALTER TABLE items ADD PRIMARY KEY (product_id)",
+        "ALTER TABLE items ADD FOREIGN KEY (order_id) REFERENCES orders (id)",
+      ],
+      "mysql",
+    );
+    expect(tables[1].columns.map((c) => [c.isPrimaryKey, c.isUnique])).toEqual([
+      [true, false],
+      [true, false],
+    ]);
+    expect(relations[0].type).toBe("N:1");
+  });
+
+  it("makes a column unique when MODIFY declares it the primary key", () => {
+    const result = parse("mysql", "ALTER TABLE posts MODIFY id INT PRIMARY KEY");
+    expect(posts(result).columns[0]).toMatchObject({
+      isPrimaryKey: true,
+      isUnique: true,
+    });
+  });
+
+  it("keeps a column MODIFY declares unique when the key grows", () => {
+    const result = parse(
+      "mysql",
+      "ALTER TABLE posts ADD PRIMARY KEY (id)",
+      "ALTER TABLE posts MODIFY id INT UNIQUE",
+      "ALTER TABLE posts ADD PRIMARY KEY (user_id)",
+    );
+    expect(posts(result).columns[0]).toMatchObject({
+      isPrimaryKey: true,
+      isUnique: true,
+    });
+  });
+
   it("turns pg_dump's sequence and identity defaults into serial columns", () => {
     const result = parse(
       "postgresql",
