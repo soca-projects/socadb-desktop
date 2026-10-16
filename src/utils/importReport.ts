@@ -2,7 +2,7 @@ import i18next from "../i18n";
 import type { ImportIssue } from "./sqlColumns";
 import { summarizeIssues } from "./issueSummary";
 
-function describeImportIssue(issue: ImportIssue): string {
+export function describeImportIssue(issue: ImportIssue): string {
   switch (issue.kind) {
     case "typeGuessed":
       return i18next.t("importIssues.typeGuessed", {
