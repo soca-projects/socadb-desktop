@@ -2,13 +2,17 @@ import { describe, it, expect } from "vitest";
 import {
   analyzeFiles,
   buildSchema,
+  displayFolder,
+  fileNameOf,
   FolderRefusedError,
   formatOf,
   gridPositions,
   orderOutcomes,
   parseSource,
+  summarizeBatch,
   planDialects,
   runImportBatch,
+  safeStem,
   stemOf,
 } from "./importFiles";
 import type { BatchFile, BatchIO, FileOutcome } from "./importFiles";
@@ -41,6 +45,11 @@ describe("formatOf and stemOf", () => {
   it("names a file after its stem", () => {
     expect(stemOf("/a/shop.v2.dbml")).toBe("shop.v2");
     expect(stemOf("C:\\a\\shop.sql")).toBe("shop");
+  });
+
+  it("gives a file's or a folder's own name", () => {
+    expect(fileNameOf("/a/shop.v2.dbml")).toBe("shop.v2.dbml");
+    expect(fileNameOf("C:\\Users\\me\\Schémas\\")).toBe("Schémas");
   });
 });
 
@@ -295,5 +304,76 @@ describe("orderOutcomes", () => {
       "/f.sql",
       "/b.sql",
     ]);
+  });
+});
+
+describe("summarizeBatch", () => {
+  it("counts what the batch window shows", () => {
+    const files = [
+      file("/a.sql", "mysql"),
+      file("/b.sql", "mysql"),
+      file("/c.sql", "mysql"),
+      file("/d.sql", null, true),
+      file("/e.sql", "mysql"),
+    ];
+    const outcomes: Record<string, FileOutcome> = {
+      "/a.sql": {
+        status: "done",
+        savedAs: "/out/a.soca",
+        dbType: "mysql",
+        source: "detected",
+        tables: 1,
+        relations: 0,
+        issues: [],
+        layoutFailed: false,
+      },
+      "/b.sql": { status: "failed", reason: "write_failed" },
+      "/c.sql": { status: "pending" },
+      "/d.sql": { status: "failed", reason: "no_tables" },
+      "/e.sql": { status: "skipped" },
+    };
+    expect(summarizeBatch(files, outcomes)).toEqual({
+      importable: 4,
+      processed: 2,
+      created: 1,
+      notImported: 3,
+      pending: 1,
+    });
+  });
+});
+
+describe("safeStem", () => {
+  it("makes a file name every disk accepts", () => {
+    expect(safeStem(".hidden")).toBe("hidden");
+    expect(safeStem("a/b:c\\d")).toBe("a-b-c-d");
+    expect(safeStem("  ")).toBe("schema");
+    expect(safeStem("x".repeat(300))).toHaveLength(200);
+  });
+
+  it("is what the batch writes, while the schema keeps its name", async () => {
+    const { io, written } = fakeIO();
+    const [dotted] = await analyzeFiles(["/in/blog.sql"], read);
+    await runImportBatch(
+      [{ ...dotted, name: ".blog:v2" }],
+      "/out",
+      { "/in/blog.sql": { dbType: "mysql", source: "detected" } },
+      io,
+      { onOutcome: () => undefined, shouldStop: () => false },
+    );
+    const [path] = Object.keys(written);
+    expect(path).toBe("/out/blog-v2.soca");
+    expect(JSON.parse(written[path]).name).toBe(".blog:v2");
+  });
+});
+
+describe("displayFolder", () => {
+  it("shortens the home folder to ~", () => {
+    expect(displayFolder("/Users/me/socadb/import-test", "/Users/me")).toBe(
+      "~/socadb/import-test",
+    );
+    expect(displayFolder("/Users/me", "/Users/me/")).toBe("~");
+    expect(displayFolder("/Users/meg/x", "/Users/me")).toBe("/Users/meg/x");
+    expect(displayFolder("C:\\Users\\me\\Docs", "C:\\Users\\me")).toBe("~\\Docs");
+    expect(displayFolder("/Volumes/Archives", null)).toBe("/Volumes/Archives");
   });
 });

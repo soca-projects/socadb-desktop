@@ -16,6 +16,7 @@ export type FailReason =
   | "unreadable"
   | "not_schema"
   | "dbml_syntax"
+  | "sql_failed"
   | "no_tables"
   | "write_failed";
 
@@ -45,8 +46,35 @@ export function formatOf(path: string): ImportFormat | null {
   return ext === "sql" || ext === "dbml" || ext === "json" ? ext : null;
 }
 
+export function fileNameOf(path: string): string {
+  return path.split(/[/\\]/).filter(Boolean).pop() ?? path;
+}
+
+export function displayFolder(path: string, home: string | null): string {
+  const base = home?.replace(/[/\\]+$/, "");
+  if (!base) return path;
+  if (path.replace(/[/\\]+$/, "") === base) return "~";
+  const rest = path.slice(base.length);
+  return path.startsWith(base) && /^[/\\]/.test(rest) ? `~${rest}` : path;
+}
+
 export function stemOf(path: string): string {
-  return (path.split(/[/\\]/).pop() ?? path).replace(/\.[^.]+$/, "");
+  return fileNameOf(path).replace(/\.[^.]+$/, "");
+}
+
+export function safeStem(name: string): string {
+  const cleaned = name
+    .replace(/[/\\:]/g, "-")
+    .replace(/^[.\s]+/, "")
+    .trim()
+    .slice(0, 200);
+  return cleaned || "schema";
+}
+
+function failureOf(format: ImportFormat, e: unknown): Failure {
+  const message = e instanceof Error ? e.message : String(e);
+  if (format === "dbml") return { reason: "dbml_syntax", message };
+  return { reason: format === "sql" ? "sql_failed" : "not_schema" };
 }
 
 export function parseSource(
@@ -71,10 +99,7 @@ function analyzeOne(
     if (parsed.tables.length === 0) return { ...base, failure: { reason: "no_tables" } };
     return { ...base, detected: parsed.detectedDbType, failure: null };
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    return format === "dbml"
-      ? { ...base, failure: { reason: "dbml_syntax", message } }
-      : { ...base, failure: { reason: "not_schema" } };
+    return { ...base, failure: failureOf(format, e) };
   }
 }
 
@@ -216,16 +241,16 @@ export async function runImportBatch(
         io.layout,
       );
     } catch (e) {
-      hooks.onOutcome(file.path, {
-        status: "failed",
-        reason: "not_schema",
-        message: e instanceof Error ? e.message : String(e),
-      });
+      hooks.onOutcome(file.path, { status: "failed", ...failureOf(file.format, e) });
       continue;
     }
     let savedAs: string;
     try {
-      savedAs = await io.create(folder, file.name, JSON.stringify(built.schema, null, 2));
+      savedAs = await io.create(
+        folder,
+        safeStem(file.name),
+        JSON.stringify(built.schema, null, 2),
+      );
     } catch (e) {
       if (e instanceof FolderRefusedError) {
         hooks.onOutcome(file.path, { status: "pending" });
@@ -261,4 +286,32 @@ export function orderOutcomes(
   outcomes: Readonly<Record<string, FileOutcome>>,
 ): string[] {
   return [...paths].sort((a, b) => rank(outcomes[a]) - rank(outcomes[b]));
+}
+
+export interface BatchSummary {
+  importable: number;
+  processed: number;
+  created: number;
+  notImported: number;
+  pending: number;
+}
+
+export function summarizeBatch(
+  files: readonly BatchFile[],
+  outcomes: Readonly<Record<string, FileOutcome>>,
+): BatchSummary {
+  const statuses = files.map((f) => outcomes[f.path]?.status);
+  const count = (pick: (status: FileOutcome["status"] | undefined) => boolean) =>
+    statuses.filter(pick).length;
+  return {
+    importable: files.filter((f) => !f.failure).length,
+    processed: files.filter(
+      (f) =>
+        !f.failure &&
+        (outcomes[f.path]?.status === "done" || outcomes[f.path]?.status === "failed"),
+    ).length,
+    created: count((s) => s === "done"),
+    notImported: count((s) => s === "failed" || s === "skipped"),
+    pending: count((s) => s === "pending"),
+  };
 }

@@ -538,6 +538,16 @@
     "unnamed": "without a name"
   },
   "importFlow": {
+    "prepareTitle_one": "Import {{count}} file",
+    "prepareTitle_other": "Import {{count}} files",
+    "prepareHint": "SocaDB creates a .soca schema for each file.",
+    "saveIn": "Save in",
+    "sourceFolder": "the folder of the chosen files",
+    "change": "Change…",
+    "folderPickerTitle": "Where should SocaDB save the schemas?",
+    "databaseSection": "Database",
+    "prepareAsk_one": "{{count}} file doesn't say its database. This can't be changed later.",
+    "prepareAsk_other": "{{count}} files don't say their database. This can't be changed later.",
     "dialectTitle_one": "Which database is this file for?",
     "dialectTitle_other": "Which database are these {{count}} files for?",
     "dialectHint_one": "SocaDB couldn't tell from the file. This can't be changed later.",
@@ -575,7 +585,10 @@
     "warnings_one": "{{count}} warning",
     "warnings_other": "{{count}} warnings",
     "layoutFailed": "Tables placed in a grid: run Auto layout.",
-    "folderRefused": "This folder doesn't accept files.",
+    "folderNotWritable": "SocaDB can't write to this folder.",
+    "folderNotWritableHint": "Choose another folder.",
+    "folderNotWritableHintMac": "Choose another folder, or allow SocaDB in System Settings › Privacy & Security › Files and Folders.",
+    "folderRefused": "SocaDB can't write to this folder.",
     "folderRefusedHint_one": "The remaining file is waiting. Choose another folder to import it.",
     "folderRefusedHint_other": "The {{count}} remaining files are waiting. Choose another folder to import them.",
     "chooseFolder": "Choose another folder",
@@ -585,6 +598,7 @@
       "unreadable": "Couldn't read this file.",
       "not_schema": "Not a SocaDB schema.",
       "dbml_syntax": "Not valid DBML.",
+      "sql_failed": "This SQL couldn't be read.",
       "no_tables": "No table found.",
       "write_failed": "Couldn't write the .soca file."
     }

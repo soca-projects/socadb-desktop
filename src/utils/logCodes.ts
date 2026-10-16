@@ -508,6 +508,12 @@ export const LOG_CODES = {
     check:
       "ctx.reason: unknown_format, unreadable, not_schema, dbml_syntax or no_tables.",
   },
+  "import.batch.folder_refused": {
+    level: "warn",
+    meaning: "SocaDB can't write to the folder chosen for imported schemas.",
+    check:
+      "macOS privacy (Files and Folders) for Downloads, Documents or Desktop, permissions, or a read-only volume.",
+  },
   "import.batch.write_failed": {
     level: "error",
     meaning: "A .soca file couldn't be written during a multi-file import.",

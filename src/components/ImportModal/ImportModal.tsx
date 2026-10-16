@@ -12,9 +12,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
 import { useSchemaStore } from "../../stores/schemaStore";
-import { parseSqlDdl, adaptColumnsToDbType } from "../../utils/importSql";
-import { parseJsonSchema } from "../../utils/importJson";
-import { parseDbmlSchema } from "../../utils/importDbml";
+import { adaptColumnsToDbType } from "../../utils/importSql";
+import { parseSource } from "../../utils/importFiles";
+import type { ImportFormat } from "../../utils/importFiles";
 import { logError, logInfo, logWarn } from "../../utils/log";
 import {
   mergeImport,
@@ -24,7 +24,6 @@ import {
 import type { ImportIssue } from "../../utils/sqlColumns";
 import type { DbType, Table, Relation, SchemaEnum } from "../../types/schema";
 
-type ImportFormat = "sql" | "dbml" | "json";
 type ImportMode = "replace" | "merge";
 
 interface ConflictState {
@@ -39,14 +38,9 @@ interface ConflictState {
 
 interface ImportModalProps {
   onClose: () => void;
-  fromHome?: boolean;
 }
 
-function fileStem(path: string): string {
-  return (path.split(/[/\\]/).pop() ?? path).replace(/\.[^.]+$/, "");
-}
-
-export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
+export function ImportModal({ onClose }: ImportModalProps) {
   const { t } = useTranslation();
   const dbType = useSchemaStore((s) => s.schema.dbType);
   const [format, setFormat] = useState<ImportFormat>("sql");
@@ -77,12 +71,11 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
 
       const content = await readTextFile(selected);
       const currentDbType = useSchemaStore.getState().schema.dbType;
-      const { tables, relations, enums, detectedDbType, attempted, issues } =
-        format === "sql"
-          ? parseSqlDdl(content, currentDbType)
-          : format === "dbml"
-            ? parseDbmlSchema(content, currentDbType)
-            : { ...parseJsonSchema(content), issues: [] };
+      const { tables, relations, enums, detectedDbType, attempted, issues } = parseSource(
+        format,
+        content,
+        currentDbType,
+      );
 
       if (tables.length === 0) {
         logWarn("import.no_tables", "No table found in the file", { format, attempted });
@@ -93,13 +86,13 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       const store = useSchemaStore.getState();
       const skipped = attempted - tables.length;
 
-      if (fromHome || mode === "replace") {
+      if (mode === "replace") {
         replaceWithImport(
           tables,
           relations,
           enums,
           detectedDbType ?? store.schema.dbType,
-          fromHome ? fileStem(selected) || store.schema.name : store.schema.name,
+          store.schema.name,
         );
       } else {
         const currentDbType = store.schema.dbType;
@@ -126,7 +119,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
         relations: relations.length,
         skipped,
         issues: issues.length,
-        fromHome,
+        fromHome: false,
       });
       showImportSummary({
         tables: tables.length,
@@ -325,37 +318,35 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
           ))}
         </div>
 
-        {!fromHome && (
-          <div className="mt-4">
-            <label
-              id="import-mode-label"
-              className="block text-[12px] font-medium uppercase tracking-wide text-tertiary"
-            >
-              {t("import.mode")}
-            </label>
-            <div
-              role="radiogroup"
-              aria-labelledby="import-mode-label"
-              className="mt-1.5 flex rounded-lg border border-border bg-surface-muted p-0.5"
-            >
-              {(["replace", "merge"] as const).map((m) => (
-                <button
-                  key={m}
-                  role="radio"
-                  aria-checked={mode === m}
-                  onClick={() => setMode(m)}
-                  className={`flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all ${
-                    mode === m
-                      ? "bg-surface text-accent shadow-soft"
-                      : "text-tertiary hover:text-secondary"
-                  }`}
-                >
-                  {t(`import.${m}`)}
-                </button>
-              ))}
-            </div>
+        <div className="mt-4">
+          <label
+            id="import-mode-label"
+            className="block text-[12px] font-medium uppercase tracking-wide text-tertiary"
+          >
+            {t("import.mode")}
+          </label>
+          <div
+            role="radiogroup"
+            aria-labelledby="import-mode-label"
+            className="mt-1.5 flex rounded-lg border border-border bg-surface-muted p-0.5"
+          >
+            {(["replace", "merge"] as const).map((m) => (
+              <button
+                key={m}
+                role="radio"
+                aria-checked={mode === m}
+                onClick={() => setMode(m)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all ${
+                  mode === m
+                    ? "bg-surface text-accent shadow-soft"
+                    : "text-tertiary hover:text-secondary"
+                }`}
+              >
+                {t(`import.${m}`)}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         <div className="mt-5 flex justify-end">
           <button

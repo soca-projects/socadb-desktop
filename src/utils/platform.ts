@@ -15,3 +15,9 @@ export function formatShortcut(keys: string[], mac = IS_MAC): string {
   if (mac) return keys.map((key) => MAC_KEYS[key] ?? key).join("");
   return keys.map((key) => (key === "Mod" ? "Ctrl" : key)).join("+");
 }
+
+export const REVEAL_LABEL_KEY = IS_MAC
+  ? "home.action.revealMac"
+  : IS_WINDOWS
+    ? "home.action.revealWindows"
+    : "home.action.revealLinux";

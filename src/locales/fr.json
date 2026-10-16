@@ -538,6 +538,16 @@
     "unnamed": "sans nom"
   },
   "importFlow": {
+    "prepareTitle_one": "Importer {{count}} fichier",
+    "prepareTitle_other": "Importer {{count}} fichiers",
+    "prepareHint": "SocaDB crée un schéma .soca pour chaque fichier.",
+    "saveIn": "Enregistrer dans",
+    "sourceFolder": "le dossier des fichiers choisis",
+    "change": "Changer…",
+    "folderPickerTitle": "Où enregistrer les schémas SocaDB ?",
+    "databaseSection": "Base de données",
+    "prepareAsk_one": "{{count}} fichier ne précise pas sa base. Ce choix ne pourra pas être changé ensuite.",
+    "prepareAsk_other": "{{count}} fichiers ne précisent pas leur base. Ce choix ne pourra pas être changé ensuite.",
     "dialectTitle_one": "Pour quelle base est ce fichier ?",
     "dialectTitle_other": "Pour quelle base sont ces {{count}} fichiers ?",
     "dialectHint_one": "SocaDB n'a pas pu le déduire du fichier. Ce choix ne pourra pas être changé ensuite.",
@@ -575,7 +585,10 @@
     "warnings_one": "{{count}} avertissement",
     "warnings_other": "{{count}} avertissements",
     "layoutFailed": "Tables posées en grille : lancez la disposition auto.",
-    "folderRefused": "Ce dossier n'accepte pas l'écriture.",
+    "folderNotWritable": "SocaDB ne peut pas écrire dans ce dossier.",
+    "folderNotWritableHint": "Choisissez un autre dossier.",
+    "folderNotWritableHintMac": "Choisissez un autre dossier, ou autorisez SocaDB dans Réglages Système › Confidentialité et sécurité › Fichiers et dossiers.",
+    "folderRefused": "SocaDB ne peut pas écrire dans ce dossier.",
     "folderRefusedHint_one": "Le fichier restant attend. Choisissez un autre dossier pour l'importer.",
     "folderRefusedHint_other": "Les {{count}} fichiers restants attendent. Choisissez un autre dossier pour les importer.",
     "chooseFolder": "Choisir un autre dossier",
@@ -585,6 +598,7 @@
       "unreadable": "Impossible de lire ce fichier.",
       "not_schema": "Pas un schéma SocaDB.",
       "dbml_syntax": "DBML non valide.",
+      "sql_failed": "Ce SQL n'a pas pu être lu.",
       "no_tables": "Aucune table trouvée.",
       "write_failed": "Impossible d'écrire le fichier .soca."
     }

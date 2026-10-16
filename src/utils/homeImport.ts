@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
-import { dirname } from "@tauri-apps/api/path";
+import { dirname, homeDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -39,7 +39,21 @@ function logFailure(file: BatchFile) {
   });
 }
 
+const BUSY = new Set(["asking", "preparing", "running", "folder_refused"]);
+let starting = false;
+
 export async function importFromHome() {
+  if (starting || BUSY.has(useImportFlowStore.getState().phase)) return;
+  starting = true;
+  try {
+    await startImport();
+  } finally {
+    starting = false;
+  }
+}
+
+async function startImport() {
+  resetImportFlow();
   const picked = await open({ multiple: true, directory: false, filters: filters() });
   if (!picked?.length) return;
   if (picked.length === 1) {
@@ -47,12 +61,11 @@ export async function importFromHome() {
     else await importDraft(picked[0]);
     return;
   }
-  const folder = await open({
-    directory: true,
-    multiple: false,
-    defaultPath: await dirname(picked[0]),
-  });
-  if (typeof folder !== "string") return;
+  const [dirs, home] = await Promise.all([
+    Promise.all(picked.map((path) => dirname(path))),
+    homeDir().catch(() => null),
+  ]);
+  const [folder] = dirs;
   const files = await analyzeFiles(picked, readTextFile);
   files.forEach(logFailure);
   const plan = planDialects(files);
@@ -63,22 +76,72 @@ export async function importFromHome() {
       : { status: "pending" };
   useImportFlowStore.setState({
     mode: "batch",
-    phase: plan.ask.length ? "asking" : "running",
+    phase: "preparing",
     folder,
+    sourceFolder: dirs.every((dir) => dir === folder) ? folder : null,
+    home,
     files,
     choices: plan.known,
     ask: plan.ask,
     outcomes,
     stopRequested: false,
   });
-  if (!plan.ask.length) await runBatch();
+  void checkFolder();
+}
+
+async function checkFolder() {
+  const { folder } = useImportFlowStore.getState();
+  if (!folder) return;
+  useImportFlowStore.setState({ folderWritable: null });
+  let writable = true;
+  try {
+    await invoke("probe_schema_folder", { dir: folder });
+  } catch (e) {
+    writable = false;
+    logWarn("import.batch.folder_refused", e);
+  }
+  if (useImportFlowStore.getState().folder === folder)
+    useImportFlowStore.setState({ folderWritable: writable });
+}
+
+const pickFolder = (defaultPath?: string) =>
+  open({
+    directory: true,
+    multiple: false,
+    defaultPath,
+    title: i18next.t("importFlow.folderPickerTitle"),
+  });
+
+export async function changeFolder() {
+  try {
+    const folder = await pickFolder(useImportFlowStore.getState().folder ?? undefined);
+    if (typeof folder !== "string") return;
+    useImportFlowStore.setState({ folder });
+    await checkFolder();
+  } catch (e) {
+    logError("import.failed", e, { format: "batch" });
+    toast.error(i18next.t("toast.importFailed", { error: String(e) }));
+  }
 }
 
 export async function importDraft(path: string) {
+  if (BUSY.has(useImportFlowStore.getState().phase)) return;
+  try {
+    await askOrFinishDraft(path);
+  } catch (e) {
+    logError("import.failed", e, { format: "draft" });
+    toast.error(i18next.t("toast.importFailed", { error: String(e) }));
+  }
+}
+
+async function askOrFinishDraft(path: string) {
   const files = await analyzeFiles([path], readTextFile);
   const [file] = files;
   if (file.failure) {
-    logWarn("import.failed", file.failure.reason, { format: file.format ?? "unknown" });
+    const format = file.format ?? "unknown";
+    if (file.failure.reason === "no_tables")
+      logWarn("import.no_tables", "No table found in the file", { format });
+    else logError("import.failed", file.failure.reason, { format });
     toast.error(
       file.failure.message ?? i18next.t(`importFlow.reason.${file.failure.reason}`),
     );
@@ -95,6 +158,7 @@ export async function importDraft(path: string) {
       ask: plan.ask,
       outcomes: {},
       stopRequested: false,
+      draftStamp: useSchemaStore.getState().schema.updatedAt,
     });
     return;
   }
@@ -130,49 +194,71 @@ export function answerDialects(answers: Readonly<Record<string, DbType>>) {
   if (state.mode === "draft") {
     const [file] = state.files;
     resetImportFlow();
-    finishDraft(file, choices[file.path].dbType);
+    const changed = useSchemaStore.getState().schema.updatedAt !== state.draftStamp;
+    if (changed && draftIsDirty()) {
+      void emit("unsaved-guard-import-file", file.path);
+      return;
+    }
+    try {
+      finishDraft(file, choices[file.path].dbType);
+    } catch (e) {
+      logError("import.failed", e, { format: file.format ?? "unknown" });
+      toast.error(i18next.t("toast.importFailed", { error: String(e) }));
+    }
     return;
   }
   useImportFlowStore.setState({ choices, ask: [], phase: "running" });
-  runBatch().catch((e: unknown) => logError("import.failed", e, { format: "batch" }));
+  void runBatch();
 }
 
 export async function runBatch() {
   const { files, folder, choices, outcomes } = useImportFlowStore.getState();
   if (!folder) return;
   const queue = files.filter((f) => outcomes[f.path]?.status === "pending");
-  const ended = await runImportBatch(
-    queue,
-    folder,
-    choices,
-    {
-      create: (dir, name, content) =>
-        invoke<string>("create_schema_file", { dir, name, content }).catch(
-          (e: unknown) => {
-            throw e === "folder_refused" ? new FolderRefusedError() : e;
-          },
-        ),
-      remember: addRecentFile,
-    },
-    {
-      onOutcome: (path, outcome) => {
-        useImportFlowStore.setState((s) => ({
-          outcomes: { ...s.outcomes, [path]: outcome },
-        }));
-        if (outcome.status !== "failed") return;
-        if (outcome.reason === "write_failed")
-          logError("import.batch.write_failed", outcome.reason);
-        else
-          logWarn("import.batch.file_failed", outcome.reason, { reason: outcome.reason });
+  let ended: "done" | "stopped" | "folder_refused";
+  try {
+    ended = await runImportBatch(
+      queue,
+      folder,
+      choices,
+      {
+        create: (dir, name, content) =>
+          invoke<string>("create_schema_file", { dir, name, content }).catch(
+            (e: unknown) => {
+              if (e === "folder_refused") {
+                logWarn("import.batch.folder_refused", e);
+                throw new FolderRefusedError();
+              }
+              logError("import.batch.write_failed", e);
+              throw e;
+            },
+          ),
+        remember: addRecentFile,
       },
-      shouldStop: () => useImportFlowStore.getState().stopRequested,
-    },
-  );
+      {
+        onOutcome: (path, outcome) => {
+          useImportFlowStore.setState((s) => ({
+            outcomes: { ...s.outcomes, [path]: outcome },
+          }));
+          if (outcome.status === "failed" && outcome.reason !== "write_failed")
+            logWarn("import.batch.file_failed", outcome.reason, {
+              reason: outcome.reason,
+            });
+        },
+        shouldStop: () => useImportFlowStore.getState().stopRequested,
+      },
+    );
+  } catch (e) {
+    logError("import.failed", e, { format: "batch" });
+    ended = "stopped";
+  }
   const final = { ...useImportFlowStore.getState().outcomes };
   if (ended === "stopped") {
-    for (const file of files)
-      if (final[file.path]?.status === "pending")
+    for (const file of files) {
+      const status = final[file.path]?.status;
+      if (status === "pending" || status === "running")
         final[file.path] = { status: "skipped" };
+    }
   }
   useImportFlowStore.setState({ outcomes: final, phase: ended });
   const counts: Record<string, number> = {};
@@ -187,10 +273,15 @@ export async function runBatch() {
 }
 
 export async function chooseAnotherFolder() {
-  const folder = await open({ directory: true, multiple: false });
-  if (typeof folder !== "string") return;
-  useImportFlowStore.setState({ folder, phase: "running" });
-  await runBatch();
+  try {
+    const folder = await pickFolder();
+    if (typeof folder !== "string") return;
+    useImportFlowStore.setState({ folder, phase: "running", stopRequested: false });
+    await runBatch();
+  } catch (e) {
+    logError("import.failed", e, { format: "batch" });
+    toast.error(i18next.t("toast.importFailed", { error: String(e) }));
+  }
 }
 
 export function stopBatch() {
