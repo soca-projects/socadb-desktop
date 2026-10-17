@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  CaretDownIcon as CaretDown,
   DownloadSimpleIcon as DownloadSimple,
   FolderOpenIcon as FolderOpen,
   MagnifyingGlassIcon as MagnifyingGlass,
@@ -54,7 +53,8 @@ import {
 import { REVEAL_LABEL_KEY } from "../../utils/platform";
 import { closeSchema } from "../../utils/schemaActions";
 import { isWorthResuming } from "../../utils/schemaQueries";
-import { HomeSortZ } from "../../utils/zodSchemas";
+import type { HomeSort } from "../../utils/homeList";
+import { SelectMenu, type SelectOption } from "../SelectMenu/SelectMenu";
 
 const GRID = "grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4";
 const GROUP_LABEL =
@@ -92,6 +92,11 @@ export function Home({ onOpenSettings }: HomeProps) {
   const importMode = useImportFlowStore((s) => s.mode);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState(getHomeSort);
+  const sortOptions: SelectOption<HomeSort>[] = [
+    { value: "opened", label: t("home.sort.opened") },
+    { value: "modified", label: t("home.sort.modified") },
+    { value: "name", label: t("home.sort.name") },
+  ];
   const [renaming, setRenaming] = useState<HomeEntry | null>(null);
   const [deletingDraft, setDeletingDraft] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -266,28 +271,20 @@ export function Home({ onOpenSettings }: HomeProps) {
                 </button>
               )}
             </div>
-            <label className="flex items-center gap-2 text-[12.5px] text-tertiary">
+            <div className="flex items-center gap-2 text-[12.5px] text-tertiary">
               {t("home.sortLabel")}
-              <span className="relative inline-flex">
-                <select
-                  value={sort}
-                  onChange={(e) => {
-                    const next = HomeSortZ.parse(e.target.value);
-                    setSort(next);
-                    setHomeSort(next);
-                  }}
-                  className="h-[30px] appearance-none rounded-md border border-border bg-surface pl-2.5 pr-7 text-[12.5px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent"
-                >
-                  <option value="opened">{t("home.sort.opened")}</option>
-                  <option value="modified">{t("home.sort.modified")}</option>
-                  <option value="name">{t("home.sort.name")}</option>
-                </select>
-                <CaretDown
-                  size={12}
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-tertiary"
-                />
-              </span>
-            </label>
+              <SelectMenu
+                value={sort}
+                options={sortOptions}
+                onChange={(next) => {
+                  setSort(next);
+                  setHomeSort(next);
+                }}
+                ariaLabel={t("home.sortLabel")}
+                caretSize={12}
+                className="h-[30px] min-w-[168px] rounded-md border border-border bg-surface pl-2.5 pr-2 text-[12.5px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent"
+              />
+            </div>
           </div>
         )}
       </div>

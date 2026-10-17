@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   XIcon as X,
   ArrowLeftIcon as ArrowLeft,
-  CaretDownIcon as CaretDown,
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   PlusIcon as Plus,
   PaperPlaneRightIcon as PaperPlaneRight,
@@ -21,6 +20,7 @@ import {
   resolveEffort,
 } from "../../types/chat";
 import { EffortPicker } from "../EffortPicker/EffortPicker";
+import { SelectMenu } from "../SelectMenu/SelectMenu";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
@@ -197,23 +197,16 @@ export function ChatPanel() {
 
   const pickers = (
     <>
-      <div className="relative min-w-0">
-        <select
+      <div className="min-w-0">
+        <SelectMenu
           value={selectedModel}
-          onChange={(e) => selectModel(e.target.value)}
+          options={availableModels.map((m) => ({ value: m.id, label: m.displayName }))}
+          onChange={selectModel}
           disabled={isStreaming}
-          aria-label={t("chat.model")}
-          className="w-full min-w-0 appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
-        >
-          {availableModels.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.displayName}
-            </option>
-          ))}
-        </select>
-        <CaretDown
-          size={10}
-          className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
+          ariaLabel={t("chat.model")}
+          caretSize={10}
+          menuWidth={200}
+          className="w-full min-w-0 rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-1.5 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
         />
       </div>
       <EffortPicker

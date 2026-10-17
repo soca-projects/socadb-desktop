@@ -83,7 +83,7 @@ export function Toolbar({
           }}
           aria-current={isHome ? "page" : undefined}
           className={`rounded-md p-1.5 transition-colors hover:bg-surface-paper-muted hover:text-secondary ${
-            isHome ? "bg-surface-paper-muted text-primary" : "text-tertiary"
+            isHome ? "text-primary" : "text-tertiary"
           }`}
           title={`${t("toolbar.home")} (${formatShortcut(["Mod", "Shift", "H"])})`}
           aria-label={t("toolbar.home")}
