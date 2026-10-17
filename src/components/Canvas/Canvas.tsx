@@ -6,7 +6,14 @@ import {
   applyEdgeChanges,
   useReactFlow,
 } from "@xyflow/react";
-import type { Node, Edge, NodeChange, EdgeChange, Connection } from "@xyflow/react";
+import type {
+  Node,
+  Edge,
+  NodeChange,
+  EdgeChange,
+  Connection,
+  OnBeforeDelete,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { useSchemaStore } from "../../stores/schemaStore";
@@ -24,6 +31,7 @@ import { ImportModal } from "../ImportModal/ImportModal";
 import { listen } from "@tauri-apps/api/event";
 import { Trans } from "react-i18next";
 import { formatShortcut } from "../../utils/platform";
+import { removableByKey } from "../../utils/canvasDeletion";
 import { NARROW_WINDOW_QUERY } from "../../utils/layout";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
@@ -33,6 +41,7 @@ const nodeTypes = { table: TableNode };
 const edgeTypes = { relation: RelationEdge };
 const PRO_OPTIONS = { hideAttribution: true };
 const DELETE_KEY_CODE = ["Delete", "Backspace"];
+const ON_BEFORE_DELETE: OnBeforeDelete = async (elements) => removableByKey(elements);
 const SIDE_PANEL_PX = 280;
 
 const TOOLBAR_PX = 40;
@@ -358,6 +367,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
             minZoom={0.1}
             maxZoom={2}
             deleteKeyCode={DELETE_KEY_CODE}
+            onBeforeDelete={ON_BEFORE_DELETE}
             proOptions={PRO_OPTIONS}
           >
             <Background gap={12} size={2} color={gridColor} />
