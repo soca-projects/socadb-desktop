@@ -286,10 +286,11 @@ function SidebarItem({
   return (
     <button
       onClick={onClick}
+      aria-current={active ? "page" : undefined}
       className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${
         active
-          ? "border-l-2 border-accent bg-accent/[0.05] pl-[10px] text-accent"
-          : "border-l-2 border-transparent pl-[10px] text-tertiary hover:bg-surface-muted hover:text-secondary"
+          ? "bg-surface-muted text-primary"
+          : "text-tertiary hover:bg-surface-muted hover:text-secondary"
       }`}
     >
       {icon}

@@ -39,7 +39,7 @@ export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
 
         <button
           onClick={onAddTable}
-          className="mt-5 flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98] animate-fade-in"
+          className="mt-5 flex items-center gap-2 rounded-lg border-2 border-sticker shadow-sticker bg-accent px-4 py-2.5 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98] animate-fade-in"
           style={{ animationDelay: "0.25s" }}
         >
           <Plus size={15} weight="bold" />

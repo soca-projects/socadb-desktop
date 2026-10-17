@@ -12,14 +12,16 @@ interface HomeEmptyProps {
   onImport: () => void;
 }
 
-const ACTION =
-  "flex flex-col items-start gap-2 rounded-lg border border-border bg-surface p-4 text-left transition-colors hover:border-border-hover hover:bg-surface-muted";
+const CARD =
+  "flex flex-col items-start gap-2 rounded-lg bg-surface p-4 text-left transition-colors hover:bg-surface-paper-muted";
+const ACTION = `${CARD} border border-border hover:border-border-hover`;
+const MAIN_ACTION = `${CARD} border-2 border-sticker shadow-sticker dark:border dark:border-border dark:hover:border-border-hover`;
 
 export function HomeEmpty({ onNew, onOpen, onImport }: HomeEmptyProps) {
   const { t } = useTranslation();
   return (
     <div className="mx-auto mt-12 flex max-w-[640px] flex-col items-center gap-2.5 text-center">
-      <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[14px] bg-surface-muted text-tertiary">
+      <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[14px] bg-surface-paper-muted text-tertiary">
         <SquaresFour size={24} />
       </span>
       <h2 className="mt-2 text-[18px] font-bold text-primary">{t("home.empty.title")}</h2>
@@ -27,7 +29,7 @@ export function HomeEmpty({ onNew, onOpen, onImport }: HomeEmptyProps) {
         {t("home.empty.description")}
       </p>
       <div className="mt-4 grid w-full grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
-        <button type="button" onClick={onNew} className={ACTION}>
+        <button type="button" onClick={onNew} className={MAIN_ACTION}>
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-light text-accent-hover">
             <Plus size={16} />
           </span>

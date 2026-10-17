@@ -175,7 +175,11 @@ export function TableItem({
             className="min-w-0 flex-1 bg-transparent font-mono text-sm font-medium text-primary outline-none focus:text-accent"
           />
         ) : (
-          <span className="truncate font-mono text-sm font-medium text-primary">
+          <span
+            className={`truncate font-mono text-sm font-medium text-primary ${
+              isOpen ? "marker" : ""
+            }`}
+          >
             {table.name}
           </span>
         )}

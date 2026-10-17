@@ -19,7 +19,7 @@ export async function exportCanvasSvg() {
     const [svg, path] = await Promise.all([
       toSvg(viewport, {
         backgroundColor:
-          useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FDFCFC",
+          useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FFFCF6",
       }),
       save({
         defaultPath: `${schemaName}.svg`,

@@ -113,7 +113,9 @@ export function NoteBubble({
         placeholder={placeholder}
         className="w-full resize-none overflow-hidden rounded-[4px] border border-border bg-surface px-[7px] py-1 text-[12.5px] leading-[1.4] text-secondary outline-none placeholder:text-tertiary hover:border-border-hover focus:border-accent/45"
       />
-      <div className="mt-1.5 text-[11px] text-muted">{t("sidePanel.noteExported")}</div>
+      <div className="mt-1.5 text-[11px] text-tertiary">
+        {t("sidePanel.noteExported")}
+      </div>
     </div>
   );
 }
