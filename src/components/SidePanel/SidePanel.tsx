@@ -4,6 +4,7 @@ import { PlusIcon as Plus } from "@phosphor-icons/react";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { createTable } from "../../utils/schemaActions";
 import { TableItem, type ColumnFocus } from "./TableItem";
+import { GhostTableSketch } from "../Sketch/Sketch";
 
 interface SidePanelProps {
   isOpen: boolean;
@@ -44,28 +45,11 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
 
       <div className="flex-1 overflow-y-auto">
         {tables.length === 0 ? (
-          <div className="flex animate-fade-in flex-col items-center px-4 pt-10 text-center">
+          <div className="flex animate-fade-in flex-col items-center gap-2 px-4 pt-10 text-center">
+            <GhostTableSketch className="h-[42px] w-14" />
             <p className="text-[13px] leading-relaxed text-tertiary">
               {t("sidePanel.emptyState")}
             </p>
-            <div className="mt-5 space-y-1 self-stretch text-left text-[12px] text-tertiary">
-              <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
-                <span className="shrink-0 font-mono text-[11px] text-tertiary">1.</span>
-                <span>{t("sidePanel.step1")}</span>
-              </div>
-              <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
-                <span className="shrink-0 font-mono text-[11px] text-tertiary">2.</span>
-                <span>{t("sidePanel.step2")}</span>
-              </div>
-              <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
-                <span className="shrink-0 font-mono text-[11px] text-tertiary">3.</span>
-                <span>
-                  {t("sidePanel.step3Save")}{" "}
-                  <span className="font-mono text-tertiary">.soca</span>{" "}
-                  {t("sidePanel.step3Export")}
-                </span>
-              </div>
-            </div>
           </div>
         ) : (
           tables.map((table) => (

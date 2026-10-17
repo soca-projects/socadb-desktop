@@ -81,7 +81,7 @@
     "remove": "Remove",
     "removeAll": "Remove all",
     "empty": {
-      "title": "No schemas yet",
+      "title": "No schemas <mark>yet</mark>",
       "description": "SocaDB designs MySQL and PostgreSQL schemas, by hand or with AI. Start in one of these three ways.",
       "newHint": "Start from a blank page, by hand or with AI",
       "open": "Open a file",
@@ -103,12 +103,14 @@
     "switchToLight": "Switch to light mode"
   },
   "emptyCanvas": {
-    "heading": "Your schema starts here",
+    "heading": "Your schema <mark>starts here</mark>",
     "description": "Add your first table to start designing. Tables will appear on the canvas and you can drag to create relations between columns.",
     "createFirst": "Create first table",
-    "newSchema": "New schema",
-    "openFile": "Open file",
+    "askAi": "or ask the AI for it",
     "openSidePanel": "Open the side panel to manage tables"
+  },
+  "sketch": {
+    "draftTable": "first_table"
   },
   "error": {
     "heading": "Something went wrong",
@@ -134,11 +136,7 @@
   },
   "sidePanel": {
     "tables": "Tables",
-    "emptyState": "No tables yet. Create one to start building your schema.",
-    "step1": "Add tables and define columns",
-    "step2": "Drag between columns to create relations",
-    "step3Save": "Save as",
-    "step3Export": "and export",
+    "emptyState": "No tables yet",
     "newTable": "New Table",
     "addColumn": "Add column",
     "deleteColumn": "Delete column",

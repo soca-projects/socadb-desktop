@@ -31,14 +31,13 @@ import {
   CHAT_PANEL_MIN_HEIGHT,
   CHAT_PANEL_MAX_WIDTH,
   CHAT_PANEL_MAX_HEIGHT,
-  CHAT_PANEL_DEFAULT_WIDTH,
-  CHAT_PANEL_DEFAULT_HEIGHT,
 } from "../../utils/layout";
 
 type ResizeAxis = "both" | "vertical" | "horizontal";
 
-function useResize(initial: { width: number; height: number }) {
-  const [size, setSize] = useState(initial);
+function useResize() {
+  const size = useChatStore((s) => s.panelSize);
+  const setSize = useChatStore((s) => s.setPanelSize);
 
   const startResize = useCallback(
     (e: React.MouseEvent, axis: ResizeAxis) => {
@@ -84,7 +83,7 @@ function useResize(initial: { width: number; height: number }) {
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
     },
-    [size],
+    [size, setSize],
   );
 
   return { size, startResize };
@@ -109,10 +108,7 @@ export function ChatPanel() {
   const providerSwitch = useChatStore((s) => s.providerSwitch);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { size, startResize } = useResize({
-    width: CHAT_PANEL_DEFAULT_WIDTH,
-    height: CHAT_PANEL_DEFAULT_HEIGHT,
-  });
+  const { size, startResize } = useResize();
   const focusMode = useFocusStore((s) => s.focusMode);
   const [view, setView] = useState<"chat" | "history">("chat");
 

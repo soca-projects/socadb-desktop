@@ -81,7 +81,7 @@
     "remove": "Retirer",
     "removeAll": "Tout retirer",
     "empty": {
-      "title": "Aucun schéma pour l'instant",
+      "title": "Aucun schéma <mark>pour l'instant</mark>",
       "description": "SocaDB conçoit des schémas de bases MySQL et PostgreSQL, à la main ou avec l'IA. Commencez de l'une de ces trois façons.",
       "newHint": "Partir d'une page blanche, à la main ou avec l'IA",
       "open": "Ouvrir un fichier",
@@ -103,12 +103,14 @@
     "switchToLight": "Passer en mode clair"
   },
   "emptyCanvas": {
-    "heading": "Votre schéma commence ici",
+    "heading": "Votre schéma <mark>commence ici</mark>",
     "description": "Ajoutez votre première table pour commencer. Les tables apparaîtront sur le canvas et vous pourrez glisser pour créer des relations entre les colonnes.",
     "createFirst": "Créer une table",
-    "newSchema": "Nouveau schéma",
-    "openFile": "Ouvrir un fichier",
+    "askAi": "ou demandez-la à l'IA",
     "openSidePanel": "Ouvrez le panneau latéral pour gérer les tables"
+  },
+  "sketch": {
+    "draftTable": "premiere_table"
   },
   "error": {
     "heading": "Une erreur est survenue",
@@ -134,11 +136,7 @@
   },
   "sidePanel": {
     "tables": "Tables",
-    "emptyState": "Aucune table. Créez-en une pour commencer votre schéma.",
-    "step1": "Ajoutez des tables et définissez les colonnes",
-    "step2": "Glissez entre les colonnes pour créer des relations",
-    "step3Save": "Enregistrez en",
-    "step3Export": "et exportez",
+    "emptyState": "Aucune table pour l'instant",
     "newTable": "Nouvelle table",
     "addColumn": "Ajouter une colonne",
     "deleteColumn": "Supprimer la colonne",
