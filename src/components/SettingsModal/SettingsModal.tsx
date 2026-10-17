@@ -5,7 +5,6 @@ import { Modal } from "../Modal/Modal";
 import {
   XIcon as X,
   CheckCircleIcon as CheckCircle,
-  CaretDownIcon as CaretDown,
   TerminalWindowIcon as TerminalWindow,
   RobotIcon as Robot,
   ChatsCircleIcon as ChatsCircle,
@@ -39,6 +38,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { CopyableCommand } from "./CopyableCommand";
 import { IntegrationsSection } from "./IntegrationsSection";
+import { SelectMenu, type SelectOption } from "../SelectMenu/SelectMenu";
 
 type Section = "agents" | "conversations" | "integrations" | "general";
 
@@ -226,6 +226,10 @@ function ProviderRow({
   const { t } = useTranslation();
   const meta = PROVIDERS[providerId];
   const Icon = PROVIDER_ICONS[providerId];
+  const loginOptions: SelectOption<LoginType>[] = [
+    { value: "subscription", label: t(`provider.${providerId}.subscriptionLabel`) },
+    { value: "api-key", label: t("agent.ownApiKey") },
+  ];
 
   return (
     <div className="rounded-lg border border-border px-5 py-4">
@@ -239,23 +243,12 @@ function ProviderRow({
           <p className="text-[13px] font-medium text-secondary">{meta.name}</p>
         </div>
 
-        <div className="relative">
-          <select
-            value={provider.loginType}
-            onChange={(e) => onLoginTypeChange(e.target.value as LoginType)}
-            className="appearance-none rounded-md border border-border bg-surface py-1.5 pl-3 pr-7 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent"
-          >
-            <option value="subscription">
-              {t(`provider.${providerId}.subscriptionLabel`)}
-            </option>
-            <option value="api-key">{t("agent.ownApiKey")}</option>
-          </select>
-          <CaretDown
-            size={11}
-            weight="bold"
-            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-tertiary"
-          />
-        </div>
+        <SelectMenu
+          value={provider.loginType}
+          options={loginOptions}
+          onChange={onLoginTypeChange}
+          className="rounded-md border border-border bg-surface py-1.5 pl-3 pr-2 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent"
+        />
       </div>
 
       {provider.loginType === "subscription" ? (

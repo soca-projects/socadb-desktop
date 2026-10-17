@@ -4,11 +4,6 @@
       "count": 2
     }
   },
-  "src/components/SettingsModal/SettingsModal.tsx": {
-    "@typescript-eslint/consistent-type-assertions": {
-      "count": 1
-    }
-  },
   "src/hooks/useChatStream.ts": {
     "@typescript-eslint/consistent-type-assertions": {
       "count": 1

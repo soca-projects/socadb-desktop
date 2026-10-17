@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -32,6 +33,8 @@ interface PickMenuProps {
   query?: string;
   emptyLabel?: (query: string) => string;
   width?: number;
+  font?: "mono" | "sans";
+  label?: string;
   onPick: (value: string) => void;
   onClose: () => void;
 }
@@ -50,12 +53,15 @@ export function PickMenu({
   query: fieldQuery,
   emptyLabel,
   width = 244,
+  font = "mono",
+  label,
   onPick,
   onClose,
 }: PickMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const optionId = useId();
   const typeahead = fieldQuery !== undefined;
   const [ownQuery, setOwnQuery] = useState("");
   const query = fieldQuery ?? ownQuery;
@@ -86,12 +92,25 @@ export function PickMenu({
     const up = below < FLIP_BELOW_PX && above > below;
     const room = Math.min(MAX_HEIGHT_PX, up ? above : below);
     const w = Math.max(width, r.width);
-    menu.style.width = `${w}px`;
+    menu.style.minWidth = `${w}px`;
+    menu.style.width = font === "sans" ? "max-content" : `${w}px`;
+    menu.style.maxWidth = `${window.innerWidth - 2 * MARGIN_PX}px`;
     menu.style.maxHeight = `${room}px`;
-    menu.style.left = `${Math.max(MARGIN_PX, Math.min(r.left, window.innerWidth - w - MARGIN_PX))}px`;
+    const shown = menu.getBoundingClientRect().width;
+    menu.style.left = `${Math.max(MARGIN_PX, Math.min(r.left, window.innerWidth - shown - MARGIN_PX))}px`;
     if (up) menu.style.bottom = `${window.innerHeight - r.top + GAP_PX}px`;
     else menu.style.top = `${r.bottom + GAP_PX}px`;
-  }, [anchor, width, hidden]);
+  }, [anchor, width, font, hidden]);
+
+  // A view switch can hide the anchor without unmounting it: the chat stays
+  // mounted under the home.
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry && !entry.isIntersecting) onClose();
+    });
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, [anchor, onClose]);
 
   useEffect(() => {
     if (typeahead) return;
@@ -197,11 +216,17 @@ export function PickMenu({
     <div
       ref={menuRef}
       role="listbox"
+      aria-label={label}
+      aria-activedescendant={
+        !typeahead && items[active] ? `${optionId}-${active}` : undefined
+      }
       tabIndex={-1}
       onKeyDown={(e: KeyboardEvent) => handleKey(e)}
       onMouseDown={typeahead ? (e) => e.preventDefault() : undefined}
       style={{ position: "fixed" }}
-      className="z-50 flex flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-float outline-none"
+      // nokey: the canvas's Delete/Backspace shortcut must not fire while the
+      // menu has the focus.
+      className="nokey z-50 flex flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-float outline-none"
     >
       {searchPlaceholder && !typeahead && (
         <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border-light px-2.5 text-tertiary">
@@ -232,6 +257,7 @@ export function PickMenu({
                 <button
                   key={item.value}
                   type="button"
+                  id={`${optionId}-${i}`}
                   role="option"
                   tabIndex={-1}
                   aria-selected={selected}
@@ -249,7 +275,9 @@ export function PickMenu({
                     className={
                       item.muted
                         ? "text-[12.5px] text-tertiary"
-                        : "whitespace-nowrap font-mono text-[12px] text-primary"
+                        : font === "sans"
+                          ? "whitespace-nowrap text-[12.5px] text-primary"
+                          : "whitespace-nowrap font-mono text-[12px] text-primary"
                     }
                   >
                     {item.label}
