@@ -33,4 +33,14 @@ ignore = [
   # Other unmaintained transitives.
   "RUSTSEC-2024-0370",  # proc-macro-error
   "RUSTSEC-2025-0057",  # fxhash
+
+  # zip 4.6.1 extraction flaws (symlinks and permissions escaping the target
+  # directory). Pulled by tauri-plugin-updater 2.x on Windows only, to unpack
+  # an update that arrives zipped; it only gets there after checking the
+  # update's signature against our key, and ours ship as a plain .exe. Upstream
+  # moved to zip 9 (tauri-apps/plugins-workspace#3698): drop these once a
+  # release after tauri-plugin-updater 2.14.0 ships it.
+  "RUSTSEC-2026-0367",
+  "RUSTSEC-2026-0368",
+  "RUSTSEC-2026-0369",
 ]
