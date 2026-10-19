@@ -180,8 +180,9 @@ if (os === "darwin") {
   if (process.platform !== "darwin") {
     throw new Error("A macOS runtime can only be built on macOS (it must be re-signed)");
   }
-  console.log(`Ad-hoc signing bundled binaries`);
-  console.log(`  ok: ${adHocSignMachOs("dist")} binaries`);
+  const identity = process.env.APPLE_SIGNING_IDENTITY;
+  console.log(identity ? `Signing bundled binaries as ${identity}` : `Ad-hoc signing bundled binaries`);
+  console.log(`  ok: ${signMachOs("dist", identity)} binaries`);
 }
 
 console.log(`Done.`);
@@ -204,12 +205,19 @@ function isMachO(path: string): boolean {
   }
 }
 
-function adHocSignMachOs(dir: string): number {
+// Tauri signs the app and its frameworks but not resources, so the notary
+// service would reject these binaries unless they carry the Developer ID,
+// a timestamp and the hardened runtime. Under that runtime the Bun-compiled
+// ones (bun, claude, socadb-mcp) can't JIT without runtime.entitlements.
+function signMachOs(dir: string, identity: string | undefined): number {
+  const args = identity
+    ? ["--force", "--sign", identity, "--options", "runtime", "--timestamp", "--entitlements", "runtime.entitlements"]
+    : ["--force", "--sign", "-"];
   let count = 0;
   for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
     const path = join(dir, rel);
     if (!lstatSync(path).isFile() || !isMachO(path)) continue;
-    execFileSync("codesign", ["--force", "--sign", "-", path], { stdio: "pipe" });
+    execFileSync("codesign", [...args, path], { stdio: "pipe" });
     execFileSync("codesign", ["--verify", "--strict", path], { stdio: "pipe" });
     count++;
   }
