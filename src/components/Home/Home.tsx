@@ -221,10 +221,11 @@ export function Home({ onOpenSettings }: HomeProps) {
           </h1>
           {!isEmpty && (
             <div className="flex flex-wrap gap-2">
+              {/* Lighter sticker on purpose: the full one marks the empty screens where you start, and this button is on screen every day. */}
               <button
                 type="button"
                 onClick={handleNew}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border-2 border-sticker shadow-sticker bg-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border-[1.5px] border-sticker shadow-sticker-sm bg-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover"
               >
                 <Plus size={14} />
                 {t("home.new")}

@@ -62,6 +62,7 @@ export default {
         card: "var(--shadow-card)",
         float: "var(--shadow-float)",
         sticker: "3px 3px 0 var(--color-sticker-shadow)",
+        "sticker-sm": "2px 2px 0 var(--color-sticker-shadow)",
       },
       keyframes: {
         "fade-in": {
