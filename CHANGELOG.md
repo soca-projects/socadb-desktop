@@ -6,6 +6,74 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.5] - 2026-10-20
+
+Schemas now carry what a real database needs: notes on tables and
+columns, enums, indexes and type parameters such as lengths and
+precision. They show on the canvas, go into the exported SQL, come back
+from SQL dumps, and the agents can read and write them. Import takes
+DBML files and several files at once, picked from the home or dropped on
+it. The app takes the website's paper look, and on macOS it is now
+signed with a Developer ID and notarized, so it opens without a security
+warning.
+
+### Added
+
+- **Notes, enums, indexes and type parameters**. Tables and columns take
+  notes, columns take enums, lengths, precision and scale, MySQL numeric
+  columns take UNSIGNED, and tables take indexes. Older files open
+  unchanged. (#94)
+- **Column editor**. Columns are listed one per line, and an editor sets
+  the type, enum values, length, default and note. A default is either a
+  value or an expression. (#96)
+- **Table note and Indexes tab** in the side panel, with index naming, a
+  hint for foreign keys without an index, and the columns an index can't
+  use greyed out. (#97)
+- **On the canvas**, tables show their notes, enum values and indexes.
+  (#100)
+- **SQL export** writes enums, indexes, notes and type parameters. (#101)
+- **SQL import** keeps enums, indexes, notes and the keys pg_dump declares
+  separately, and lists what it couldn't keep. (#102)
+- **The agents** read and write notes, enums, indexes and type parameters.
+  (#103)
+- **DBML import**. (#104)
+- **Several files at once**. The home imports several SQL, DBML or JSON
+  files in one go, one schema file each, without overwriting existing
+  files, and shows each file's result. Files can also be dropped on the
+  home. (#106, #107)
+
+### Changed
+
+- **The paper look**. Warm paper and objects, a sticker on the actions
+  where you start, and a marker band on the open table, in light and
+  dark. The home's New schema button wears a lighter sticker. (#109,
+  #115)
+- **Drawn empty states** on the home, the canvas and the side panel.
+  (#111)
+- **The app's own menus** replace the system dropdowns for the sort
+  order, the chat model and the agent login type. (#112)
+- **The database of an imported file** is detected from more SQL types,
+  and a DBML file's from its types. (#105)
+- **Signed with a Developer ID and notarized** (macOS). The app and its
+  disk image pass Gatekeeper, so macOS no longer warns on first launch.
+  API-key users are asked for keychain access one last time after this
+  update. (#114)
+
+### Fixed
+
+- **Schemas opened from the home or restored at startup** save again.
+  (#95)
+- **Pressing Delete with a table selected** no longer removes its
+  relations. (#113)
+- **A composite primary key declared one column at a time** is read
+  correctly. (#108)
+
+### Internal
+
+- Project conventions are linted in TypeScript and Rust. (#98)
+- rustls is updated for its advisories, and the zip advisories are
+  ignored until the updater ships zip 9. (#99, #110)
+
 ## [0.1.4] - 2026-10-12
 
 SocaDB now opens on a home screen with every schema you have worked on,
