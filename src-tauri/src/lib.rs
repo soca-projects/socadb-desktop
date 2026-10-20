@@ -207,13 +207,17 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_plugin_sparkle_updater::init());
 
-    builder
+    let app = builder
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             read_schema_file,
             schema_files::schema_files_info,
             schema_files::rename_schema_file,
             schema_files::duplicate_schema_file,
+            schema_files::write_schema_file,
+            schema_files::create_schema_file,
+            schema_files::probe_schema_folder,
+            schema_files::read_import_file,
             mcp_respond,
             atomic_write,
             open_terminal,
@@ -255,11 +259,15 @@ pub fn run() {
                 ws::cleanup_port_file();
             }
         })
-        .build(tauri::generate_context!())
-        .expect("error while building tauri application")
-        .run(|_app, event| {
-            if let tauri::RunEvent::Exit = event {
-                logging::log_stop();
-            }
-        });
+        .build(tauri::generate_context!());
+    #[expect(
+        clippy::expect_used,
+        reason = "without its Tauri app SocaDB has nothing to fall back to"
+    )]
+    let app = app.expect("error while building tauri application");
+    app.run(|_app, event| {
+        if let tauri::RunEvent::Exit = event {
+            logging::log_stop();
+        }
+    });
 }

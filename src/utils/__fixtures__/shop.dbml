@@ -1,0 +1,73 @@
+Project shop {
+  database_type: 'PostgreSQL'
+  Note: 'A small shop'
+}
+
+Enum order_status {
+  pending
+  paid [note: 'Money received']
+  shipped
+  "on hold"
+}
+
+TablePartial timestamps {
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp
+}
+
+Table users as U [headercolor: #3498DB] {
+  id integer [pk, increment]
+  email varchar(255) [not null, unique, note: 'Login']
+  full_name varchar
+  ~timestamps
+  Note: 'People who buy'
+}
+
+Table products {
+  id integer [pk, increment]
+  name varchar(120) [not null]
+  price decimal(10,2) [not null, default: 0]
+  in_stock boolean [default: true]
+  tags text[]
+  indexes {
+    name
+    (`lower(name)`) [name: 'products_lower_name']
+  }
+}
+
+Table orders {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > U.id]
+  status order_status [default: 'pending']
+  ~timestamps
+}
+
+Table order_items {
+  order_id integer
+  product_id integer
+  quantity int [not null, default: 1]
+
+  indexes {
+    (order_id, product_id) [pk]
+  }
+}
+
+Table profiles {
+  user_id integer [pk]
+  bio text
+}
+
+Table categories {
+  id integer [pk]
+  name varchar [unique]
+}
+
+Ref: order_items.order_id > orders.id [delete: cascade]
+Ref: products.id < order_items.product_id [delete: restrict, update: cascade]
+Ref: users.id - profiles.user_id
+Ref: products.id <> categories.id
+
+TableGroup sales {
+  orders
+  order_items
+}

@@ -153,7 +153,11 @@ fn c_path(path: &Path) -> Option<CString> {
 
 fn mount_of(path: &Path) -> Option<libc::statfs> {
     let path = c_path(path)?;
+    // SAFETY: statfs is a C struct of integers and char arrays, for which all
+    // zero bytes is a valid value.
     let mut info: libc::statfs = unsafe { std::mem::zeroed() };
+    // SAFETY: `path` is a NUL-terminated string alive for the call, and `info`
+    // is a valid statfs for it to fill.
     (unsafe { libc::statfs(path.as_ptr(), &mut info) } == 0).then_some(info)
 }
 
@@ -162,6 +166,7 @@ fn is_read_only(path: &Path) -> bool {
 }
 
 fn is_writable(path: &Path) -> bool {
+    // SAFETY: `path` is a NUL-terminated string alive for the call.
     c_path(path).is_some_and(|path| unsafe { libc::access(path.as_ptr(), libc::W_OK) } == 0)
 }
 
@@ -170,6 +175,7 @@ fn is_writable(path: &Path) -> bool {
 // still launches.
 fn translocated_original(bundle: &Path) -> Option<PathBuf> {
     type CreateOriginalPath = unsafe extern "C" fn(*const c_void, *mut c_void) -> *mut c_void;
+    // SAFETY: RTLD_DEFAULT is a libc handle and the name a static C string.
     let symbol = unsafe {
         libc::dlsym(
             libc::RTLD_DEFAULT,
@@ -179,9 +185,15 @@ fn translocated_original(bundle: &Path) -> Option<PathBuf> {
     if symbol.is_null() {
         return None;
     }
+    // SAFETY: the symbol is non-null and its C signature is
+    // `CFURLRef (CFURLRef, CFErrorRef *)`, which `CreateOriginalPath` mirrors.
     let create: CreateOriginalPath = unsafe { std::mem::transmute(symbol) };
     let url = NSURL::fileURLWithPath(&NSString::from_str(bundle.to_str()?));
+    // SAFETY: `url` is a live NSURL, toll-free bridged to CFURLRef, for the whole
+    // call, and the error out-pointer may be null.
     let original = unsafe { create(Retained::as_ptr(&url).cast(), std::ptr::null_mut()) };
+    // SAFETY: a Create function returns a reference we own, or null; from_raw
+    // takes that ownership and gives None for null.
     let original = unsafe { Retained::from_raw(original.cast::<NSURL>()) }?;
     Some(PathBuf::from(original.path()?.to_string()))
 }
@@ -253,6 +265,7 @@ fn repaired_recently(marker: &Path, original: &Path) -> bool {
 
 fn remove_quarantine(path: &Path) -> std::io::Result<()> {
     let c_path = c_path(path).ok_or(std::io::ErrorKind::InvalidInput)?;
+    // SAFETY: both names are NUL-terminated strings alive for the call.
     let removed =
         unsafe { libc::removexattr(c_path.as_ptr(), QUARANTINE.as_ptr(), libc::XATTR_NOFOLLOW) };
     if removed != 0 {
@@ -298,7 +311,10 @@ fn move_to_trash(path: &Path) -> Option<PathBuf> {
 
 fn disk_image_mount(path: &Path) -> Option<PathBuf> {
     let info = mount_of(path)?;
+    // SAFETY: statfs fills f_mntonname with a NUL-terminated string inside the
+    // array, and `info` outlives the borrow.
     let mount_point = unsafe { CStr::from_ptr(info.f_mntonname.as_ptr()) };
+    // SAFETY: same as f_mntonname.
     let device = unsafe { CStr::from_ptr(info.f_mntfromname.as_ptr()) }
         .to_str()
         .ok()?;

@@ -1,34 +1,45 @@
-import { useTranslation } from "react-i18next";
-import {
-  TableIcon as Table,
-  PlusIcon as Plus,
-  ArrowLeftIcon as ArrowLeft,
-} from "@phosphor-icons/react";
-import { formatShortcut } from "../../utils/platform";
+import { Trans, useTranslation } from "react-i18next";
+import { PlusIcon as Plus, ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react";
+import { ArrowSketch, DraftTableSketch } from "../Sketch/Sketch";
+import { useChatStore } from "../../stores/chatStore";
 
 interface EmptyCanvasProps {
   onAddTable: () => void;
   isSidePanelOpen: boolean;
 }
 
+const CHAT_GUTTER_PX = 32;
+const MIN_CONTENT_PX = 280;
+
 export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
   const { t } = useTranslation();
+  const chatOpen = useChatStore((s) => s.isPanelOpen);
+  const chatWidth = useChatStore((s) => s.panelSize.width);
+  const chatInset = chatOpen ? chatWidth + CHAT_GUTTER_PX : 0;
 
+  // The canvas controls and the chat float over the canvas: the content keeps
+  // clear of them, and drops the drawing when the window is too short.
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-      <div className="pointer-events-auto flex max-w-[320px] flex-col items-center text-center">
-        <div
-          className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/[0.07] animate-fade-in"
+    <div
+      className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center pb-20"
+      style={{
+        paddingRight: `min(${chatInset}px, max(0px, 100% - ${MIN_CONTENT_PX}px))`,
+      }}
+    >
+      <div className="pointer-events-auto flex w-full max-w-[372px] flex-col items-center px-4 text-center">
+        <DraftTableSketch
+          className="w-[210px] animate-fade-in [@media(max-height:640px)]:hidden"
           style={{ animationDelay: "0.05s" }}
-        >
-          <Table size={22} className="text-accent" />
-        </div>
+        />
 
         <h3
-          className="mt-4 text-[15px] font-semibold text-primary animate-fade-in"
+          className="mt-5 text-[20px] font-bold tracking-[-0.02em] text-primary animate-fade-in"
           style={{ animationDelay: "0.12s" }}
         >
-          {t("emptyCanvas.heading")}
+          <Trans
+            i18nKey="emptyCanvas.heading"
+            components={{ mark: <span className="marker" /> }}
+          />
         </h3>
         <p
           className="mt-1.5 text-[13px] leading-relaxed text-tertiary animate-fade-in"
@@ -37,30 +48,20 @@ export function EmptyCanvas({ onAddTable, isSidePanelOpen }: EmptyCanvasProps) {
           {t("emptyCanvas.description")}
         </p>
 
-        <button
-          onClick={onAddTable}
-          className="mt-5 flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98] animate-fade-in"
+        <div
+          className="mt-5 flex flex-col items-center animate-fade-in"
           style={{ animationDelay: "0.25s" }}
         >
-          <Plus size={15} weight="bold" />
-          {t("emptyCanvas.createFirst")}
-        </button>
-
-        <div
-          className="mt-6 flex items-center gap-5 text-[12px] text-tertiary animate-fade-in"
-          style={{ animationDelay: "0.35s" }}
-        >
-          <span className="flex items-center gap-1.5">
-            <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary shadow-soft">
-              {formatShortcut(["Mod", "N"])}
-            </kbd>
-            {t("emptyCanvas.newSchema")}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary shadow-soft">
-              {formatShortcut(["Mod", "O"])}
-            </kbd>
-            {t("emptyCanvas.openFile")}
+          <button
+            onClick={onAddTable}
+            className="flex items-center gap-2 rounded-lg border-2 border-sticker shadow-sticker bg-accent px-4 py-2.5 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98]"
+          >
+            <Plus size={15} weight="bold" />
+            {t("emptyCanvas.createFirst")}
+          </button>
+          <span className="relative mt-2 whitespace-nowrap text-[13px] text-tertiary">
+            {t("emptyCanvas.askAi")}
+            <ArrowSketch className="absolute left-full top-2 ml-1 h-[30px] w-[62px]" />
           </span>
         </div>
 

@@ -18,6 +18,7 @@ import {
   makeProvider,
 } from "../types/chat";
 import { genId } from "../utils/id";
+import { CHAT_PANEL_DEFAULT_HEIGHT, CHAT_PANEL_DEFAULT_WIDTH } from "../utils/layout";
 import { providerFromSessionId } from "../utils/conversationFiles";
 
 function defaultProviders(): Record<string, Provider> {
@@ -59,6 +60,7 @@ interface ChatState {
   streamingConversationId: string | null;
   isStreaming: boolean;
   isPanelOpen: boolean;
+  panelSize: { width: number; height: number };
   providers: Record<string, Provider>;
   effortByProvider: Record<ProviderId, EffortLevel>;
 
@@ -83,6 +85,7 @@ interface ChatState {
   updateLastToolCall: (toolUseId: string, result: string, isSuccess: boolean) => void;
   finishResponse: (sessionId: string) => void;
   togglePanel: () => void;
+  setPanelSize: (size: { width: number; height: number }) => void;
   clearHistory: () => void;
   setProvider: (id: ProviderId, provider: Provider) => void;
   setEffort: (providerId: ProviderId, effort: EffortLevel) => void;
@@ -138,6 +141,7 @@ export const useChatStore = create<ChatState>()((set) => ({
   sessionId: null,
   isStreaming: false,
   isPanelOpen: false,
+  panelSize: { width: CHAT_PANEL_DEFAULT_WIDTH, height: CHAT_PANEL_DEFAULT_HEIGHT },
   selectedModel: DEFAULT_MODEL,
   providerSwitch: null,
   providers: defaultProviders(),
@@ -387,6 +391,8 @@ export const useChatStore = create<ChatState>()((set) => ({
     }),
 
   togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
+
+  setPanelSize: (panelSize) => set({ panelSize }),
 
   clearHistory: () => set({ messages: [], sessionId: null }),
 

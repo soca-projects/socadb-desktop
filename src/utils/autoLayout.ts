@@ -7,14 +7,21 @@ const NODE_WIDTH = 250;
 const ROW_HEIGHT = 28; // matches py-1.5 (12px) + text line-height (16px) in ColumnRow
 const HEADER_HEIGHT = 36; // matches py-2.5 (20px) + text line-height (16px) in TableItem header
 const PADDING = 16; // bottom padding + "Add column" button area
+const INDEX_HEADER_HEIGHT = 28; // h-7, the INDEXES line in TableNode
+const INDEX_ROW_HEIGHT = 24; // h-6, one index line in TableNode
 
-function estimateNodeHeight(table: Table): number {
-  return HEADER_HEIGHT + table.columns.length * ROW_HEIGHT + PADDING;
+export function estimateNodeHeight(table: Table, indexesOpen: boolean): number {
+  const indexes = table.indexes?.length ?? 0;
+  const section = indexes
+    ? INDEX_HEADER_HEIGHT + (indexesOpen ? indexes * INDEX_ROW_HEIGHT : 0)
+    : 0;
+  return HEADER_HEIGHT + table.columns.length * ROW_HEIGHT + PADDING + section;
 }
 
 export async function computeAutoLayout(
   tables: Table[],
   relations: Relation[],
+  indexesOpen: ReadonlySet<string> = new Set(),
 ): Promise<Record<string, { x: number; y: number }>> {
   const graph = {
     id: "root",
@@ -28,7 +35,7 @@ export async function computeAutoLayout(
     children: tables.map((table) => ({
       id: table.id,
       width: NODE_WIDTH,
-      height: estimateNodeHeight(table),
+      height: estimateNodeHeight(table, indexesOpen.has(table.id)),
     })),
     edges: relations.map((rel) => ({
       id: rel.id,

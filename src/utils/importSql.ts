@@ -1,51 +1,40 @@
-import type { Table, Relation, DbType, ColumnType } from "../types/schema";
-import { COLUMN_TYPES_BY_DB } from "../types/schema";
-import {
-  stripComments,
-  splitStatements,
-  detectDbType,
-  parseCreateTable,
-  parseAlterTableFks,
-  resolveForeignKeys,
-} from "./sqlParser";
-import type { PendingFk } from "./sqlParser";
-
-export { detectDbType } from "./sqlParser";
+import type { Column, Table, Relation, DbType, SchemaEnum } from "../types/schema";
+import { linkEnumColumns } from "./schemaIntegrity";
+import { detectDbType, parseStatements } from "./sqlParser";
+import type { ImportIssue } from "./sqlColumns";
+import { splitStatements, stripComments } from "./sqlScan";
+import { dialectType } from "./sqlTypes";
 
 export interface SqlImportResult {
   tables: Table[];
   relations: Relation[];
   detectedDbType: DbType | null;
   attempted: number;
+  enums: SchemaEnum[];
+  issues: ImportIssue[];
 }
 
-export function parseSqlDdl(sql: string): SqlImportResult {
-  const clean = stripComments(sql);
-  const detectedDbType = detectDbType(clean);
-  const statements = splitStatements(clean);
-
-  const tables: Table[] = [];
-  const allPendingFks: PendingFk[] = [];
-  let attempted = 0;
-
-  for (const stmt of statements) {
-    const upper = stmt.toUpperCase().trim();
-
-    if (upper.startsWith("CREATE TABLE") && !upper.startsWith("CREATE TEMPORARY TABLE")) {
-      attempted++;
-      const result = parseCreateTable(stmt);
-      if (result) {
-        tables.push(result.table);
-        allPendingFks.push(...result.pendingFks);
-      }
-    } else if (upper.startsWith("ALTER TABLE")) {
-      allPendingFks.push(...parseAlterTableFks(stmt));
-    }
-  }
-
-  const relations = resolveForeignKeys(tables, allPendingFks);
-
-  return { tables, relations, detectedDbType, attempted };
+// Quotes and escapes depend on the dialect, so a file nothing marks as MySQL or
+// PostgreSQL is read as the schema it goes into.
+export function parseSqlDdl(
+  sql: string,
+  fallbackDbType: DbType | null = null,
+): SqlImportResult {
+  const detectedDbType = detectDbType(sql);
+  const dialect = detectedDbType ?? fallbackDbType;
+  const parsed = parseStatements(
+    splitStatements(stripComments(sql, dialect), dialect),
+    dialect,
+  );
+  const linked = linkEnumColumns(parsed.tables, parsed.enums);
+  return {
+    tables: linked.tables,
+    relations: parsed.relations,
+    enums: linked.enums,
+    detectedDbType,
+    attempted: parsed.attempted,
+    issues: parsed.issues,
+  };
 }
 
 export interface AdaptResult {
@@ -54,15 +43,16 @@ export interface AdaptResult {
 }
 
 export function adaptColumnsToDbType(tables: Table[], targetDbType: DbType): AdaptResult {
-  const validTypes = new Set<string>(COLUMN_TYPES_BY_DB[targetDbType]);
   let adaptedCount = 0;
 
   const adapted = tables.map((table) => ({
     ...table,
-    columns: table.columns.map((col) => {
-      if (validTypes.has(col.type)) return col;
+    columns: table.columns.map((col): Column => {
+      const type = dialectType(col.type, targetDbType);
+      if (type === col.type) return col;
+      if (type) return { ...col, type };
       adaptedCount++;
-      return { ...col, type: "varchar" as ColumnType };
+      return { ...col, type: "varchar" };
     }),
   }));
 

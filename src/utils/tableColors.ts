@@ -66,7 +66,7 @@ export function getColorVariants(
   dot: string;
 } {
   const hex = normalizeTableColor(color);
-  const base = isDark ? "#242222" : "#FDFCFC";
+  const base = isDark ? "#2A2827" : "#FFFCF6";
   return {
     bg: blendWithBase(hex, isDark ? 0.82 : 0.72, base),
     border: blendWithBase(hex, isDark ? 0.7 : 0.55, base),
@@ -87,4 +87,13 @@ export function getNextTableColor(existingTables: Table[]): string {
   }
 
   return PRESET_COLORS[existingTables.length % PRESET_COLORS.length];
+}
+
+export function colorTables(tables: Table[], existing: Table[] = []): Table[] {
+  const colored: Table[] = [];
+  for (const table of tables) {
+    const color = table.color ?? getNextTableColor([...existing, ...colored]);
+    colored.push({ ...table, color });
+  }
+  return colored;
 }

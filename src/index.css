@@ -56,19 +56,25 @@
   --color-accent-hover: #b34058;
   --color-accent-light: #fdf2f5;
 
-  --color-surface: #fdfcfc;
-  --color-surface-canvas: #f9f8f8;
-  --color-surface-muted: 244 242 243;
-  --color-surface-sidebar: #f9f8f8;
+  --color-surface: #fffcf6;
+  --color-surface-paper: #f5eee3;
+  --color-surface-paper-muted: 235 226 211;
+  --color-surface-canvas: #fcfaf6;
+  --color-surface-muted: 242 236 226;
+  --color-surface-sidebar: #fffcf6;
 
   --color-fg: #292524;
   --color-fg-secondary: #44403c;
-  --color-fg-tertiary: #78716c;
-  --color-fg-muted: #d6d3d1;
+  --color-fg-tertiary: #73685c;
+  --color-fg-muted: #d6c9b4;
 
-  --color-border: #e8e5e6;
-  --color-border-light: #f2f0f1;
-  --color-border-hover: #d6d3d1;
+  --color-border: #e6dccb;
+  --color-border-light: #efe7da;
+  --color-border-hover: #d6c9b4;
+
+  --color-highlight: 252 211 77;
+  --color-sticker-border: #292524;
+  --color-sticker-shadow: #292524;
 
   --color-badge-primary-text: #d97706;
   --color-badge-primary-bg: #fffbeb;
@@ -77,14 +83,15 @@
   --color-badge-unique-bg: #eff6ff;
   --color-badge-unique-border: rgba(37, 99, 235, 0.2);
 
-  --color-edge-default: #a8a29e;
+  --color-edge-default: #9c9184;
   --color-edge-hovered: #d4667e;
   --color-edge-selected: #c74b68;
   --color-edge-hover-zone: rgba(199, 75, 104, 0.125);
 
-  --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
-  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
-  --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+  --shadow-soft:
+    0 1px 3px 0 rgba(41, 37, 36, 0.05), 0 1px 2px -1px rgba(41, 37, 36, 0.04);
+  --shadow-card: 0 2px 8px 0 rgba(41, 37, 36, 0.07);
+  --shadow-float: 0 4px 16px 0 rgba(41, 37, 36, 0.12);
 }
 
 [data-theme="dark"] {
@@ -92,19 +99,26 @@
   --color-accent-hover: #d4667e;
   --color-accent-light: #2a1f23;
 
-  --color-surface: #242222;
+  --color-surface: #2a2827;
+  --color-surface-paper: #1c1b1a;
+  --color-surface-paper-muted: 51 48 46;
   --color-surface-canvas: #1c1b1a;
-  --color-surface-muted: 47 44 45;
-  --color-surface-sidebar: #242222;
+  --color-surface-muted: 51 48 46;
+  --color-surface-sidebar: #2a2827;
 
   --color-fg: #e7e5e4;
   --color-fg-secondary: #d6d3d1;
-  --color-fg-tertiary: #8a8380;
+  --color-fg-tertiary: #9a938e;
   --color-fg-muted: #57534e;
 
-  --color-border: #3d3a3b;
-  --color-border-light: #322f30;
-  --color-border-hover: #4a4647;
+  --color-border: #3d3936;
+  --color-border-light: #33302e;
+  --color-border-hover: #4a4542;
+
+  --color-highlight: 251 191 36;
+  /* No sticker in dark mode: its offset shadow doesn't show on dark paper. */
+  --color-sticker-border: transparent;
+  --color-sticker-shadow: transparent;
 
   --color-badge-primary-text: #f59e0b;
   --color-badge-primary-bg: #2a2215;
@@ -128,8 +142,25 @@ body {
   padding: 0;
   font-family: "Satoshi", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-paper);
   color: var(--color-fg);
+}
+
+.marker {
+  margin: 0 -4px;
+  padding: 0 4px;
+  background: linear-gradient(
+    transparent 58%,
+    rgb(var(--color-highlight)) 58%,
+    rgb(var(--color-highlight)) 92%,
+    transparent 92%
+  );
+}
+
+/* A marker band only reads on light paper; on dark paper the words take the color. */
+[data-theme="dark"] .marker {
+  background: none;
+  color: rgb(var(--color-highlight));
 }
 
 button:focus-visible,
@@ -177,4 +208,12 @@ select:focus-visible,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* A table's note and enum hover cards must cover the tables drawn after it.
+   Only while a card shows: a table raised on any hover would cover a selected
+   edge's toolbar lying over it. The canvas controls stay above anyway: React
+   Flow panels sit over the viewport. */
+.react-flow__node:has(.group\/hover:hover) {
+  z-index: 1001 !important;
 }

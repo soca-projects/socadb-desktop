@@ -54,9 +54,25 @@ export const ColumnZ = z.object({
   isUnique: z.boolean(),
   isAutoIncrement: z.boolean(),
   defaultValue: z.string().nullable(),
+  // A bad value in a hand-edited file is dropped rather than making the whole
+  // schema unreadable.
+  defaultKind: z.enum(["value", "expression"]).optional().catch(undefined),
+  length: z.number().int().positive().optional().catch(undefined),
+  precision: z.number().int().positive().optional().catch(undefined),
+  scale: z.number().int().nonnegative().optional().catch(undefined),
+  unsigned: z.boolean().optional().catch(undefined),
+  enumId: z.string().optional(),
+  note: z.string().optional(),
 });
 
 const PositionZ = z.object({ x: z.number(), y: z.number() });
+
+export const TableIndexZ = z.object({
+  id: z.string(),
+  columnIds: z.array(z.string()),
+  unique: z.boolean(),
+  name: z.string().optional(),
+});
 
 export const TableZ = z.object({
   id: z.string(),
@@ -64,6 +80,14 @@ export const TableZ = z.object({
   color: z.string().optional(),
   position: PositionZ,
   columns: z.array(ColumnZ),
+  note: z.string().optional(),
+  indexes: z.array(TableIndexZ).optional(),
+});
+
+export const SchemaEnumZ = z.object({
+  id: z.string(),
+  name: z.string(),
+  values: z.array(z.string()),
 });
 
 const RelationEndpointZ = z.object({
@@ -88,27 +112,41 @@ export const SchemaZ = z.object({
   updatedAt: z.string(),
   tables: z.array(TableZ),
   relations: z.array(RelationZ),
+  enums: z.array(SchemaEnumZ).optional(),
 });
 
-export const McpColumnInputZ = z.object({
-  name: z.string(),
+const McpColumnFieldsZ = z.object({
   type: z.string().optional(),
   isPrimaryKey: z.boolean().optional(),
   isNullable: z.boolean().optional(),
   isUnique: z.boolean().optional(),
   isAutoIncrement: z.boolean().optional(),
+  unsigned: z.boolean().optional(),
+  length: z.number().int().positive().optional(),
+  precision: z.number().int().positive().optional(),
+  scale: z.number().int().nonnegative().optional(),
   defaultValue: z.string().nullable().optional(),
+  defaultKind: z.enum(["value", "expression"]).optional(),
+  enumValues: z.array(z.string()).optional(),
+  enumName: z.string().optional(),
+});
+
+export const McpColumnInputZ = McpColumnFieldsZ.extend({
+  name: z.string(),
+  note: z.string().optional(),
 });
 
 export const McpCreateTableZ = z.object({
   name: z.string(),
   columns: z.array(McpColumnInputZ).optional(),
+  note: z.string().optional(),
 });
 
 export const McpUpdateTableZ = z.object({
   name: z.string(),
   newName: z.string().optional(),
   color: z.string().optional(),
+  note: z.string().nullable().optional(),
 });
 
 export const McpTableNameZ = z.object({
@@ -120,14 +158,9 @@ export const McpAddColumnZ = z.object({
   column: McpColumnInputZ,
 });
 
-export const McpColumnUpdateZ = z.object({
+export const McpColumnUpdateZ = McpColumnFieldsZ.extend({
   name: z.string().optional(),
-  type: z.string().optional(),
-  isPrimaryKey: z.boolean().optional(),
-  isNullable: z.boolean().optional(),
-  isUnique: z.boolean().optional(),
-  isAutoIncrement: z.boolean().optional(),
-  defaultValue: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
 });
 
 export const McpUpdateColumnZ = z.object({
@@ -139,6 +172,18 @@ export const McpUpdateColumnZ = z.object({
 export const McpDeleteColumnZ = z.object({
   table: z.string(),
   column: z.string(),
+});
+
+export const McpAddIndexZ = z.object({
+  table: z.string(),
+  columns: z.array(z.string()).min(1),
+  unique: z.boolean().optional(),
+  name: z.string().optional(),
+});
+
+export const McpDeleteIndexZ = z.object({
+  table: z.string(),
+  name: z.string(),
 });
 
 export const McpRelationEndpointsZ = z.object({

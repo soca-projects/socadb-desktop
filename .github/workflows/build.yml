@@ -33,9 +33,13 @@ jobs:
           - platform: macos-latest
             args: --target aarch64-apple-darwin
             bunTarget: darwin-arm64
+            macTarget: aarch64-apple-darwin
+            publishArgs: --config '{"bundle":{"macOS":{"hardenedRuntime":true}}}'
           - platform: macos-latest
             args: --target x86_64-apple-darwin
             bunTarget: darwin-x64
+            macTarget: x86_64-apple-darwin
+            publishArgs: --config '{"bundle":{"macOS":{"hardenedRuntime":true}}}'
           - platform: ubuntu-22.04
             args: '--verbose'
             bunTarget: linux-x64
@@ -131,13 +135,31 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Import the Developer ID certificate
+        if: ${{ inputs.publish && matrix.platform == 'macos-latest' }}
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: ./scripts/macos/import-signing-identity.sh
+
+      - name: Sign Sparkle's helpers
+        if: ${{ inputs.publish && matrix.platform == 'macos-latest' }}
+        run: ./scripts/macos/sign-sparkle-helpers.sh
+
       - name: Build and publish
         if: ${{ inputs.publish }}
+        timeout-minutes: 150
         uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ matrix.platform == 'macos-latest' && secrets.APPLE_API_KEY || '' }}
+          APPLE_API_ISSUER: ${{ matrix.platform == 'macos-latest' && secrets.APPLE_API_ISSUER || '' }}
           APPIMAGE_EXTRACT_AND_RUN: '1'
           NO_STRIP: 'true'
           BUN_TARGET: ${{ matrix.bunTarget }}
@@ -155,7 +177,36 @@ jobs:
           # succeed, so users never see a partial release.
           releaseDraft: true
           prerelease: ${{ inputs.prerelease }}
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} ${{ matrix.publishArgs }}
+
+      - name: Notarize the disk image
+        if: ${{ inputs.publish && matrix.platform == 'macos-latest' }}
+        timeout-minutes: 150
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          TAG_NAME: ${{ inputs.tag-name }}
+          BUNDLE_DIR: src-tauri/target/${{ matrix.macTarget }}/release/bundle
+        run: |
+          dmgs=("$BUNDLE_DIR"/dmg/*.dmg)
+          if [ "${#dmgs[@]}" -ne 1 ] || [ ! -f "${dmgs[0]}" ]; then
+            echo "::error::Expected one disk image in $BUNDLE_DIR/dmg, found: ${dmgs[*]}"
+            exit 1
+          fi
+          ./scripts/macos/notarize-dmg.sh "${dmgs[0]}" "$TAG_NAME"
+
+      - name: Check the signature and notarization
+        if: ${{ inputs.publish && matrix.platform == 'macos-latest' }}
+        env:
+          BUNDLE_DIR: src-tauri/target/${{ matrix.macTarget }}/release/bundle
+        run: ./scripts/macos/check-signature.sh "$BUNDLE_DIR/macos/SocaDB.app" "$BUNDLE_DIR"/dmg/*.dmg
+
+      - name: Remove the signing keychain
+        if: ${{ always() && inputs.publish && matrix.platform == 'macos-latest' }}
+        run: |
+          security delete-keychain "$RUNNER_TEMP/macos-signing/signing.keychain-db" || true
+          rm -rf "$RUNNER_TEMP/macos-signing"
 
       - name: Upload AppImage debug artifacts on failure
         if: failure() && matrix.platform == 'ubuntu-22.04'

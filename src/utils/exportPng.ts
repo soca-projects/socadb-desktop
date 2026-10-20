@@ -19,7 +19,7 @@ export async function exportCanvasPng() {
     const [blob, path] = await Promise.all([
       toBlob(viewport, {
         backgroundColor:
-          useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FDFCFC",
+          useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FFFCF6",
         pixelRatio: 2,
       }),
       save({

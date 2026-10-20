@@ -4,11 +4,12 @@ import { genId } from "./id";
 import { createDefaultIdColumn } from "./columnDefaults";
 import { computeAutoLayout } from "./autoLayout";
 import { getNextTableColor } from "./tableColors";
-import { findTableById, findTableByName } from "./schemaQueries";
+import { findEnumById, findTableById, findTableByName } from "./schemaQueries";
+import { uniqueEnumName } from "./schemaIntegrity";
 import { logError } from "./log";
 import { toast } from "sonner";
 import i18next from "../i18n";
-import type { Column, Schema } from "../types/schema";
+import type { Column, Schema, SchemaEnum } from "../types/schema";
 
 export function handleUndo() {
   useSchemaStore.temporal.getState().undo();
@@ -21,7 +22,11 @@ export function handleRedo() {
 export async function handleAutoLayout() {
   try {
     const { schema, updateTablePositions } = useSchemaStore.getState();
-    const positions = await computeAutoLayout(schema.tables, schema.relations);
+    const positions = await computeAutoLayout(
+      schema.tables,
+      schema.relations,
+      useViewStore.getState().indexesOpen,
+    );
     updateTablePositions(positions);
   } catch (e) {
     logError("layout.auto.failed", e);
@@ -63,13 +68,47 @@ export function duplicateTable(tableId: string): string | null {
   const source = findTableById(schema, tableId);
   if (!source) return null;
   const newId = genId();
-  addTable({
-    id: newId,
-    name: uniqueTableName(`${source.name}_copy`, schema),
-    color: source.color,
-    position: { x: source.position.x + 40, y: source.position.y + 40 },
-    columns: source.columns.map((col) => ({ ...col, id: genId(), isForeignKey: false })),
+  const name = uniqueTableName(`${source.name}_copy`, schema);
+  const columnIds = new Map(source.columns.map((c) => [c.id, genId()]));
+  // A MySQL enum belongs to its column (the SQL writes the values inline), so
+  // the copy gets its own instead of sharing the original's.
+  const clones: SchemaEnum[] = [];
+  const columns = source.columns.map((col) => {
+    const copy = { ...col, id: columnIds.get(col.id) ?? genId(), isForeignKey: false };
+    const original =
+      schema.dbType === "mysql" && col.enumId
+        ? findEnumById(schema, col.enumId)
+        : undefined;
+    if (!original) return copy;
+    const clone: SchemaEnum = {
+      id: genId(),
+      name: uniqueEnumName(
+        `${name}_${col.name}`,
+        [...(schema.enums ?? []), ...clones],
+        [...schema.tables.map((t) => t.name), name],
+      ),
+      values: [...original.values],
+    };
+    clones.push(clone);
+    return { ...copy, enumId: clone.id };
   });
+  addTable(
+    {
+      id: newId,
+      name,
+      color: source.color,
+      position: { x: source.position.x + 40, y: source.position.y + 40 },
+      columns,
+      note: source.note,
+      indexes: source.indexes?.map((i) => ({
+        ...i,
+        id: genId(),
+        name: undefined,
+        columnIds: i.columnIds.map((id) => columnIds.get(id) ?? id),
+      })),
+    },
+    clones,
+  );
   return newId;
 }
 

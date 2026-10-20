@@ -6,7 +6,14 @@ import {
   applyEdgeChanges,
   useReactFlow,
 } from "@xyflow/react";
-import type { Node, Edge, NodeChange, EdgeChange, Connection } from "@xyflow/react";
+import type {
+  Node,
+  Edge,
+  NodeChange,
+  EdgeChange,
+  Connection,
+  OnBeforeDelete,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { useSchemaStore } from "../../stores/schemaStore";
@@ -24,15 +31,17 @@ import { ImportModal } from "../ImportModal/ImportModal";
 import { listen } from "@tauri-apps/api/event";
 import { Trans } from "react-i18next";
 import { formatShortcut } from "../../utils/platform";
+import { removableByKey } from "../../utils/canvasDeletion";
 import { NARROW_WINDOW_QUERY } from "../../utils/layout";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
-import type { Table, Relation } from "../../types/schema";
+import type { DbType, Relation, SchemaEnum, Table } from "../../types/schema";
 
 const nodeTypes = { table: TableNode };
 const edgeTypes = { relation: RelationEdge };
 const PRO_OPTIONS = { hideAttribution: true };
 const DELETE_KEY_CODE = ["Delete", "Backspace"];
+const ON_BEFORE_DELETE: OnBeforeDelete = async (elements) => removableByKey(elements);
 const SIDE_PANEL_PX = 280;
 
 const TOOLBAR_PX = 40;
@@ -74,15 +83,17 @@ function ViewportCompensator({
   return null;
 }
 
-function tablesToNodes(tables: Table[]) {
+const NO_ENUMS: SchemaEnum[] = [];
+
+function tablesToNodes(tables: Table[], enums: SchemaEnum[], dbType: DbType) {
   return tables.map((table) => ({
     id: table.id,
     type: "table" as const,
     position: table.position,
     data: {
-      label: table.name,
-      columns: table.columns,
-      color: table.color,
+      table,
+      enums: enums.filter((e) => table.columns.some((c) => c.enumId === e.id)),
+      dbType,
     },
   }));
 }
@@ -114,13 +125,15 @@ interface CanvasProps {
 export function Canvas({ onOpenSettings }: CanvasProps) {
   const tables = useSchemaStore((s) => s.schema.tables);
   const relations = useSchemaStore((s) => s.schema.relations);
+  const enums = useSchemaStore((s) => s.schema.enums ?? NO_ENUMS);
+  const dbType = useSchemaStore((s) => s.schema.dbType);
   const updateTable = useSchemaStore((s) => s.updateTable);
   const deleteTable = useSchemaStore((s) => s.deleteTable);
   const addRelation = useSchemaStore((s) => s.addRelation);
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
   const theme = useThemeStore((s) => s.theme);
 
-  const gridColor = theme === "dark" ? "#3A3737" : "#DBD8D9";
+  const gridColor = theme === "dark" ? "#3A3634" : "#E3DCCF";
 
   const focusMode = useFocusStore((s) => s.focusMode);
   const toggleFocusMode = useFocusStore((s) => s.toggleFocusMode);
@@ -190,7 +203,10 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   const [lastStoreNodes, setLastStoreNodes] = useState<Node[]>([]);
   const [lastStoreEdges, setLastStoreEdges] = useState<Edge[]>([]);
 
-  const storeNodes = useMemo(() => tablesToNodes(tables), [tables]);
+  const storeNodes = useMemo(
+    () => tablesToNodes(tables, enums, dbType),
+    [tables, enums, dbType],
+  );
   const storeEdges = useMemo(() => relationsToEdges(relations), [relations]);
 
   if (storeNodes !== lastStoreNodes) {
@@ -351,6 +367,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
             minZoom={0.1}
             maxZoom={2}
             deleteKeyCode={DELETE_KEY_CODE}
+            onBeforeDelete={ON_BEFORE_DELETE}
             proOptions={PRO_OPTIONS}
           >
             <Background gap={12} size={2} color={gridColor} />

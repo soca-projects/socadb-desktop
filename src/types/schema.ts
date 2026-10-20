@@ -80,12 +80,35 @@ export const POSTGRESQL_COLUMN_TYPES: ColumnType[] = [
   "json",
   "jsonb",
   "bytea",
+  "enum",
 ];
 
 export const COLUMN_TYPES_BY_DB: Record<DbType, ColumnType[]> = {
   mysql: MYSQL_COLUMN_TYPES,
   postgresql: POSTGRESQL_COLUMN_TYPES,
 };
+
+export const LENGTH_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
+  "varchar",
+  "char",
+]);
+export const PRECISION_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
+  "decimal",
+  "numeric",
+]);
+
+export const MYSQL_NUMERIC_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType>([
+  "int",
+  "bigint",
+  "tinyint",
+  "smallint",
+  "mediumint",
+  "float",
+  "double",
+  "decimal",
+]);
+
+export type DefaultKind = "value" | "expression";
 
 export type RelationType = "1:1" | "1:N" | "N:1";
 
@@ -101,14 +124,38 @@ export interface Column {
   isUnique: boolean;
   isAutoIncrement: boolean;
   defaultValue: string | null;
+  defaultKind?: DefaultKind;
+  length?: number;
+  precision?: number;
+  scale?: number;
+  unsigned?: boolean;
+  enumId?: string;
+  note?: string;
 }
 
+export interface TableIndex {
+  id: string;
+  columnIds: string[];
+  unique: boolean;
+  name?: string;
+}
+
+// The new fields are optional so a file that uses none of them is saved
+// unchanged: users commit .soca files and read the diffs.
 export interface Table {
   id: string;
   name: string;
   color?: string;
   position: { x: number; y: number };
   columns: Column[];
+  note?: string;
+  indexes?: TableIndex[];
+}
+
+export interface SchemaEnum {
+  id: string;
+  name: string;
+  values: string[];
 }
 
 export interface Relation {
@@ -128,4 +175,5 @@ export interface Schema {
   updatedAt: string;
   tables: Table[];
   relations: Relation[];
+  enums?: SchemaEnum[];
 }

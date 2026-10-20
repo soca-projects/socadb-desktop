@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   XIcon as X,
   ArrowLeftIcon as ArrowLeft,
-  CaretDownIcon as CaretDown,
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   PlusIcon as Plus,
   PaperPlaneRightIcon as PaperPlaneRight,
@@ -12,7 +11,7 @@ import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
 import { chatSendErrorText } from "../../utils/chatErrors";
 import { useSchemaStore } from "../../stores/schemaStore";
-import { serializeRelation } from "../../utils/schemaQueries";
+import { buildSystemPrompt } from "../../utils/agentPrompt";
 import {
   getAvailableModels,
   getModelDisplayName,
@@ -21,6 +20,7 @@ import {
   resolveEffort,
 } from "../../types/chat";
 import { EffortPicker } from "../EffortPicker/EffortPicker";
+import { SelectMenu } from "../SelectMenu/SelectMenu";
 import { useFocusStore } from "../../stores/focusStore";
 import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
@@ -31,45 +31,13 @@ import {
   CHAT_PANEL_MIN_HEIGHT,
   CHAT_PANEL_MAX_WIDTH,
   CHAT_PANEL_MAX_HEIGHT,
-  CHAT_PANEL_DEFAULT_WIDTH,
-  CHAT_PANEL_DEFAULT_HEIGHT,
 } from "../../utils/layout";
-
-function buildSystemPrompt(): string {
-  const { schema } = useSchemaStore.getState();
-
-  const tables = schema.tables.map((t) => {
-    const cols = t.columns.map((c) => c.name).join(", ");
-    return `- ${t.name} (${t.columns.length} cols: ${cols})`;
-  });
-
-  const relations = schema.relations.map((r) => {
-    const sr = serializeRelation(schema, r);
-    return `- ${sr.from.table}.${sr.from.column} → ${sr.to.table}.${sr.to.column} (${sr.type})`;
-  });
-
-  return `You are a database schema design assistant in SocaDB.
-
-## Context
-- Database: ${schema.dbType}
-- Schema: "${schema.name}"
-- Tables: ${schema.tables.length}
-${tables.length > 0 ? "\n" + tables.join("\n") : ""}
-${relations.length > 0 ? "\n## Relations\n" + relations.join("\n") : ""}
-
-## Rules
-- Use the SocaDB MCP tools to modify the schema (create_table, add_column, create_relation, etc.)
-- Use get_table to inspect column details (types, constraints) before modifying a table
-- Respect the dbType and use compatible column types
-- After creating or modifying multiple tables, call auto_layout to reorganize the canvas
-- Answer in the user's language
-- Be concise`;
-}
 
 type ResizeAxis = "both" | "vertical" | "horizontal";
 
-function useResize(initial: { width: number; height: number }) {
-  const [size, setSize] = useState(initial);
+function useResize() {
+  const size = useChatStore((s) => s.panelSize);
+  const setSize = useChatStore((s) => s.setPanelSize);
 
   const startResize = useCallback(
     (e: React.MouseEvent, axis: ResizeAxis) => {
@@ -115,7 +83,7 @@ function useResize(initial: { width: number; height: number }) {
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
     },
-    [size],
+    [size, setSize],
   );
 
   return { size, startResize };
@@ -140,10 +108,7 @@ export function ChatPanel() {
   const providerSwitch = useChatStore((s) => s.providerSwitch);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { size, startResize } = useResize({
-    width: CHAT_PANEL_DEFAULT_WIDTH,
-    height: CHAT_PANEL_DEFAULT_HEIGHT,
-  });
+  const { size, startResize } = useResize();
   const focusMode = useFocusStore((s) => s.focusMode);
   const [view, setView] = useState<"chat" | "history">("chat");
 
@@ -188,7 +153,7 @@ export function ChatPanel() {
       addUserMessage(content);
       startAssistantMessage();
 
-      const systemPrompt = buildSystemPrompt();
+      const systemPrompt = buildSystemPrompt(useSchemaStore.getState().schema);
       try {
         await sendChatMessage({
           message: content,
@@ -232,23 +197,16 @@ export function ChatPanel() {
 
   const pickers = (
     <>
-      <div className="relative min-w-0">
-        <select
+      <div className="min-w-0">
+        <SelectMenu
           value={selectedModel}
-          onChange={(e) => selectModel(e.target.value)}
+          options={availableModels.map((m) => ({ value: m.id, label: m.displayName }))}
+          onChange={selectModel}
           disabled={isStreaming}
-          aria-label={t("chat.model")}
-          className="w-full min-w-0 appearance-none truncate rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-6 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
-        >
-          {availableModels.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.displayName}
-            </option>
-          ))}
-        </select>
-        <CaretDown
-          size={10}
-          className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-tertiary"
+          ariaLabel={t("chat.model")}
+          caretSize={10}
+          menuWidth={200}
+          className="w-full min-w-0 rounded-md border border-border bg-surface-muted py-1 pl-2.5 pr-1.5 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent disabled:opacity-50"
         />
       </div>
       <EffortPicker

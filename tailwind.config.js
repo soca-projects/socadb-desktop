@@ -18,6 +18,8 @@ export default {
         },
         surface: {
           DEFAULT: "var(--color-surface)",
+          paper: "var(--color-surface-paper)",
+          "paper-muted": "rgb(var(--color-surface-paper-muted) / <alpha-value>)",
           canvas: "var(--color-surface-canvas)",
           muted: "rgb(var(--color-surface-muted) / <alpha-value>)",
           sidebar: "var(--color-surface-sidebar)",
@@ -40,6 +42,9 @@ export default {
           },
         },
       },
+      borderColor: {
+        sticker: "var(--color-sticker-border)",
+      },
       textColor: {
         primary: "var(--color-fg)",
         secondary: "var(--color-fg-secondary)",
@@ -56,6 +61,8 @@ export default {
         soft: "var(--shadow-soft)",
         card: "var(--shadow-card)",
         float: "var(--shadow-float)",
+        sticker: "3px 3px 0 var(--color-sticker-shadow)",
+        "sticker-sm": "2px 2px 0 var(--color-sticker-shadow)",
       },
       keyframes: {
         "fade-in": {

@@ -1,106 +1,66 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { XIcon as X, BracketsCurlyIcon as BracketsCurly } from "@phosphor-icons/react";
+import {
+  XIcon as X,
+  BracketsCurlyIcon as BracketsCurly,
+  FileCodeIcon as FileCode,
+} from "@phosphor-icons/react";
 import { Modal } from "../Modal/Modal";
 import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
 import { MysqlIcon } from "../../assets/icons/MysqlIcon";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
-import { useSchemaStore, createEmptySchema } from "../../stores/schemaStore";
-import { useViewStore } from "../../stores/viewStore";
-import { parseSqlDdl, adaptColumnsToDbType } from "../../utils/importSql";
-import { parseJsonSchema } from "../../utils/importJson";
-import { getNextTableColor } from "../../utils/tableColors";
-import { handleAutoLayout } from "../../utils/schemaActions";
+import { useSchemaStore } from "../../stores/schemaStore";
+import { adaptColumnsToDbType } from "../../utils/importSql";
+import { parseSource } from "../../utils/importFiles";
+import type { ImportFormat } from "../../utils/importFiles";
 import { logError, logInfo, logWarn } from "../../utils/log";
-import type { DbType, Table, Relation } from "../../types/schema";
+import {
+  mergeImport,
+  replaceWithImport,
+  showImportSummary,
+} from "../../utils/importApply";
+import type { ImportIssue } from "../../utils/sqlColumns";
+import type { DbType, Table, Relation, SchemaEnum } from "../../types/schema";
 
-type ImportFormat = "sql" | "json";
 type ImportMode = "replace" | "merge";
 
 interface ConflictState {
   tables: Table[];
   relations: Relation[];
+  enums: SchemaEnum[];
   fileDbType: DbType;
   currentDbType: DbType;
   skipped: number;
+  issues: ImportIssue[];
 }
 
 interface ImportModalProps {
   onClose: () => void;
-  fromHome?: boolean;
 }
 
-function fileStem(path: string): string {
-  return (path.split(/[/\\]/).pop() ?? path).replace(/\.[^.]+$/, "");
-}
-
-export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
+export function ImportModal({ onClose }: ImportModalProps) {
   const { t } = useTranslation();
   const dbType = useSchemaStore((s) => s.schema.dbType);
   const [format, setFormat] = useState<ImportFormat>("sql");
   const [mode, setMode] = useState<ImportMode>("replace");
   const [conflict, setConflict] = useState<ConflictState | null>(null);
 
-  const showImportSummary = (
-    tableCount: number,
-    relationCount: number,
-    skipped: number,
-    adaptedColumns = 0,
-  ) => {
-    let text = t("toast.importComplete", { count: tableCount });
-    if (relationCount > 0) {
-      text += t("toast.importRelations", { count: relationCount });
-    }
-    text += ".";
-    if (skipped > 0) {
-      text += " " + t("toast.importSkipped", { count: skipped });
-    }
-    if (adaptedColumns > 0) {
-      text += " " + t("toast.importAdapted", { count: adaptedColumns });
-    }
-    toast.success(text);
-  };
-
-  const assignColors = (tables: Table[]): Table[] => {
-    const colored: Table[] = [];
-    for (const table of tables) {
-      const color = getNextTableColor(colored);
-      colored.push({ ...table, color });
-    }
-    return colored;
-  };
-
-  const replaceSchema = (
-    tables: Table[],
-    relations: Relation[],
-    dbType: DbType,
-    name: string,
-  ) => {
-    const store = useSchemaStore.getState();
-    const schema = createEmptySchema(name, dbType);
-    schema.tables = assignColors(tables);
-    schema.relations = relations;
-    store.setSchema(schema);
-    store.setFilePath(null);
-    useViewStore.getState().showEditor();
-    void handleAutoLayout();
-  };
-
   const handleImport = async () => {
     try {
-      const filters =
-        format === "sql"
-          ? [
-              {
-                name: t("import.sqlLabel", {
-                  dbType: dbType === "mysql" ? "MySQL" : "PostgreSQL",
-                }),
-                extensions: ["sql"],
-              },
-            ]
-          : [{ name: t("import.jsonLabel"), extensions: ["json"] }];
+      const filters = {
+        sql: [
+          {
+            name: t("import.sqlLabel", {
+              dbType: dbType === "mysql" ? "MySQL" : "PostgreSQL",
+            }),
+            extensions: ["sql"],
+          },
+        ],
+        dbml: [{ name: t("import.dbmlLabel"), extensions: ["dbml"] }],
+        json: [{ name: t("import.jsonLabel"), extensions: ["json"] }],
+      }[format];
 
       const selected = await open({
         multiple: false,
@@ -110,8 +70,12 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       if (!selected) return;
 
       const content = await readTextFile(selected);
-      const { tables, relations, detectedDbType, attempted } =
-        format === "sql" ? parseSqlDdl(content) : parseJsonSchema(content);
+      const currentDbType = useSchemaStore.getState().schema.dbType;
+      const { tables, relations, enums, detectedDbType, attempted, issues } = parseSource(
+        format,
+        content,
+        currentDbType,
+      );
 
       if (tables.length === 0) {
         logWarn("import.no_tables", "No table found in the file", { format, attempted });
@@ -122,12 +86,13 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       const store = useSchemaStore.getState();
       const skipped = attempted - tables.length;
 
-      if (fromHome || mode === "replace") {
-        replaceSchema(
+      if (mode === "replace") {
+        replaceWithImport(
           tables,
           relations,
+          enums,
           detectedDbType ?? store.schema.dbType,
-          fromHome ? fileStem(selected) || store.schema.name : store.schema.name,
+          store.schema.name,
         );
       } else {
         const currentDbType = store.schema.dbType;
@@ -136,14 +101,16 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
           setConflict({
             tables,
             relations,
+            enums,
             fileDbType: detectedDbType,
             currentDbType,
             skipped,
+            issues,
           });
           return;
         }
 
-        mergeIntoSchema(tables, relations);
+        mergeImport(tables, relations, enums);
       }
 
       logInfo("import.done", "Import done", {
@@ -151,9 +118,15 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
         tables: tables.length,
         relations: relations.length,
         skipped,
-        fromHome,
+        issues: issues.length,
+        fromHome: false,
       });
-      showImportSummary(tables.length, relations.length, skipped);
+      showImportSummary({
+        tables: tables.length,
+        relations: relations.length,
+        skipped,
+        issues,
+      });
       onClose();
     } catch (e) {
       logError("import.failed", e, { format });
@@ -163,45 +136,21 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
     }
   };
 
-  const mergeIntoSchema = (tables: Table[], relations: Relation[]) => {
-    const store = useSchemaStore.getState();
-    const existingNames = new Set(store.schema.tables.map((t) => t.name.toLowerCase()));
-    const allTables = [...store.schema.tables];
-
-    const renamedTables = tables.map((table) => {
-      let name = table.name;
-      if (existingNames.has(name.toLowerCase())) {
-        let counter = 2;
-        while (existingNames.has(`${table.name.toLowerCase()}_${counter}`)) {
-          counter++;
-        }
-        name = `${table.name}_${counter}`;
-      }
-      existingNames.add(name.toLowerCase());
-
-      const color = getNextTableColor(allTables);
-      const result = { ...table, name, color };
-      allTables.push(result);
-      return result;
-    });
-
-    store.importTables(renamedTables, relations);
-    void handleAutoLayout();
-  };
-
   const handleConflictReplace = () => {
     if (!conflict) return;
-    replaceSchema(
+    replaceWithImport(
       conflict.tables,
       conflict.relations,
+      conflict.enums,
       conflict.fileDbType,
       useSchemaStore.getState().schema.name,
     );
-    showImportSummary(
-      conflict.tables.length,
-      conflict.relations.length,
-      conflict.skipped,
-    );
+    showImportSummary({
+      tables: conflict.tables.length,
+      relations: conflict.relations.length,
+      skipped: conflict.skipped,
+      issues: conflict.issues,
+    });
     onClose();
   };
 
@@ -211,13 +160,14 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       conflict.tables,
       conflict.currentDbType,
     );
-    mergeIntoSchema(adapted, conflict.relations);
-    showImportSummary(
-      conflict.tables.length,
-      conflict.relations.length,
-      conflict.skipped,
-      adaptedCount,
-    );
+    mergeImport(adapted, conflict.relations, conflict.enums);
+    showImportSummary({
+      tables: conflict.tables.length,
+      relations: conflict.relations.length,
+      skipped: conflict.skipped,
+      adapted: adaptedCount,
+      issues: conflict.issues,
+    });
     onClose();
   };
 
@@ -311,6 +261,12 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
       icon: dbType === "mysql" ? <MysqlIcon size={24} /> : <PostgresqlIcon size={24} />,
     },
     {
+      type: "dbml",
+      label: t("import.dbmlLabel"),
+      description: t("import.dbmlDescription"),
+      icon: <FileCode size={24} />,
+    },
+    {
       type: "json",
       label: t("import.jsonLabel"),
       description: t("import.jsonDescription"),
@@ -342,7 +298,7 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-3 gap-3">
           {formatCards.map((card) => (
             <button
               key={card.type}
@@ -362,37 +318,35 @@ export function ImportModal({ onClose, fromHome = false }: ImportModalProps) {
           ))}
         </div>
 
-        {!fromHome && (
-          <div className="mt-4">
-            <label
-              id="import-mode-label"
-              className="block text-[12px] font-medium uppercase tracking-wide text-tertiary"
-            >
-              {t("import.mode")}
-            </label>
-            <div
-              role="radiogroup"
-              aria-labelledby="import-mode-label"
-              className="mt-1.5 flex rounded-lg border border-border bg-surface-muted p-0.5"
-            >
-              {(["replace", "merge"] as const).map((m) => (
-                <button
-                  key={m}
-                  role="radio"
-                  aria-checked={mode === m}
-                  onClick={() => setMode(m)}
-                  className={`flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all ${
-                    mode === m
-                      ? "bg-surface text-accent shadow-soft"
-                      : "text-tertiary hover:text-secondary"
-                  }`}
-                >
-                  {t(`import.${m}`)}
-                </button>
-              ))}
-            </div>
+        <div className="mt-4">
+          <label
+            id="import-mode-label"
+            className="block text-[12px] font-medium uppercase tracking-wide text-tertiary"
+          >
+            {t("import.mode")}
+          </label>
+          <div
+            role="radiogroup"
+            aria-labelledby="import-mode-label"
+            className="mt-1.5 flex rounded-lg border border-border bg-surface-muted p-0.5"
+          >
+            {(["replace", "merge"] as const).map((m) => (
+              <button
+                key={m}
+                role="radio"
+                aria-checked={mode === m}
+                onClick={() => setMode(m)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all ${
+                  mode === m
+                    ? "bg-surface text-accent shadow-soft"
+                    : "text-tertiary hover:text-secondary"
+                }`}
+              >
+                {t(`import.${m}`)}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         <div className="mt-5 flex justify-end">
           <button

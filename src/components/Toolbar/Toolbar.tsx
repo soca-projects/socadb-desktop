@@ -69,7 +69,7 @@ export function Toolbar({
   return (
     <div
       data-tauri-drag-region
-      className="flex h-10 items-center border-b border-border bg-surface pr-[13px]"
+      className="flex h-10 items-center border-b border-border bg-surface-paper pr-[13px]"
     >
       <div
         className="flex items-center gap-1"
@@ -82,8 +82,8 @@ export function Toolbar({
             showHome();
           }}
           aria-current={isHome ? "page" : undefined}
-          className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-secondary ${
-            isHome ? "bg-surface-muted text-primary" : "text-tertiary"
+          className={`rounded-md p-1.5 transition-colors hover:bg-surface-paper-muted hover:text-secondary ${
+            isHome ? "text-primary" : "text-tertiary"
           }`}
           title={`${t("toolbar.home")} (${formatShortcut(["Mod", "Shift", "H"])})`}
           aria-label={t("toolbar.home")}
@@ -93,7 +93,7 @@ export function Toolbar({
         {!isHome && (
           <button
             onClick={onToggleSidePanel}
-            className={`rounded-md p-1.5 transition-colors hover:bg-surface-muted hover:text-secondary ${
+            className={`rounded-md p-1.5 transition-colors hover:bg-surface-paper-muted hover:text-secondary ${
               isSidePanelOpen ? "text-secondary" : "text-tertiary"
             }`}
             title={isSidePanelOpen ? t("toolbar.hidePanel") : t("toolbar.showPanel")}
@@ -117,7 +117,7 @@ export function Toolbar({
               {isDirty && <span className="text-base text-tertiary">• </span>}
               {displayName}
             </span>
-            <span className="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary">
+            <span className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-tertiary">
               {dbType === "mysql" ? t("toolbar.mysql") : t("toolbar.postgresql")}
             </span>
           </>
@@ -128,7 +128,7 @@ export function Toolbar({
         {!isHome && (
           <button
             onClick={onToggleFocusMode}
-            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+            className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-paper-muted hover:text-secondary"
             title={t("toolbar.focusMode")}
             aria-label={t("toolbar.focusMode")}
           >
@@ -138,7 +138,7 @@ export function Toolbar({
         <ThemeToggle />
         <button
           onClick={onOpenSettings}
-          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-muted hover:text-secondary"
+          className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-paper-muted hover:text-secondary"
           title={t("toolbar.settings")}
           aria-label={t("toolbar.settings")}
         >

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  CaretDownIcon as CaretDown,
   DownloadSimpleIcon as DownloadSimple,
   FolderOpenIcon as FolderOpen,
   MagnifyingGlassIcon as MagnifyingGlass,
@@ -9,15 +8,20 @@ import {
   XIcon as X,
 } from "@phosphor-icons/react";
 import { Toolbar } from "../Toolbar/Toolbar";
-import { ImportModal } from "../ImportModal/ImportModal";
+import { DialectModal } from "../ImportFlow/DialectModal";
+import { PrepareModal } from "../ImportFlow/PrepareModal";
+import { DropOverlay } from "../ImportFlow/DropOverlay";
+import { ImportBatchModal } from "../ImportFlow/ImportBatchModal";
 import { HomeCard } from "./HomeCard";
-import type { HomeMenuItem } from "./HomeCardMenu";
+import type { ActionMenuItem } from "../ActionMenu/ActionMenu";
 import { HomeEmpty } from "./HomeEmpty";
 import { MissingFiles } from "./MissingFiles";
 import { RenameSchemaModal } from "./RenameSchemaModal";
 import { DeleteDraftModal } from "./DeleteDraftModal";
 import { useHomeEntries } from "../../hooks/useHomeEntries";
+import { useHomeDrop } from "../../hooks/useHomeDrop";
 import { useSchemaStore } from "../../stores/schemaStore";
+import { useImportFlowStore } from "../../stores/importFlowStore";
 import { useViewStore } from "../../stores/viewStore";
 import {
   currentBadge,
@@ -46,21 +50,17 @@ import {
   handleOpen,
   handleSaveAs,
 } from "../../utils/menuActions";
-import { IS_MAC, IS_WINDOWS } from "../../utils/platform";
+import { REVEAL_LABEL_KEY } from "../../utils/platform";
 import { closeSchema } from "../../utils/schemaActions";
 import { isWorthResuming } from "../../utils/schemaQueries";
-import { HomeSortZ } from "../../utils/zodSchemas";
+import type { HomeSort } from "../../utils/homeList";
+import { SelectMenu, type SelectOption } from "../SelectMenu/SelectMenu";
 
 const GRID = "grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4";
 const GROUP_LABEL =
   "mb-2.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-tertiary";
 const SECONDARY =
-  "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-muted";
-const REVEAL_KEY = IS_MAC
-  ? "home.action.revealMac"
-  : IS_WINDOWS
-    ? "home.action.revealWindows"
-    : "home.action.revealLinux";
+  "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-paper-muted";
 
 function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
   const cards = Array.from(
@@ -87,13 +87,19 @@ export function Home({ onOpenSettings }: HomeProps) {
   const filePath = useSchemaStore((s) => s.filePath);
   const dirty = useSchemaStore((s) => s.savedAt !== s.schema.updatedAt);
   const searchRequested = useViewStore((s) => s.searchRequested);
-  const importOpen = useViewStore((s) => s.importOpen);
+  const drop = useHomeDrop();
+  const importPhase = useImportFlowStore((s) => s.phase);
+  const importMode = useImportFlowStore((s) => s.mode);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState(getHomeSort);
+  const sortOptions: SelectOption<HomeSort>[] = [
+    { value: "opened", label: t("home.sort.opened") },
+    { value: "modified", label: t("home.sort.modified") },
+    { value: "name", label: t("home.sort.name") },
+  ];
   const [renaming, setRenaming] = useState<HomeEntry | null>(null);
   const [deletingDraft, setDeletingDraft] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const closeImport = useViewStore((s) => s.closeImport);
 
   useEffect(() => {
     if (!searchRequested) return;
@@ -115,9 +121,9 @@ export function Home({ onOpenSettings }: HomeProps) {
       .filter(Boolean)
       .join(" · ");
 
-  const entryMenu = (entry: HomeEntry, isCurrent: boolean): HomeMenuItem[] => [
+  const entryMenu = (entry: HomeEntry, isCurrent: boolean): ActionMenuItem[] => [
     { label: t("home.action.open"), onSelect: () => openHomeEntry(entry.path) },
-    { label: t(REVEAL_KEY), onSelect: () => void revealHomeEntry(entry.path) },
+    { label: t(REVEAL_LABEL_KEY), onSelect: () => void revealHomeEntry(entry.path) },
     ...(entry.state === "present"
       ? [
           { label: t("home.action.rename"), onSelect: () => setRenaming(entry) },
@@ -205,7 +211,7 @@ export function Home({ onOpenSettings }: HomeProps) {
   );
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-surface">
+    <div className="flex h-screen w-screen flex-col bg-surface-paper">
       <Toolbar variant="home" onOpenSettings={onOpenSettings} />
 
       <div className="flex shrink-0 flex-col gap-3.5 px-8 pb-3.5 pt-[22px]">
@@ -215,10 +221,11 @@ export function Home({ onOpenSettings }: HomeProps) {
           </h1>
           {!isEmpty && (
             <div className="flex flex-wrap gap-2">
+              {/* Lighter sticker on purpose: the full one marks the empty screens where you start, and this button is on screen every day. */}
               <button
                 type="button"
                 onClick={handleNew}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border-[1.5px] border-sticker shadow-sticker-sm bg-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover"
               >
                 <Plus size={14} />
                 {t("home.new")}
@@ -265,28 +272,20 @@ export function Home({ onOpenSettings }: HomeProps) {
                 </button>
               )}
             </div>
-            <label className="flex items-center gap-2 text-[12.5px] text-tertiary">
+            <div className="flex items-center gap-2 text-[12.5px] text-tertiary">
               {t("home.sortLabel")}
-              <span className="relative inline-flex">
-                <select
-                  value={sort}
-                  onChange={(e) => {
-                    const next = HomeSortZ.parse(e.target.value);
-                    setSort(next);
-                    setHomeSort(next);
-                  }}
-                  className="h-[30px] appearance-none rounded-md border border-border bg-surface pl-2.5 pr-7 text-[12.5px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent"
-                >
-                  <option value="opened">{t("home.sort.opened")}</option>
-                  <option value="modified">{t("home.sort.modified")}</option>
-                  <option value="name">{t("home.sort.name")}</option>
-                </select>
-                <CaretDown
-                  size={12}
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-tertiary"
-                />
-              </span>
-            </label>
+              <SelectMenu
+                value={sort}
+                options={sortOptions}
+                onChange={(next) => {
+                  setSort(next);
+                  setHomeSort(next);
+                }}
+                ariaLabel={t("home.sortLabel")}
+                caretSize={12}
+                className="h-[30px] min-w-[168px] rounded-md border border-border bg-surface pl-2.5 pr-2 text-[12.5px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -396,7 +395,13 @@ export function Home({ onOpenSettings }: HomeProps) {
           }}
         />
       )}
-      {importOpen && <ImportModal fromHome onClose={closeImport} />}
+      {drop && <DropOverlay kind={drop} />}
+      {importPhase === "asking" && <DialectModal />}
+      {importPhase === "preparing" && <PrepareModal />}
+      {importMode === "batch" &&
+        ["running", "done", "stopped", "folder_refused"].includes(importPhase) && (
+          <ImportBatchModal />
+        )}
     </div>
   );
 }

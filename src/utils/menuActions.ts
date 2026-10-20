@@ -12,6 +12,7 @@ import {
   saveCurrentSchema,
   saveSchemaFileAs,
 } from "./fileOperations";
+import { importFromHome } from "./homeImport";
 import { addRecentFile } from "./recentFiles";
 import { closeSchema, handleRedo, handleUndo } from "./schemaActions";
 import { isWorthResuming } from "./schemaQueries";
@@ -74,11 +75,10 @@ export function handleNew() {
 
 export function handleHomeImport() {
   commitActiveEdit();
-  if (isDirty()) {
-    void emit("unsaved-guard-import");
-    return;
-  }
-  useViewStore.getState().requestImport();
+  importFromHome().catch((e: unknown) => {
+    logError("import.failed", e, { format: "picker" });
+    toast.error(i18next.t("toast.importFailed", { error: String(e) }));
+  });
 }
 
 function isEditor() {

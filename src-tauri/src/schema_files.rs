@@ -152,9 +152,169 @@ fn duplicate_file(path: &Path, label: &str) -> Result<PathBuf, String> {
     Err("exists".into())
 }
 
+fn write_file(path: &Path, content: &str) -> Result<(), String> {
+    if !is_schema_path(path) {
+        return Err("Only .soca files can be saved".into());
+    }
+    crate::write_atomic(path, content)
+}
+
+// Saving goes through Rust because the fs plugin only writes paths picked in a
+// dialog during this launch: a schema reopened from the home or restored at
+// startup would be refused.
+#[tauri::command(async)]
+pub fn write_schema_file(path: String, content: String) -> Result<(), String> {
+    write_file(Path::new(&path), &content)
+}
+
 #[tauri::command(async)]
 pub fn duplicate_schema_file(path: String, copy_label: String) -> Result<String, String> {
     duplicate_file(Path::new(&path), &copy_label).map(|p| p.to_string_lossy().into_owned())
+}
+
+fn refuses_files(e: &std::io::Error) -> bool {
+    use std::io::ErrorKind;
+    matches!(
+        e.kind(),
+        ErrorKind::PermissionDenied
+            | ErrorKind::ReadOnlyFilesystem
+            | ErrorKind::StorageFull
+            | ErrorKind::QuotaExceeded
+    )
+}
+
+fn write_reserved(target: &Path, content: &str) -> Result<(), String> {
+    let dir = target.parent().ok_or_else(|| "not_found".to_string())?;
+    let name = target
+        .file_name()
+        .ok_or_else(|| "not_found".to_string())?
+        .to_string_lossy();
+    for n in 0..1000 {
+        let tmp = dir.join(format!(".{name}.{n}.tmp"));
+        let mut file = match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)
+        {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) if refuses_files(&e) => return Err("folder_refused".into()),
+            Err(e) => return Err(e.to_string()),
+        };
+        let written = file.write_all(content.as_bytes());
+        drop(file);
+        let result = written.and_then(|()| std::fs::rename(&tmp, target));
+        if let Err(e) = result {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(if refuses_files(&e) {
+                "folder_refused".into()
+            } else {
+                e.to_string()
+            });
+        }
+        return Ok(());
+    }
+    Err("exists".into())
+}
+
+const IMPORT_EXTENSIONS: [&str; 3] = ["sql", "dbml", "json"];
+const MAX_IMPORT_BYTES: u64 = 200 * 1024 * 1024;
+
+fn read_import_within(path: &Path, limit: u64) -> Result<String, String> {
+    let target = path.canonicalize().map_err(read_error)?;
+    let supported = target
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| {
+            IMPORT_EXTENSIONS
+                .iter()
+                .any(|e| ext.eq_ignore_ascii_case(e))
+        });
+    if !supported {
+        return Err("unsupported".into());
+    }
+    if std::fs::metadata(&target).map_err(read_error)?.len() > limit {
+        return Err("too_large".into());
+    }
+    let bytes = std::fs::read(&target).map_err(read_error)?;
+    let text = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+    Ok(String::from_utf8_lossy(text).into_owned())
+}
+
+fn read_import(path: &Path) -> Result<String, String> {
+    read_import_within(path, MAX_IMPORT_BYTES)
+}
+
+#[tauri::command(async)]
+pub fn read_import_file(path: String) -> Result<String, String> {
+    read_import(Path::new(&path))
+}
+
+fn takes_files(dir: &Path) -> Result<(), String> {
+    match std::fs::metadata(dir) {
+        Ok(meta) if meta.is_dir() => Ok(()),
+        _ => Err("folder_refused".into()),
+    }
+}
+
+fn probe_folder(dir: &Path) -> Result<(), String> {
+    takes_files(dir)?;
+    for n in 0..1000 {
+        let probe = dir.join(format!(".socadb-write-check-{n}.tmp"));
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&probe)
+        {
+            Ok(file) => {
+                drop(file);
+                let _ = std::fs::remove_file(&probe);
+                return Ok(());
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(_) => return Err("folder_refused".into()),
+        }
+    }
+    Err("folder_refused".into())
+}
+
+#[tauri::command(async)]
+pub fn probe_schema_folder(dir: String) -> Result<(), String> {
+    probe_folder(Path::new(&dir))
+}
+
+fn create_file(dir: &Path, name: &str, content: &str) -> Result<PathBuf, String> {
+    takes_files(dir)?;
+    let file_name = file_name_for(name)?;
+    let stem = &file_name[..file_name.len() - EXTENSION.len() - 1];
+    for n in 1..1000 {
+        let target = if n == 1 {
+            dir.join(&file_name)
+        } else {
+            dir.join(format!("{stem} {n}.{EXTENSION}"))
+        };
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+        {
+            Ok(file) => drop(file),
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) if refuses_files(&e) => return Err("folder_refused".into()),
+            Err(_) => return Err("invalid_name".into()),
+        }
+        if let Err(e) = write_reserved(&target, content) {
+            let _ = std::fs::remove_file(&target);
+            return Err(e);
+        }
+        return Ok(target);
+    }
+    Err("exists".into())
+}
+
+#[tauri::command(async)]
+pub fn create_schema_file(dir: String, name: String, content: String) -> Result<String, String> {
+    create_file(Path::new(&dir), &name, &content).map(|p| p.to_string_lossy().into_owned())
 }
 
 #[cfg(test)]
@@ -209,6 +369,155 @@ mod tests {
             assert_eq!(infos[0].state, FileState::Unavailable);
         }
         std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn create_never_overwrites() {
+        let dir = temp_dir("create");
+        let taken = dir.join("shop.soca");
+        std::fs::write(&taken, "OLD").unwrap();
+        let first = create_file(&dir, "shop", "A").unwrap();
+        let second = create_file(&dir, "shop.soca", "B").unwrap();
+        assert_eq!(first, dir.join("shop 2.soca"));
+        assert_eq!(second, dir.join("shop 3.soca"));
+        assert_eq!(std::fs::read_to_string(&taken).unwrap(), "OLD");
+        assert_eq!(std::fs::read_to_string(&first).unwrap(), "A");
+        assert!(!dir.join("shop 2.tmp").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn create_leaves_other_files_alone() {
+        let dir = temp_dir("create-tmp");
+        std::fs::write(dir.join("backup.tmp"), "MINE").unwrap();
+        create_file(&dir, "backup", "x").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.join("backup.tmp")).unwrap(),
+            "MINE"
+        );
+        let mut names: Vec<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(names, ["backup.soca", "backup.tmp"]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn create_reports_a_name_the_disk_refuses_as_that_file_only() {
+        let dir = temp_dir("create-long");
+        let long = "x".repeat(300);
+        assert_eq!(create_file(&dir, &long, "x").unwrap_err(), "invalid_name");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn import_files_are_read_by_extension_only() {
+        let dir = temp_dir("read-import");
+        for name in ["a.sql", "b.DBML", "c.json", "d.txt", "e.soca"] {
+            std::fs::write(dir.join(name), name).unwrap();
+        }
+        let read = |name: &str| read_import(&dir.join(name));
+        assert_eq!(read("a.sql").unwrap(), "a.sql");
+        assert_eq!(read("b.DBML").unwrap(), "b.DBML");
+        assert_eq!(read("c.json").unwrap(), "c.json");
+        assert_eq!(read("d.txt").unwrap_err(), "unsupported");
+        assert_eq!(read("e.soca").unwrap_err(), "unsupported");
+        assert_eq!(read("gone.sql").unwrap_err(), "not_found");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn import_files_decode_like_a_browser() {
+        let dir = temp_dir("read-decode");
+        std::fs::write(dir.join("bom.json"), b"\xEF\xBB\xBF{}").unwrap();
+        std::fs::write(
+            dir.join("latin1.sql"),
+            b"-- caf\xE9\nCREATE TABLE t (id INT);",
+        )
+        .unwrap();
+        assert_eq!(read_import(&dir.join("bom.json")).unwrap(), "{}");
+        let sql = read_import(&dir.join("latin1.sql")).unwrap();
+        assert!(sql.contains("caf\u{FFFD}") && sql.ends_with("CREATE TABLE t (id INT);"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn import_files_over_the_limit_are_refused() {
+        let dir = temp_dir("read-limit");
+        std::fs::write(dir.join("big.sql"), "x".repeat(20)).unwrap();
+        assert_eq!(
+            read_import_within(&dir.join("big.sql"), 10).unwrap_err(),
+            "too_large"
+        );
+        assert_eq!(
+            read_import_within(&dir.join("big.sql"), 20).unwrap().len(),
+            20
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn import_files_check_the_extension_of_the_link_target() {
+        let dir = temp_dir("read-link");
+        std::fs::write(dir.join("secret"), "key").unwrap();
+        std::os::unix::fs::symlink(dir.join("secret"), dir.join("x.json")).unwrap();
+        assert_eq!(read_import(&dir.join("x.json")).unwrap_err(), "unsupported");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn probe_checks_a_folder_takes_files_and_leaves_nothing() {
+        let dir = temp_dir("probe");
+        probe_folder(&dir).unwrap();
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+        assert_eq!(
+            probe_folder(&dir.join("gone")).unwrap_err(),
+            "folder_refused"
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn probe_refuses_a_read_only_folder() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp_dir("probe-locked");
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o555)).unwrap();
+        // Root ignores permissions, so there is nothing to check there.
+        if std::fs::File::create(dir.join("probe")).is_err() {
+            assert_eq!(probe_folder(&dir).unwrap_err(), "folder_refused");
+        }
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn create_refuses_bad_names_and_missing_folders() {
+        let dir = temp_dir("create-bad");
+        assert_eq!(create_file(&dir, "a/b", "x").unwrap_err(), "invalid_name");
+        assert_eq!(create_file(&dir, "  ", "x").unwrap_err(), "invalid_name");
+        assert_eq!(
+            create_file(&dir.join("gone"), "a", "x").unwrap_err(),
+            "folder_refused"
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_reports_a_folder_that_refuses_files() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp_dir("create-locked");
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o555)).unwrap();
+        // Root ignores permissions, so there is nothing to check there.
+        if std::fs::File::create(dir.join("probe")).is_err() {
+            assert_eq!(create_file(&dir, "a", "x").unwrap_err(), "folder_refused");
+        }
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -269,6 +578,20 @@ mod tests {
         assert_eq!(first, dir.join("shop copie.soca"));
         assert_eq!(second, dir.join("shop copie 2.soca"));
         assert_eq!(std::fs::read_to_string(&second).unwrap(), "A");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn save_writes_schema_files_only() {
+        let dir = temp_dir("save");
+        let schema = dir.join("shop.soca");
+        write_file(&schema, "{\"v\":1}").unwrap();
+        write_file(&schema, "{\"v\":2}").unwrap();
+        assert_eq!(std::fs::read_to_string(&schema).unwrap(), "{\"v\":2}");
+        assert!(!dir.join("shop.tmp").exists());
+        let other = dir.join("notes.txt");
+        assert!(write_file(&other, "x").is_err());
+        assert!(!other.exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

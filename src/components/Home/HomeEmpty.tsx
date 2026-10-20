@@ -1,10 +1,10 @@
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
-  DownloadSimpleIcon as DownloadSimple,
-  FolderOpenIcon as FolderOpen,
-  PlusIcon as Plus,
-  SquaresFourIcon as SquaresFour,
-} from "@phosphor-icons/react";
+  DraftTableSketch,
+  ImportFileSketch,
+  NewSchemaSketch,
+  OpenFileSketch,
+} from "../Sketch/Sketch";
 
 interface HomeEmptyProps {
   onNew: () => void;
@@ -12,34 +12,36 @@ interface HomeEmptyProps {
   onImport: () => void;
 }
 
-const ACTION =
-  "flex flex-col items-start gap-2 rounded-lg border border-border bg-surface p-4 text-left transition-colors hover:border-border-hover hover:bg-surface-muted";
+const CARD =
+  "flex flex-col items-start gap-2 rounded-lg bg-surface p-4 text-left transition-colors hover:bg-surface-paper-muted";
+const ACTION = `${CARD} border border-border hover:border-border-hover`;
+const MAIN_ACTION = `${CARD} border-2 border-sticker shadow-sticker dark:border dark:border-border dark:hover:border-border-hover`;
+const CARD_SKETCH = "mb-1 h-10 w-[54px]";
 
 export function HomeEmpty({ onNew, onOpen, onImport }: HomeEmptyProps) {
   const { t } = useTranslation();
   return (
-    <div className="mx-auto mt-12 flex max-w-[640px] flex-col items-center gap-2.5 text-center">
-      <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[14px] bg-surface-muted text-tertiary">
-        <SquaresFour size={24} />
-      </span>
-      <h2 className="mt-2 text-[18px] font-bold text-primary">{t("home.empty.title")}</h2>
+    <div className="mx-auto mt-10 flex max-w-[640px] flex-col items-center gap-2.5 text-center">
+      <DraftTableSketch className="mb-3 w-[250px]" />
+      <h2 className="text-[22px] font-bold tracking-[-0.02em] text-primary">
+        <Trans
+          i18nKey="home.empty.title"
+          components={{ mark: <span className="marker" /> }}
+        />
+      </h2>
       <p className="max-w-[460px] text-[13.5px] leading-normal text-tertiary">
         {t("home.empty.description")}
       </p>
       <div className="mt-4 grid w-full grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
-        <button type="button" onClick={onNew} className={ACTION}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-light text-accent-hover">
-            <Plus size={16} />
-          </span>
+        <button type="button" onClick={onNew} className={MAIN_ACTION}>
+          <NewSchemaSketch className={CARD_SKETCH} />
           <span className="text-[13.5px] font-medium text-primary">{t("home.new")}</span>
           <span className="text-[12px] leading-snug text-tertiary">
             {t("home.empty.newHint")}
           </span>
         </button>
         <button type="button" onClick={onOpen} className={ACTION}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-muted text-secondary">
-            <FolderOpen size={16} />
-          </span>
+          <OpenFileSketch className={CARD_SKETCH} />
           <span className="text-[13.5px] font-medium text-primary">
             {t("home.empty.open")}
           </span>
@@ -48,9 +50,7 @@ export function HomeEmpty({ onNew, onOpen, onImport }: HomeEmptyProps) {
           </span>
         </button>
         <button type="button" onClick={onImport} className={ACTION}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-muted text-secondary">
-            <DownloadSimple size={16} />
-          </span>
+          <ImportFileSketch className={CARD_SKETCH} />
           <span className="text-[13.5px] font-medium text-primary">
             {t("home.empty.import")}
           </span>
