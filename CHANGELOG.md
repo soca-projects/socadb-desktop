@@ -6,6 +6,77 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.5](https://github.com/soca-projects/socadb-desktop/compare/v0.1.4...v0.1.5) (2026-10-20)
+
+
+### Features
+
+* add column type, enum and default helpers ([b086a60](https://github.com/soca-projects/socadb-desktop/commit/b086a606096d6b544d6d4c0ac34f8947e1890cb4))
+* add enum and index actions to the schema store ([5c622cf](https://github.com/soca-projects/socadb-desktop/commit/5c622cf2c2bb8bece97d10d88376fa8eeafa49e3))
+* add index naming, foreign key hint and index editing helpers ([e0bf078](https://github.com/soca-projects/socadb-desktop/commit/e0bf07844d00c3fb998522c187731a3cbfaa62d0))
+* add notes, indexes, enums and type lengths to the schema model ([eae3cec](https://github.com/soca-projects/socadb-desktop/commit/eae3cece79f8e7943109a26ec7ce4ff26d834d25))
+* add the table note and an Indexes tab to the side panel ([da9da33](https://github.com/soca-projects/socadb-desktop/commit/da9da3318997e8adee9274ded8c7706bf3df9878))
+* add UNSIGNED to MySQL numeric columns ([cb8d5aa](https://github.com/soca-projects/socadb-desktop/commit/cb8d5aa1faf78df37bc81835e6037e1d692f8f86))
+* build one schema file per imported file ([236d891](https://github.com/soca-projects/socadb-desktop/commit/236d8916acda7913b4159c897263cdae37a7fc36))
+* carry enums through SQL and JSON imports ([63dc705](https://github.com/soca-projects/socadb-desktop/commit/63dc7058fb413e83b883836e029194848f6bd1c1))
+* column editor with enums, lengths, defaults and notes ([c904348](https://github.com/soca-projects/socadb-desktop/commit/c90434819663ee238c81d1b8780ddaf829b3e467))
+* copy notes, indexes and enums when duplicating a table ([0b454dc](https://github.com/soca-projects/socadb-desktop/commit/0b454dcfc6cbc0ecbf5ab7c50e3c3942ae789241))
+* create schema files without overwriting ([cfe4ca8](https://github.com/soca-projects/socadb-desktop/commit/cfe4ca8cd76ba50ae4203909ef9e945e57af7188))
+* detect MySQL and PostgreSQL from more SQL types ([5f7aaf6](https://github.com/soca-projects/socadb-desktop/commit/5f7aaf6ad317dec323eab69390b0f49c6177f3c0))
+* detect the database of imported files more often ([31d8030](https://github.com/soca-projects/socadb-desktop/commit/31d8030d4b0b319f6a7724a1f4a7bd83b7052a7e))
+* draw the empty states ([980862f](https://github.com/soca-projects/socadb-desktop/commit/980862f8178573bf15b27acf9ee65851255a5073))
+* draw the empty states ([5db5e00](https://github.com/soca-projects/socadb-desktop/commit/5db5e003184ef7a0caebc5aeee01368e1b62c5c4))
+* drop files on the home to import them ([f510b47](https://github.com/soca-projects/socadb-desktop/commit/f510b47e27db39b8fce33582a1aa72be9b081499))
+* drop files on the home to import them ([f4a7c34](https://github.com/soca-projects/socadb-desktop/commit/f4a7c34ee8ec6d4f55cc377a56c3ce1dc38e67e1))
+* edit columns in a one-line list with a column editor ([a7f9dce](https://github.com/soca-projects/socadb-desktop/commit/a7f9dcea5a15259b0f01c238d524e78087b2cff6))
+* export enums, indexes, notes and type parameters to SQL ([5e7692a](https://github.com/soca-projects/socadb-desktop/commit/5e7692a66c22753261619c2cd5cde9770442d07e))
+* export enums, indexes, notes and type parameters to SQL ([2996671](https://github.com/soca-projects/socadb-desktop/commit/299667108dee996348db675212c26905a2ac483a))
+* give the app the website's paper look ([a8d2a54](https://github.com/soca-projects/socadb-desktop/commit/a8d2a54b26a62811a4f70f5347ea178af5b63a70))
+* give the app the website's paper look ([3e0b149](https://github.com/soca-projects/socadb-desktop/commit/3e0b14917b86e37225e6fb965cb424f5a9fa4851))
+* grey out columns an index can't use ([17368e5](https://github.com/soca-projects/socadb-desktop/commit/17368e5ace818f75657615e1edcb4ea6e7c5cef3))
+* guess a DBML file's database from its types ([9eb7df0](https://github.com/soca-projects/socadb-desktop/commit/9eb7df02d397eeebc770a3cfc11b8ffd54711f48))
+* import DBML files ([88aae30](https://github.com/soca-projects/socadb-desktop/commit/88aae30e374429760f22866030658131211d9901))
+* import DBML files ([a57ca7d](https://github.com/soca-projects/socadb-desktop/commit/a57ca7d13c9a511608edcf628ea5024b7690dc1f))
+* import enums, indexes, notes and pg_dump keys from SQL ([4af2dc0](https://github.com/soca-projects/socadb-desktop/commit/4af2dc0948e2eea970311ba62b4cfc4c0a5ad4f4))
+* import enums, indexes, notes and pg_dump keys from SQL ([dbe6483](https://github.com/soca-projects/socadb-desktop/commit/dbe648341cb75c1dc4757fd56e451a97c5a664e5))
+* import several files from the home ([5a35777](https://github.com/soca-projects/socadb-desktop/commit/5a3577727672879dcce20e360a4749f1ac973d8a))
+* import several files from the home ([8e96657](https://github.com/soca-projects/socadb-desktop/commit/8e96657c22bcc924b8e86b519bd64e40de5e5ce4))
+* keep enum links, indexes and type parameters consistent ([ae729c9](https://github.com/soca-projects/socadb-desktop/commit/ae729c9a63796f6079f062f1851e5b1701e0d45d))
+* let the agent read and write notes, enums, indexes and type parameters ([1602dd5](https://github.com/soca-projects/socadb-desktop/commit/1602dd581f8b8eca5daea9d18a3ccb8cd9c2e911))
+* let the agent read and write notes, enums, indexes and type parameters ([827512b](https://github.com/soca-projects/socadb-desktop/commit/827512b8eb58be44e83522a62d4423c80fdae93a))
+* lighten the sticker on the home's New schema button ([701fe2c](https://github.com/soca-projects/socadb-desktop/commit/701fe2c063a3767c5382b431a1134656a7c89eb6))
+* lighten the sticker on the home's New schema button ([6cf6bfa](https://github.com/soca-projects/socadb-desktop/commit/6cf6bfae44ed24f1d4370b9486132f90033737e7))
+* list what a SQL import could not keep ([a71dc53](https://github.com/soca-projects/socadb-desktop/commit/a71dc534892fc5e6d4f12050399ec0c74c218d73))
+* notes, enums and indexes on the canvas ([a396330](https://github.com/soca-projects/socadb-desktop/commit/a396330d192cee5909cbf2fa28e318439e06c357))
+* parse DBML files ([a566a72](https://github.com/soca-projects/socadb-desktop/commit/a566a72b6d1549bfd9f5ba8ae92b96cf0e964888))
+* schema model for notes, indexes, enums and type lengths ([e598985](https://github.com/soca-projects/socadb-desktop/commit/e59898528520bf8d05de9b00765a20707789b2ef))
+* show each imported file's result ([111046f](https://github.com/soca-projects/socadb-desktop/commit/111046f47261d58c0aa37a9fc1dc41c248e1b4ee))
+* show notes, enum values and indexes on canvas tables ([8a7aa73](https://github.com/soca-projects/socadb-desktop/commit/8a7aa739d48c45b977c7534cb225aa75ce599b9a))
+* sign and notarize the macOS app with a Developer ID ([0741ab2](https://github.com/soca-projects/socadb-desktop/commit/0741ab23b519cb2fbd37b200e50bdbde762120f5))
+* sign and notarize the macOS app with a Developer ID ([a31b4ff](https://github.com/soca-projects/socadb-desktop/commit/a31b4ff34c271f9f57150d00e5f1b35d324049fe))
+* size tables and thumbnails for their index section ([c6298c1](https://github.com/soca-projects/socadb-desktop/commit/c6298c17584442826f257d984eb380bc39d2ced8))
+* table notes and indexes in the side panel ([c39c3f3](https://github.com/soca-projects/socadb-desktop/commit/c39c3f335a20e2d290a9f0e239ed824dbdf977a6))
+* tell the agent about notes, enums and indexes ([c0e7de2](https://github.com/soca-projects/socadb-desktop/commit/c0e7de2b4e50d51d62b9a2d5fc6dd06a757d37fb))
+* tell value defaults from expression defaults ([f70bd6b](https://github.com/soca-projects/socadb-desktop/commit/f70bd6becca296f19a2a1901c287dec3c11fd237))
+
+
+### Bug Fixes
+
+* **deps:** update rustls to 0.23.46 ([e5d7654](https://github.com/soca-projects/socadb-desktop/commit/e5d7654684b942aa08651adf7b8ba581a9bed2c2))
+* **deps:** update rustls to 0.23.46 ([f0326e7](https://github.com/soca-projects/socadb-desktop/commit/f0326e7a44ab5e541a09e99524e037abb66f11b0))
+* keep a selected table's relations when pressing delete ([0bef475](https://github.com/soca-projects/socadb-desktop/commit/0bef47540d76e808a62632fd1a229ace7eb385f0))
+* keep a selected table's relations when pressing delete ([56c478d](https://github.com/soca-projects/socadb-desktop/commit/56c478d7802830a4fbdd3bbb1d1bec966cb72542))
+* keep empty text defaults through import and export ([b4d3c7b](https://github.com/soca-projects/socadb-desktop/commit/b4d3c7ba3dbbd402197feccefb136f6a0a49b108))
+* keep notes, indexes and enums in JSON imports ([f9eb03b](https://github.com/soca-projects/socadb-desktop/commit/f9eb03b3689f0a1b4907323bbf8c8700776157c1))
+* move an enum aside when a table takes its name ([00cb887](https://github.com/soca-projects/socadb-desktop/commit/00cb8874944ae34d632b5c7c73817c08aa62b6ab))
+* open the app's own menu instead of the system dropdowns ([910845a](https://github.com/soca-projects/socadb-desktop/commit/910845a5882594a54a581a6399ecbb4c3b35d229))
+* open the app's own menu instead of the system dropdowns ([d03e4f7](https://github.com/soca-projects/socadb-desktop/commit/d03e4f746754169812420a06462b7bdd1b96c699))
+* read a composite key declared one column at a time ([c5660c6](https://github.com/soca-projects/socadb-desktop/commit/c5660c6c369fccb75a5779cebf8746e96d4bb8c0))
+* read a composite key declared one column at a time ([42ffaff](https://github.com/soca-projects/socadb-desktop/commit/42ffaff7e17014dd2a043f2b3dfd9f74e743041c))
+* save schemas opened from the home or restored at startup ([747c796](https://github.com/soca-projects/socadb-desktop/commit/747c79607b08c01b5a538174f44dd2ea09db885d))
+* save schemas opened from the home or restored at startup ([ee5e6a1](https://github.com/soca-projects/socadb-desktop/commit/ee5e6a10b82f7b2bf85e6f3205cf3e0f10a4f0a3))
+* validate enum links when a schema is loaded ([239a173](https://github.com/soca-projects/socadb-desktop/commit/239a1735eb645e24f6e5a0c8c751d73506b5fa92))
+
 ## [0.1.4] - 2026-10-12
 
 SocaDB now opens on a home screen with every schema you have worked on,
