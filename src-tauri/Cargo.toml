@@ -53,6 +53,10 @@ undocumented_unsafe_blocks = "deny"
 
 [profile.dev]
 incremental = true
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
 
 [profile.release]
 codegen-units = 1
