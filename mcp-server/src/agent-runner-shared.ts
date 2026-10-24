@@ -90,15 +90,18 @@ export function getClaudeSessionsDir(): string {
   return join(homedir(), ".socadb", "sessions", "claude");
 }
 
-export function getMcpBinaryPath(moduleDir: string): string {
+export function mcpBinaryName(): string {
   const os = platform() === "darwin" ? "darwin" : platform() === "win32" ? "windows" : "linux";
   const cpu = arch() === "arm64" ? "arm64" : "x64";
-  const ext = os === "windows" ? ".exe" : "";
-  const binaryName = `socadb-mcp-${os}-${cpu}${ext}`;
+  return `socadb-mcp-${os}-${cpu}${os === "windows" ? ".exe" : ""}`;
+}
+
+export function getMcpBinaryPath(moduleDir: string): string {
+  const ext = platform() === "win32" ? ".exe" : "";
+  const binaryName = mcpBinaryName();
 
   const candidates = [
-    join(moduleDir, binaryName),
-    join(moduleDir, `socadb-mcp${ext}`),
+    join(moduleDir, "..", binaryName),
     join(moduleDir, "..", "dist", binaryName),
     join(moduleDir, "..", "dist", `socadb-mcp${ext}`),
   ];

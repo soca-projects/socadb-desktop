@@ -75,7 +75,6 @@ console.log(`[2/4] Preparing runtime folder → ${runtimeDir}`);
 rmSync(runtimeDir, { recursive: true, force: true });
 mkdirSync(runtimeDir, { recursive: true });
 
-cpSync(mcpOutfile, join(runtimeDir, mcpBinary), { dereference: true });
 for (const file of [
   "agent-runner-claude.ts",
   "agent-runner-codex.ts",
@@ -99,7 +98,10 @@ const srcModules = "node_modules";
 const dstModules = join(runtimeDir, "node_modules");
 mkdirSync(dstModules, { recursive: true });
 
-function copyPackage(pkgPath: string, options: { skipDirs?: string[]; required?: boolean } = {}) {
+function copyPackage(
+  pkgPath: string,
+  options: { skipDirs?: string[]; skip?: (parts: string[]) => boolean; required?: boolean } = {},
+) {
   const src = join(srcModules, pkgPath);
   if (!existsSync(src)) {
     if (options.required) {
@@ -117,10 +119,9 @@ function copyPackage(pkgPath: string, options: { skipDirs?: string[]; required?:
     dereference: true,
     recursive: true,
     filter: (source: string) => {
-      const rel = source.slice(src.length).replace(/^[\\/]/, "");
-      const top = rel.split(/[\\/]/)[0];
-      if (top && skip.has(top)) return false;
-      return true;
+      const parts = source.slice(src.length).replace(/^[\\/]/, "").split(/[\\/]/);
+      if (parts[0] && skip.has(parts[0])) return false;
+      return !options.skip?.(parts);
     },
   });
   console.log(`  ok: ${pkgPath}`);
@@ -164,7 +165,20 @@ await Promise.all([
   }),
 ]);
 copyPackage(claudeVariant, { required: true });
-copyPackage(codexVariant, { required: true });
+// `codex exec` runs here without a shell: the voice host, the patched zsh and ripgrep
+// (used only by the shell tool, `codex doctor` and the desktop app's thread search)
+// never start. bwrap and the Windows sandbox helpers stay: the read-only sandbox needs them.
+copyPackage(codexVariant, {
+  required: true,
+  skip: (parts) => {
+    const resource = parts[parts.indexOf("codex-resources") + 1];
+    const onPath = parts[parts.indexOf("codex-path") + 1];
+    return (
+      (parts.includes("codex-resources") && (resource === "voice" || resource === "zsh")) ||
+      (parts.includes("codex-path") && (onPath === "rg" || onPath === "rg.exe"))
+    );
+  },
+});
 
 console.log(`[4/4] Bundling Bun runtime (bun-${bunReleaseTag} v${BUN_VERSION})`);
 const bunDest = join(runtimeDir, `bun${ext}`);
