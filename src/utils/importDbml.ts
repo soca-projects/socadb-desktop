@@ -486,9 +486,11 @@ function convert(file: DbmlFile, fallbackDbType: DbType | null): SqlImportResult
   const detectedDbType =
     file.databaseType === null ? dialectFromTypes(file) : dialectOf(file.databaseType);
   const ctx = newCtx(detectedDbType ?? fallbackDbType);
-  ctx.enums = file.enums.map(
-    (e): SchemaEnum => ({ id: genId(), name: e.name, values: e.values }),
-  );
+  ctx.enums = file.enums.map((e): SchemaEnum => ({
+    id: genId(),
+    name: e.name,
+    values: e.values,
+  }));
   const refs: PendingRef[] = [];
   const entries = file.tables.map((t) => buildTable(t, file.partials, ctx, refs));
   for (const ref of file.refs) refs.push({ ...ref, inline: false });

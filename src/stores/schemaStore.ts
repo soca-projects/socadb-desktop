@@ -188,17 +188,16 @@ export const useSchemaStore = create<SchemaState>()(
               enums: [...enums, created],
               tables: mapTable(state.schema.tables, tableId, (t) => ({
                 ...t,
-                columns: t.columns.map(
-                  (c): Column =>
-                    c.id === columnId
-                      ? {
-                          ...c,
-                          type: "enum",
-                          enumId: id,
-                          isAutoIncrement: false,
-                          defaultValue: keepDefault ? c.defaultValue : null,
-                        }
-                      : c,
+                columns: t.columns.map((c): Column =>
+                  c.id === columnId
+                    ? {
+                        ...c,
+                        type: "enum",
+                        enumId: id,
+                        isAutoIncrement: false,
+                        defaultValue: keepDefault ? c.defaultValue : null,
+                      }
+                    : c,
                 ),
               })),
             }),
