@@ -202,9 +202,9 @@ export function IntegrationsSection() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    void getIntegrationStatuses().then(setStatuses);
     getMcpServerPath().then(setServerPath, () => setServerPath(null));
-  }, [refresh]);
+  }, []);
 
   const toggle = useCallback(
     async (status: IntegrationStatus) => {
