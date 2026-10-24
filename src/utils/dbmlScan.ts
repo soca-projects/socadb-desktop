@@ -1,12 +1,5 @@
 export type DbmlTokenKind =
-  | "word"
-  | "quoted"
-  | "string"
-  | "expr"
-  | "number"
-  | "color"
-  | "op"
-  | "punct";
+  "word" | "quoted" | "string" | "expr" | "number" | "color" | "op" | "punct";
 
 export interface DbmlToken {
   kind: DbmlTokenKind;
