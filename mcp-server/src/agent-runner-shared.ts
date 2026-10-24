@@ -121,7 +121,7 @@ export function emit(event: Record<string, unknown>) {
 }
 
 const AUTH_ERROR_PATTERN =
-  /not logged in|please run \/login|authentication_error|invalid api key|api key is invalid|401 unauthorized|unauthorized \(401\)|could not be refreshed|sign in again/i;
+  /not logged in|please run \/login|authentication_error|failed to authenticate|invalid api key|api key is invalid|401 unauthorized|unauthorized \(401\)|could not be refreshed|sign in again/i;
 
 export function isAuthErrorMessage(message: string): boolean {
   return AUTH_ERROR_PATTERN.test(message);
