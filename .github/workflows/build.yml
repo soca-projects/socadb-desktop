@@ -179,6 +179,12 @@ jobs:
           prerelease: ${{ inputs.prerelease }}
           args: ${{ matrix.args }} ${{ matrix.publishArgs }}
 
+      - name: Check the agent runtime
+        shell: bash
+        env:
+          BUN_TARGET: ${{ matrix.bunTarget }}
+        run: bun scripts/check-runtime.ts
+
       - name: Notarize the disk image
         if: ${{ inputs.publish && matrix.platform == 'macos-latest' }}
         timeout-minutes: 150
