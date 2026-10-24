@@ -1,49 +1,50 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "Every update waits for approval in the Dependency Dashboard, and each one is checked (changelog and our usage) before merging. Security fixes skip the approval."
+  ],
   "extends": [
     "config:best-practices",
     ":semanticCommits",
-    ":timezone(Europe/Paris)"
+    ":timezone(Europe/Paris)",
+    ":dependencyDashboardApproval"
   ],
-  "schedule": ["before 5am on monday"],
   "labels": ["dependencies"],
-  "prConcurrentLimit": 10,
+  "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
-      "matchManagers": ["npm"],
-      "matchFileNames": ["package.json"],
-      "addLabels": ["frontend"],
-      "groupName": "frontend minor and patch",
+      "matchDatasources": ["npm", "crate"],
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Renovate can't read installed versions from bun.lock, so it only sees an update inside a range when it bumps the range itself.",
+      "matchManagers": ["bun"],
+      "matchDepTypes": ["dependencies"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "tauri build fails when the Rust crates and the @tauri-apps packages differ in major.minor, so they move together.",
+      "groupName": "tauri",
+      "matchPackageNames": [
+        "tauri",
+        "tauri-build",
+        "tauri-plugin-*",
+        "@tauri-apps/*",
+        "!tauri-plugin-sparkle-updater"
+      ],
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
-      "matchManagers": ["npm"],
-      "matchFileNames": ["mcp-server/package.json"],
-      "addLabels": ["mcp-server"],
-      "groupName": "mcp-server minor and patch",
-      "matchUpdateTypes": ["minor", "patch"]
-    },
-    {
-      "matchManagers": ["cargo"],
-      "addLabels": ["rust"],
-      "groupName": "rust minor and patch",
-      "matchUpdateTypes": ["minor", "patch"]
-    },
-    {
+      "description": "Bun is pinned in 5 places that must match (BUN_VERSION in mcp-server/src/build.ts and the workflows), so it's bumped by hand.",
       "matchManagers": ["github-actions"],
-      "addLabels": ["ci"],
-      "groupName": "github-actions minor and patch",
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchDepNames": ["bun"],
+      "enabled": false
     },
     {
       "description": "Tailwind v4+ is incompatible with WebKit on macOS — pinned to v3.",
       "matchPackageNames": ["tailwindcss"],
       "allowedVersions": "<4"
-    },
-    {
-      "description": "Throttle major bumps to the first Monday of the month — each major dep gets its own PR so they can be reviewed and shipped independently.",
-      "matchUpdateTypes": ["major"],
-      "schedule": ["before 5am on the first day of the month"]
     }
   ],
   "vulnerabilityAlerts": {
