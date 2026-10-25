@@ -8,13 +8,13 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import { FileSessionStore } from "./claude-session-store.ts";
 import {
+  agentRuntimeDir,
   CLAUDE_EFFORTS,
   emit,
   emitDone,
   emitError,
   getAgentWorkDir,
   getClaudeCodeBinaryPath,
-  getClaudeSdkOptions,
   errorText,
   getClaudeSessionsDir,
   getMcpBinaryPath,
@@ -25,8 +25,7 @@ import {
 } from "./agent-runner-shared.ts";
 
 const __dirname = getModuleDir(import.meta.url);
-const sdkOptions = getClaudeSdkOptions();
-const claudeCodePath = getClaudeCodeBinaryPath(__dirname);
+const claudeCodePath = getClaudeCodeBinaryPath(agentRuntimeDir(__dirname));
 const sessionStore = new FileSessionStore(getClaudeSessionsDir());
 
 let currentQuery: Query | undefined;
@@ -51,7 +50,6 @@ async function handleSend(cmd: ChatSendCommand) {
         : undefined;
 
     const options: Options = {
-      ...sdkOptions,
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
       model: cmd.model,
       cwd: getAgentWorkDir(),

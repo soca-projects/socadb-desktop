@@ -2,9 +2,10 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { agentRuntimeDir, getModuleDir } from "./agent-runner-shared.ts";
 import { CODEX_DISABLED_FEATURES, locateCodex } from "./codex-exec.ts";
 
-const { executable } = locateCodex();
+const { executable } = locateCodex(agentRuntimeDir(getModuleDir(import.meta.url)));
 const codexHome = mkdtempSync(join(tmpdir(), "socadb-codex-check-"));
 try {
   const run = (args: string[]) =>

@@ -38,8 +38,7 @@ fn keyring_delete(account: String) -> Result<(), String> {
     }
 }
 
-#[tauri::command]
-fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
+pub(crate) fn mcp_binary_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let os = match std::env::consts::OS {
         "macos" => "darwin",
         "linux" => "linux",
@@ -74,7 +73,12 @@ fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
     if !path.exists() {
         return Err(format!("MCP binary not found: {}", path.display()));
     }
+    Ok(path)
+}
 
+#[tauri::command]
+fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
+    let path = mcp_binary_path(&app)?;
     path.to_str()
         .ok_or_else(|| format!("Path is not valid UTF-8: {}", path.display()))
         .map(|s| s.to_owned())

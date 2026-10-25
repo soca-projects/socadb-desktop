@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { createRequire } from "node:module";
-import { delimiter, dirname, join } from "node:path";
+import { delimiter, join } from "node:path";
 import { createInterface } from "node:readline";
 import type { ThreadEvent } from "@openai/codex-sdk";
 
@@ -34,11 +33,10 @@ export const CODEX_DISABLED_FEATURES = [
   "hooks",
 ];
 
-export function locateCodex(): { executable: string; pathDirs: string[] } {
+export function locateCodex(runtimeDir: string): { executable: string; pathDirs: string[] } {
   const target = PLATFORM_PACKAGES[`${process.platform}-${process.arch}`];
   if (!target) throw new Error(`Unsupported platform: ${process.platform} (${process.arch})`);
-  const codexRequire = createRequire(createRequire(import.meta.url).resolve("@openai/codex/package.json"));
-  const packageRoot = join(dirname(codexRequire.resolve(`${target.pkg}/package.json`)), "vendor", target.triple);
+  const packageRoot = join(runtimeDir, "node_modules", target.pkg, "vendor", target.triple);
   const binary = process.platform === "win32" ? "codex.exe" : "codex";
   const executable = join(packageRoot, "bin", binary);
   if (!existsSync(executable)) throw new Error(`Codex CLI binary not found at ${executable}`);
@@ -54,11 +52,12 @@ function isThreadEvent(value: unknown): value is ThreadEvent {
 // command but can't pass --ignore-user-config, which keeps the user's own Codex
 // setup (MCP servers, notify commands, hooks) out of SocaDB's agent.
 export async function* runCodexExec(
+  runtimeDir: string,
   args: string[],
   input: string,
   signal: AbortSignal,
 ): AsyncGenerator<ThreadEvent> {
-  const { executable, pathDirs } = locateCodex();
+  const { executable, pathDirs } = locateCodex(runtimeDir);
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined) env[key] = value;

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { CODEX_DISABLED_FEATURES, runCodexExec } from "./codex-exec.ts";
 import {
+  agentRuntimeDir,
   CODEX_EFFORTS,
   codexErrorCode,
   codexErrorText,
@@ -108,6 +109,7 @@ async function runTurn(
   turn: TurnState,
 ) {
   const events = runCodexExec(
+    agentRuntimeDir(__dirname),
     codexArgs(cmd, turn.threadId),
     cmd.message,
     controller.signal,

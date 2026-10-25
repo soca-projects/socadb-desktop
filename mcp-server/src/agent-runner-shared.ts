@@ -1,5 +1,5 @@
 import { createInterface } from "readline";
-import { join, dirname } from "path";
+import { basename, join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { existsSync, mkdirSync } from "fs";
 import { platform, arch, homedir } from "os";
@@ -50,7 +50,7 @@ export function getModuleDir(importMetaUrl: string): string {
 
 // Resolves the bundled `claude` CLI binary so we can pass it as
 // `pathToClaudeCodeExecutable` and avoid the SDK's implicit PATH lookup.
-export function getClaudeCodeBinaryPath(moduleDir: string): string | undefined {
+export function getClaudeCodeBinaryPath(runtimeDir: string): string | undefined {
   const npmOs =
     platform() === "darwin"
       ? "darwin"
@@ -62,19 +62,11 @@ export function getClaudeCodeBinaryPath(moduleDir: string): string | undefined {
   const pkgDir = `claude-agent-sdk-${npmOs}-${cpu}`;
   const binary = `claude${ext}`;
 
-  const candidates = [
-    join(moduleDir, "node_modules", "@anthropic-ai", pkgDir, binary),
-    join(moduleDir, "..", "node_modules", "@anthropic-ai", pkgDir, binary),
-    join(moduleDir, "..", "..", "node_modules", "@anthropic-ai", pkgDir, binary),
-  ];
-  for (const c of candidates) {
-    if (existsSync(c)) return c;
-  }
+  const path = join(runtimeDir, "node_modules", "@anthropic-ai", pkgDir, binary);
+  if (existsSync(path)) return path;
   // Logged so a missing binary is diagnosable instead of the SDK's generic
   // "claude not found".
-  process.stderr.write(
-    `[agent-runner] bundled claude binary not found, falling back to PATH. Searched:\n${candidates.map((c) => `  ${c}`).join("\n")}\n`,
-  );
+  process.stderr.write(`[agent-runner] bundled claude binary not found: ${path}\n`);
   return undefined;
 }
 
@@ -96,27 +88,27 @@ export function mcpBinaryName(): string {
   return `socadb-mcp-${os}-${cpu}${os === "windows" ? ".exe" : ""}`;
 }
 
-export function getMcpBinaryPath(moduleDir: string): string {
-  const ext = platform() === "win32" ? ".exe" : "";
-  const binaryName = mcpBinaryName();
+// In the MCP binary, modules live in Bun's virtual file system, so paths start
+// from the binary itself: the CLIs are in the runtime folder next to it.
+function runsAsMcpBinary(execPath: string): boolean {
+  return basename(execPath) === mcpBinaryName();
+}
 
+export function agentRuntimeDir(moduleDir: string, execPath = process.execPath): string {
+  return runsAsMcpBinary(execPath) ? join(dirname(execPath), "runtime") : join(moduleDir, "..");
+}
+
+export function getMcpBinaryPath(moduleDir: string, execPath = process.execPath): string {
+  if (runsAsMcpBinary(execPath)) return execPath;
+  const ext = platform() === "win32" ? ".exe" : "";
   const candidates = [
-    join(moduleDir, "..", binaryName),
-    join(moduleDir, "..", "dist", binaryName),
+    join(moduleDir, "..", "dist", mcpBinaryName()),
     join(moduleDir, "..", "dist", `socadb-mcp${ext}`),
   ];
   for (const c of candidates) {
     if (existsSync(c)) return c;
   }
   return candidates[0];
-}
-
-// Tells the SDK we run under bun (matches `process.execPath` at runtime, since
-// agent-runners are spawned with the bundled bun). Otherwise the SDK defaults
-// to "node" and tries to spawn it from PATH on machines that only have our
-// bundled runtime.
-export function getClaudeSdkOptions(): Record<string, unknown> {
-  return { executable: "bun" };
 }
 
 export function emit(event: Record<string, unknown>) {

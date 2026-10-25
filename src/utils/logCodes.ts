@@ -38,14 +38,15 @@ export const LOG_CODES = {
   },
   "agent.spawn.failed": {
     level: "error",
-    meaning: "The agent runner process (bun) could not be started.",
+    meaning:
+      "The agent runner process (the MCP binary in agent mode) could not be started.",
     check:
-      "The message names the bun and runner paths: missing runtime in the bundle, or run `bun run build:mcp` in dev.",
+      "The message names the MCP binary path: a broken bundle, or run `bun run build:mcp` in dev.",
   },
   "agent.runtime.missing": {
     level: "error",
     meaning:
-      "The bundled agent runtime (bun or a runner script) wasn't found, so no agent can start.",
+      "The MCP binary or the runtime folder of agent CLIs next to it wasn't found, so no agent can start.",
     check: "A broken bundle; in dev run `bun run build:mcp` after switching branches.",
   },
   "agent.send.failed": {
