@@ -1,10 +1,5 @@
 [advisories]
 ignore = [
-  # rand 0.8.5 unsoundness — pulled only by tokio-tungstenite 0.24 (masking
-  # keys of the localhost MCP bridge), no custom logger involved. Drop with
-  # the tokio-tungstenite bump.
-  "RUSTSEC-2026-0097",
-
   # gtk-rs GTK3 bindings — the entire gtk-rs ecosystem dropped GTK3 in
   # favor of GTK4 in 2024. Tauri 2 still pulls these on Linux because
   # webkit2gtk is GTK3-only. Tracked upstream at tauri-apps/tauri; will

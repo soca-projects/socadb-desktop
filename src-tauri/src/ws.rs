@@ -29,7 +29,7 @@ fn get_clients() -> &'static WsClients {
 pub async fn send_to_client(connection_id: u64, message: String) {
     let mut clients = get_clients().lock().await;
     if let Some(sink) = clients.get_mut(&connection_id) {
-        if let Err(e) = sink.send(Message::Text(message)).await {
+        if let Err(e) = sink.send(Message::Text(message.into())).await {
             crate::log_event!(Level::Warn, "mcp.ws.send_failed", e, "connection" => connection_id);
             clients.remove(&connection_id);
         }
