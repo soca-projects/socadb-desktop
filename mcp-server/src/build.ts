@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
-  chmodSync,
   closeSync,
   cpSync,
   existsSync,
@@ -17,10 +16,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-
-// Pinned for reproducible builds. Bump alongside the `bun-version` in
-// .github/workflows/release.yml so the runner bun matches the bundled bun.
-const BUN_VERSION = "1.3.3";
 
 type Os = "darwin" | "linux" | "windows";
 type Arch = "arm64" | "x64";
@@ -48,20 +43,27 @@ const ext = os === "windows" ? ".exe" : "";
 const targetTag = `${os}-${arch}`;
 const npmOs = os === "windows" ? "win32" : os;
 const bunBuildTarget = `bun-${targetTag}`;
-// Bun release artifacts use `aarch64`, not `arm64`.
-const bunReleaseTag = `${os}-${arch === "arm64" ? "aarch64" : "x64"}`;
 
 const mcpBinary = `socadb-mcp-${targetTag}${ext}`;
 const mcpOutfile = `dist/${mcpBinary}`;
 
 mkdirSync("dist", { recursive: true });
 
-console.log(`[1/4] Compiling MCP server (--target=${bunBuildTarget}) → ${mcpOutfile}`);
+const releaseBun = readFileSync("../.github/workflows/build.yml", "utf-8").match(/bun-version:\s*(\S+)/)?.[1];
+const localBun = execFileSync("bun", ["--version"], { encoding: "utf-8" }).trim();
+if (localBun !== releaseBun) {
+  console.warn(`Warning: Bun ${localBun} compiles the agents here, releases use Bun ${releaseBun} (.github/workflows/build.yml)`);
+}
+
+console.log(`[1/3] Compiling MCP server (--target=${bunBuildTarget}) → ${mcpOutfile}`);
 execFileSync(
   "bun",
   [
     "build",
     "--compile",
+    // The user's own Claude Code or Codex starts the server in their project folder.
+    "--no-compile-autoload-bunfig",
+    "--no-compile-autoload-dotenv",
     `--target=${bunBuildTarget}`,
     "src/index.ts",
     "--outfile",
@@ -71,58 +73,29 @@ execFileSync(
 );
 
 const runtimeDir = "dist/runtime";
-console.log(`[2/4] Preparing runtime folder → ${runtimeDir}`);
+console.log(`[2/3] Preparing runtime folder → ${runtimeDir}`);
 rmSync(runtimeDir, { recursive: true, force: true });
 mkdirSync(runtimeDir, { recursive: true });
 
-for (const file of [
-  "agent-runner-claude.ts",
-  "agent-runner-codex.ts",
-  "agent-runner-shared.ts",
-  "claude-session-store.ts",
-  "codex-exec.ts",
-]) {
-  cpSync(join("src", file), join(runtimeDir, file));
-}
-
-const minimalPkg = {
-  name: "socadb-agent-runtime",
-  private: true,
-  type: "module",
-  dependencies: JSON.parse(readFileSync("package.json", "utf-8")).dependencies,
-};
-writeFileSync(join(runtimeDir, "package.json"), JSON.stringify(minimalPkg, null, 2));
-
-console.log(`[3/4] Copying runtime node_modules`);
+console.log(`[3/3] Copying the agent CLIs`);
 const srcModules = "node_modules";
 const dstModules = join(runtimeDir, "node_modules");
 mkdirSync(dstModules, { recursive: true });
 
-function copyPackage(
-  pkgPath: string,
-  options: { skipDirs?: string[]; skip?: (parts: string[]) => boolean; required?: boolean } = {},
-) {
+function copyPackage(pkgPath: string, skip?: (parts: string[]) => boolean) {
   const src = join(srcModules, pkgPath);
   if (!existsSync(src)) {
-    if (options.required) {
-      throw new Error(
-        `Required package missing from node_modules: ${pkgPath} (run \`bun install\` first)`,
-      );
-    }
-    console.warn(`  skip (missing): ${pkgPath}`);
-    return;
+    throw new Error(
+      `Required package missing from node_modules: ${pkgPath} (run \`bun install\` first)`,
+    );
   }
   const dst = join(dstModules, pkgPath);
   mkdirSync(dirname(dst), { recursive: true });
-  const skip = new Set(options.skipDirs ?? []);
   cpSync(src, dst, {
     dereference: true,
     recursive: true,
-    filter: (source: string) => {
-      const parts = source.slice(src.length).replace(/^[\\/]/, "").split(/[\\/]/);
-      if (parts[0] && skip.has(parts[0])) return false;
-      return !options.skip?.(parts);
-    },
+    filter: (source: string) =>
+      !skip?.(source.slice(src.length).replace(/^[\\/]/, "").split(/[\\/]/)),
   });
   console.log(`  ok: ${pkgPath}`);
 }
@@ -133,12 +106,6 @@ function readPackageVersion(pkgPath: string): string {
   );
   return manifest.version;
 }
-
-copyPackage("@anthropic-ai/claude-agent-sdk", { skipDirs: ["vendor"], required: true });
-copyPackage("@openai/codex");
-copyPackage("@openai/codex-sdk", { required: true });
-copyPackage("zod", { required: true });
-copyPackage("@modelcontextprotocol/sdk", { required: true });
 
 // Cross-arch variants aren't installable via `bun add` (silently filtered by
 // os/cpu), so for cross-compile we fetch the tarball from npm directly.
@@ -164,28 +131,18 @@ await Promise.all([
     expectedFile: "vendor",
   }),
 ]);
-copyPackage(claudeVariant, { required: true });
+copyPackage(claudeVariant);
 // `codex exec` runs here without a shell: the voice host, the patched zsh and ripgrep
 // (used only by the shell tool, `codex doctor` and the desktop app's thread search)
 // never start. bwrap and the Windows sandbox helpers stay: the read-only sandbox needs them.
-copyPackage(codexVariant, {
-  required: true,
-  skip: (parts) => {
-    const resource = parts[parts.indexOf("codex-resources") + 1];
-    const onPath = parts[parts.indexOf("codex-path") + 1];
-    return (
-      (parts.includes("codex-resources") && (resource === "voice" || resource === "zsh")) ||
-      (parts.includes("codex-path") && (onPath === "rg" || onPath === "rg.exe"))
-    );
-  },
+copyPackage(codexVariant, (parts) => {
+  const resource = parts[parts.indexOf("codex-resources") + 1];
+  const onPath = parts[parts.indexOf("codex-path") + 1];
+  return (
+    (parts.includes("codex-resources") && (resource === "voice" || resource === "zsh")) ||
+    (parts.includes("codex-path") && (onPath === "rg" || onPath === "rg.exe"))
+  );
 });
-
-console.log(`[4/4] Bundling Bun runtime (bun-${bunReleaseTag} v${BUN_VERSION})`);
-const bunDest = join(runtimeDir, `bun${ext}`);
-await downloadAndExtractBun(bunReleaseTag, BUN_VERSION, bunDest);
-// 0755 so cargo can re-copy across rebuilds (no-op on Windows).
-chmodSync(bunDest, 0o755);
-console.log(`  ok: ${bunDest}`);
 
 // Vendor signatures would tie the sealed app to certificates we don't control:
 // Apple revoking one (it happened to codex twice) gets the whole app blocked
@@ -222,7 +179,7 @@ function isMachO(path: string): boolean {
 // Tauri signs the app and its frameworks but not resources, so the notary
 // service would reject these binaries unless they carry the Developer ID,
 // a timestamp and the hardened runtime. Under that runtime the Bun-compiled
-// ones (bun, claude, socadb-mcp) can't JIT without runtime.entitlements.
+// ones (claude, socadb-mcp) can't JIT without runtime.entitlements.
 function signMachOs(dir: string, identity: string | undefined): number {
   const args = identity
     ? ["--force", "--sign", identity, "--options", "runtime", "--timestamp", "--entitlements", "runtime.entitlements"]
@@ -261,16 +218,6 @@ function verifySri(filePath: string, sri: string) {
   }
 }
 
-function verifySha256Hex(filePath: string, expectedHex: string) {
-  const actual = createHash("sha256").update(readFileSync(filePath)).digest("hex");
-  if (actual !== expectedHex) {
-    rmSync(filePath, { force: true });
-    throw new Error(
-      `SHA-256 mismatch for ${filePath}: expected ${expectedHex}, got ${actual} ` +
-        `(cache cleared, retry the build)`,
-    );
-  }
-}
 
 async function fetchNpmIntegrity(npmName: string, npmVersion: string): Promise<string> {
   const url = `https://registry.npmjs.org/${npmName}/${npmVersion}`;
@@ -286,19 +233,6 @@ async function fetchNpmIntegrity(npmName: string, npmVersion: string): Promise<s
   return integrity;
 }
 
-async function fetchBunSha256(releaseTag: string, version: string): Promise<string> {
-  const url = `https://github.com/oven-sh/bun/releases/download/bun-v${version}/SHASUMS256.txt`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-  }
-  const filename = `bun-${releaseTag}.zip`;
-  for (const line of (await res.text()).split("\n")) {
-    const [hex, name] = line.trim().split(/\s+/);
-    if (name === filename) return hex;
-  }
-  throw new Error(`SHA-256 for ${filename} not found in SHASUMS256.txt`);
-}
 
 function installedVersion(pkgDir: string): string | undefined {
   try {
@@ -361,40 +295,3 @@ async function ensurePlatformPackage(opts: {
   renameSync(staging, dst);
 }
 
-async function downloadAndExtractBun(releaseTag: string, version: string, outBin: string) {
-  const cacheDir = join(tmpdir(), "socadb-bun-cache");
-  mkdirSync(cacheDir, { recursive: true });
-
-  const expectedSha = await fetchBunSha256(releaseTag, version);
-  const zipPath = join(cacheDir, `bun-${releaseTag}-v${version}.zip`);
-  if (!existsSync(zipPath)) {
-    const url = `https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-${releaseTag}.zip`;
-    console.log(`  download: ${url}`);
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Failed to download ${url}: ${res.status} ${res.statusText}`);
-    }
-    await writeAtomic(zipPath, Buffer.from(await res.arrayBuffer()));
-  } else {
-    console.log(`  cached:   ${zipPath}`);
-  }
-  verifySha256Hex(zipPath, expectedSha);
-
-  const extractDir = join(cacheDir, `extract-${releaseTag}-v${version}`);
-  rmSync(extractDir, { recursive: true, force: true });
-  mkdirSync(extractDir, { recursive: true });
-  // Linux ships GNU tar (no zip support), so use `unzip` there. macOS and
-  // Windows 10+ ship bsdtar which handles .zip natively.
-  if (process.platform === "linux") {
-    execFileSync("unzip", ["-q", "-o", zipPath, "-d", extractDir], { stdio: "inherit" });
-  } else {
-    execFileSync("tar", ["-xf", zipPath, "-C", extractDir], { stdio: "inherit" });
-  }
-
-  const innerName = releaseTag.startsWith("windows") ? "bun.exe" : "bun";
-  const extracted = join(extractDir, `bun-${releaseTag}`, innerName);
-  if (!existsSync(extracted)) {
-    throw new Error(`Expected bun binary not found after extraction: ${extracted}`);
-  }
-  cpSync(extracted, outBin, { dereference: true });
-}

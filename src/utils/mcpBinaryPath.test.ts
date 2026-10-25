@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  agentRuntimeDir,
   getMcpBinaryPath,
   mcpBinaryName,
 } from "../../mcp-server/src/agent-runner-shared";
@@ -22,24 +23,16 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe("getMcpBinaryPath", () => {
-  it("finds the bundled binary next to the runtime folder", () => {
+describe("agent paths", () => {
+  it("serves MCP from the binary the agent runs in", () => {
     const dir = layout([
       `Resources/${mcpBinaryName()}`,
-      "Resources/runtime/agent-runner-claude.ts",
+      "Resources/runtime/node_modules/.keep",
     ]);
-    expect(getMcpBinaryPath(join(dir, "Resources", "runtime"))).toBe(
-      join(dir, "Resources", "runtime", "..", mcpBinaryName()),
-    );
-  });
-
-  it("ignores a copy left in the runtime folder by an earlier version", () => {
-    const dir = layout([
-      `Resources/${mcpBinaryName()}`,
-      `Resources/runtime/${mcpBinaryName()}`,
-    ]);
-    expect(getMcpBinaryPath(join(dir, "Resources", "runtime"))).toBe(
-      join(dir, "Resources", mcpBinaryName()),
+    const binary = join(dir, "Resources", mcpBinaryName());
+    expect(getMcpBinaryPath("/$bunfs/root", binary)).toBe(binary);
+    expect(agentRuntimeDir("/$bunfs/root", binary)).toBe(
+      join(dir, "Resources", "runtime"),
     );
   });
 
@@ -48,8 +41,10 @@ describe("getMcpBinaryPath", () => {
       `mcp-server/dist/${mcpBinaryName()}`,
       "mcp-server/src/agent-runner-claude.ts",
     ]);
-    expect(getMcpBinaryPath(join(dir, "mcp-server", "src"))).toBe(
-      join(dir, "mcp-server", "src", "..", "dist", mcpBinaryName()),
+    const src = join(dir, "mcp-server", "src");
+    expect(getMcpBinaryPath(src, "/usr/local/bin/bun")).toBe(
+      join(src, "..", "dist", mcpBinaryName()),
     );
+    expect(agentRuntimeDir(src, "/usr/local/bin/bun")).toBe(join(dir, "mcp-server"));
   });
 });

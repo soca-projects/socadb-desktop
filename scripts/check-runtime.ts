@@ -1,7 +1,12 @@
 #!/usr/bin/env bun
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import {
+  agentRuntimeDir,
+  getMcpBinaryPath,
+} from "../mcp-server/src/agent-runner-shared.ts";
+import { locateCodex } from "../mcp-server/src/codex-exec.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const DIST = join(ROOT, "mcp-server", "dist");
@@ -27,21 +32,10 @@ function size(path: string): number {
 }
 
 const mcp = join(DIST, `socadb-mcp-${target}${ext}`);
-const bun = join(RUNTIME, `bun${ext}`);
-const claude = join(
-  RUNTIME,
-  "node_modules",
-  "@anthropic-ai",
-  `claude-agent-sdk-${npmOs}-${arch}`,
-  `claude${ext}`,
-);
-const vendorRoot = join(
-  RUNTIME,
-  "node_modules",
-  "@openai",
-  `codex-${npmOs}-${arch}`,
-  "vendor",
-);
+const claudePackage = `@anthropic-ai/claude-agent-sdk-${npmOs}-${arch}`;
+const codexPackage = `@openai/codex-${npmOs}-${arch}`;
+const claude = join(RUNTIME, "node_modules", claudePackage, `claude${ext}`);
+const vendorRoot = join(RUNTIME, "node_modules", codexPackage, "vendor");
 const triple = existsSync(vendorRoot) ? readdirSync(vendorRoot)[0] : "";
 const vendor = join(vendorRoot, triple);
 const codex = join(vendor, "bin", `codex${ext}`);
@@ -51,7 +45,20 @@ check(
   !existsSync(join(RUNTIME, `socadb-mcp-${target}${ext}`)),
   "the runtime holds its own copy of the MCP binary",
 );
-check(existsSync(bun), `missing Bun runtime: ${bun}`);
+const runtimeEntries = existsSync(RUNTIME) ? readdirSync(RUNTIME) : [];
+check(
+  runtimeEntries.join() === "node_modules",
+  `the runtime holds more than the agent CLIs: ${runtimeEntries.join(", ")}`,
+);
+const packages = existsSync(join(RUNTIME, "node_modules"))
+  ? readdirSync(join(RUNTIME, "node_modules")).flatMap((scope) =>
+      readdirSync(join(RUNTIME, "node_modules", scope)).map((name) => `${scope}/${name}`),
+    )
+  : [];
+check(
+  packages.sort().join() === [claudePackage, codexPackage].sort().join(),
+  `the runtime ships other packages than the agent CLIs: ${packages.join(", ")}`,
+);
 check(existsSync(claude), `missing Claude CLI: ${claude}`);
 check(existsSync(codex), `missing Codex CLI: ${codex}`);
 check(
@@ -92,20 +99,42 @@ if (target === host) {
       failures.push(`${name} CLI failed to start: ${String(error)}`);
     }
   }
-  const { getMcpBinaryPath } = await import(join(RUNTIME, "agent-runner-shared.ts"));
+  for (const provider of ["claude", "codex"]) {
+    const agent = spawnSync(mcp, ["agent", provider], {
+      input: "",
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    check(
+      agent.status === 0 &&
+        agent.stdout.includes('{"type":"ready"}') &&
+        !agent.stderr.includes("not found"),
+      `the ${provider} agent doesn't start from the MCP binary: ${agent.stderr || agent.error}`,
+    );
+  }
   check(
-    resolve(getMcpBinaryPath(RUNTIME)) === resolve(mcp),
-    "the agents don't find the MCP binary from the runtime folder",
+    getMcpBinaryPath(ROOT, mcp) === mcp,
+    "the agents don't give their own binary as the MCP server",
   );
+  check(
+    resolve(agentRuntimeDir(ROOT, mcp)) === resolve(RUNTIME),
+    "the agents don't look for the CLIs in the runtime folder",
+  );
+  try {
+    check(
+      locateCodex(RUNTIME).executable === codex,
+      "the Codex agent finds its CLI outside the runtime folder",
+    );
+  } catch (error) {
+    failures.push(`the Codex agent doesn't find its CLI: ${String(error)}`);
+  }
 } else {
   console.log(`Host ${host} can't run ${target}: CLIs not started`);
 }
 
 const mb = (bytes: number) => `${(bytes / 1048576).toFixed(1)} MB`;
 console.log(`MCP binary ${mb(size(mcp))}, runtime ${mb(size(RUNTIME))}`);
-console.log(
-  `  bun ${mb(size(bun))}, claude ${mb(size(claude))}, codex package ${mb(size(vendor))}`,
-);
+console.log(`  claude ${mb(size(claude))}, codex package ${mb(size(vendor))}`);
 
 for (const failure of failures) {
   console.log(process.env.GITHUB_ACTIONS ? `::error::${failure}` : failure);

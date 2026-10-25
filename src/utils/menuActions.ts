@@ -125,7 +125,7 @@ export function handleShowLogs() {
 
 // Closing the window triggers WindowEvent::Destroyed which runs the agent +
 // port-file cleanup on the Rust side. exit() from plugin-process would skip
-// that cleanup and orphan bun.exe subprocesses on Windows. In-memory schema
+// that cleanup and orphan agent runner subprocesses on Windows. In-memory schema
 // edits are preserved by sessionPersistence (localStorage), so there is no
 // need to gate this behind an unsaved-changes prompt — same behavior as
 // clicking the window's close button.

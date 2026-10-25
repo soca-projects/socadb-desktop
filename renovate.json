@@ -36,7 +36,7 @@
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
-      "description": "Bun is pinned in 5 places that must match (BUN_VERSION in mcp-server/src/build.ts and the workflows), so it's bumped by hand.",
+      "description": "Bun is pinned in 4 places in the workflows that must match, and it compiles the MCP binary we ship, so it's bumped by hand.",
       "matchManagers": ["github-actions"],
       "matchDepNames": ["bun"],
       "enabled": false

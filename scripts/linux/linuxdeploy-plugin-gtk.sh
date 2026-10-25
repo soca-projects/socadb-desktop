@@ -12,7 +12,7 @@
 # `std::runtime_error: Failed to run ldd` and aborts the AppImage build
 # (SIGABRT, exit 134). This blocks our Linux release because we ship the
 # Anthropic SDK's bundled Claude binary (`@anthropic-ai/claude-agent-sdk-linux-x64/claude`)
-# and our own Bun-compiled MCP server under usr/lib/SocaDB/runtime/.
+# and our own Bun-compiled MCP server under usr/lib/SocaDB/.
 #
 # This script overrides Tauri's cached linuxdeploy-plugin-gtk to move static
 # binaries out of the AppDir before linuxdeploy scans them, run linuxdeploy
@@ -25,7 +25,7 @@
 #   https://github.com/khoj-ai/pipali/blob/main/scripts/linux/linuxdeploy-plugin-gtk.sh
 #
 # When this can be removed: when linuxdeploy upstream stops crashing on
-# unreadable-by-ldd binaries, or when we drop the bundled Claude/Codex/Bun
+# unreadable-by-ldd binaries, or when we drop the bundled Claude/Codex
 # binaries from the AppImage payload (e.g. by moving them out of usr/lib/
 # or by switching to a user-installed CLI model).
 

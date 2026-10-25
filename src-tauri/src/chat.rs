@@ -3,9 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, VecDeque};
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -20,7 +19,7 @@ pub enum LoginType {
 }
 
 // CREATE_NO_WINDOW flag for Windows CreateProcess. Without this, every
-// bun.exe / taskkill.exe subprocess flashes a console window because they
+// agent runner / taskkill.exe subprocess flashes a console window because they
 // are console applications and Tauri's main process is a GUI app — Windows
 // allocates a fresh console whenever a console subprocess is spawned from
 // a GUI parent. The flag suppresses the allocation entirely.
@@ -150,55 +149,6 @@ pub fn cleanup_agents() {
     }
 }
 
-pub struct RuntimeLayout {
-    pub dir: PathBuf,
-    pub bun: PathBuf,
-}
-
-pub fn resolve_runtime_layout(app: &AppHandle) -> Result<RuntimeLayout, String> {
-    let dir = if cfg!(debug_assertions) {
-        // Dev: use mcp-server/dist/runtime if built, else fall back to mcp-server/src
-        // (which still works because agent-runner-shared.ts looks in ../dist for the MCP binary).
-        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        let project_root = manifest_dir.parent().ok_or("Cannot resolve project root")?;
-        let runtime = project_root.join("mcp-server").join("dist").join("runtime");
-        if runtime.exists() {
-            runtime
-        } else {
-            project_root.join("mcp-server").join("src")
-        }
-    } else {
-        app.path()
-            .resource_dir()
-            .map_err(|e| format!("Failed to resolve resource_dir: {e}"))?
-            .join("runtime")
-    };
-
-    let bun_name = if cfg!(target_os = "windows") {
-        "bun.exe"
-    } else {
-        "bun"
-    };
-    let bundled_bun = dir.join(bun_name);
-    let bun = if bundled_bun.exists() {
-        bundled_bun
-    } else if cfg!(debug_assertions) {
-        // Dev fallback: rely on system-installed bun (developer machine).
-        PathBuf::from("bun")
-    } else {
-        return Err(format!(
-            "Bun runtime not found in resources: {}",
-            bundled_bun.display()
-        ));
-    };
-
-    Ok(RuntimeLayout { dir, bun })
-}
-
-pub fn agent_runner_path(layout: &RuntimeLayout, provider_id: &str) -> PathBuf {
-    layout.dir.join(format!("agent-runner-{provider_id}.ts"))
-}
-
 fn api_key_env_var(provider_id: &str) -> &'static str {
     match provider_id {
         // `codex exec` reads CODEX_API_KEY and ignores OPENAI_API_KEY.
@@ -220,24 +170,19 @@ async fn spawn_agent(
     api_key: Option<&str>,
     spawned_auth: SpawnedAuth,
 ) -> Result<AgentProcess, String> {
-    let layout = resolve_runtime_layout(app).inspect_err(|e| {
+    let mcp = crate::mcp_binary_path(app).inspect_err(|e| {
         crate::log_event!(Level::Error, "agent.runtime.missing", e, "provider" => provider_id);
     })?;
-    let runner = agent_runner_path(&layout, provider_id);
-
-    if !runner.exists() {
-        let message = format!(
-            "Agent runner not found: {} (runtime dir: {})",
-            runner.display(),
-            layout.dir.display()
-        );
+    let runtime = mcp.with_file_name("runtime");
+    if !runtime.is_dir() {
+        let message = format!("Agent runtime not found: {}", runtime.display());
         crate::log_event!(Level::Error, "agent.runtime.missing", message, "provider" => provider_id);
         return Err(message);
     }
 
-    let mut cmd = Command::new(&layout.bun);
-    cmd.arg(&runner)
-        .current_dir(&layout.dir)
+    let mut cmd = Command::new(&mcp);
+    cmd.args(["agent", provider_id])
+        .current_dir(&runtime)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
@@ -259,9 +204,8 @@ async fn spawn_agent(
 
     let mut child = cmd.spawn().map_err(|e| {
         let message = format!(
-            "Failed to spawn agent-runner-{provider_id}: {e} (bun: {}, runner: {})",
-            layout.bun.display(),
-            runner.display()
+            "Failed to spawn the {provider_id} agent: {e} ({})",
+            mcp.display()
         );
         crate::log_event!(Level::Error, "agent.spawn.failed", message, "provider" => provider_id);
         message
