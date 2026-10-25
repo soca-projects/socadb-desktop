@@ -13,7 +13,6 @@ import type {
   EdgeChange,
   Connection,
   OnBeforeDelete,
-  OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -33,6 +32,7 @@ import { listen } from "@tauri-apps/api/event";
 import { Trans } from "react-i18next";
 import { formatShortcut } from "../../utils/platform";
 import { removableByKey } from "../../utils/canvasDeletion";
+import { keepSelection, newMoveTracker, saveMoves } from "../../utils/canvasMoves";
 import { NARROW_WINDOW_QUERY } from "../../utils/layout";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
@@ -128,7 +128,6 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   const relations = useSchemaStore((s) => s.schema.relations);
   const enums = useSchemaStore((s) => s.schema.enums ?? NO_ENUMS);
   const dbType = useSchemaStore((s) => s.schema.dbType);
-  const updateTable = useSchemaStore((s) => s.updateTable);
   const deleteTable = useSchemaStore((s) => s.deleteTable);
   const addRelation = useSchemaStore((s) => s.addRelation);
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
@@ -213,7 +212,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   if (storeNodes !== lastStoreNodes) {
     setLastStoreNodes(storeNodes);
     if (localNodes !== null) {
-      setLocalNodes(null);
+      setLocalNodes(keepSelection(storeNodes, localNodes));
     }
   }
 
@@ -234,19 +233,14 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
     [baseEdges, hoveredEdgeId],
   );
 
+  const moves = useRef(newMoveTracker());
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setLocalNodes((prev) => applyNodeChanges(changes, prev ?? storeNodes));
+      saveMoves(changes, moves.current, Date.now());
     },
     [storeNodes],
-  );
-
-  const onNodeDragStop = useCallback<OnNodeDrag>(
-    (_event, node) => {
-      updateTable(node.id, { position: node.position });
-      setLocalNodes(null);
-    },
-    [updateTable],
   );
 
   const onEdgesChange = useCallback(
@@ -355,7 +349,6 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
-            onNodeDragStop={onNodeDragStop}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
