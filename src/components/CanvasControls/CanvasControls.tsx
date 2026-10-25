@@ -21,7 +21,7 @@ const btnDisabledClass = "px-2 py-1.5 text-muted cursor-not-allowed";
 
 export function CanvasControls() {
   const { t } = useTranslation();
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { zoomIn, zoomOut, fitView, getNodes } = useReactFlow();
   const percentage = useStore(zoomSelector);
   const canUndo = useZustandStore(
     useSchemaStore.temporal,
@@ -56,7 +56,11 @@ export function CanvasControls() {
             <Plus size={14} />
           </button>
           <button
-            onClick={() => void fitView({ padding: 0.2 })}
+            onClick={() => {
+              // On an empty canvas React Flow would hold this fit and zoom the
+              // first table to 200% when it appears.
+              if (getNodes().length > 0) void fitView({ padding: 0.2 });
+            }}
             className={`border-l border-border-light ${btnClass}`}
             title={t("canvas.fitView")}
             aria-label={t("canvas.fitView")}
