@@ -183,5 +183,7 @@ mod tests {
     fn refuses_a_config_it_cannot_parse() {
         assert!(with_socadb_server("model = ", Some(OURS)).is_err());
         assert!(socadb_command("[mcp_servers").is_err());
+        assert!(socadb_command("={[]\r].").is_err());
+        assert!(socadb_command("a=[{[]-]{\na.").is_err());
     }
 }
