@@ -13,6 +13,7 @@ import type {
   EdgeChange,
   Connection,
   OnBeforeDelete,
+  OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -240,8 +241,8 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
     [storeNodes],
   );
 
-  const onNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
+  const onNodeDragStop = useCallback<OnNodeDrag>(
+    (_event, node) => {
       updateTable(node.id, { position: node.position });
       setLocalNodes(null);
     },
