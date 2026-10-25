@@ -357,7 +357,9 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
             onEdgeMouseLeave={onEdgeMouseLeave}
             onPaneClick={handleCloseContextMenu}
             elevateEdgesOnSelect
-            onInit={(instance) => instance.fitView({ padding: 0.2 })}
+            // On an empty canvas React Flow holds this fit until the first
+            // table appears, then frames that lone table: uncapped, it zooms to 200%.
+            onInit={(instance) => instance.fitView({ padding: 0.2, maxZoom: 1 })}
             minZoom={0.1}
             maxZoom={2}
             deleteKeyCode={DELETE_KEY_CODE}
