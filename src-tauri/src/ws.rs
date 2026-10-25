@@ -81,7 +81,10 @@ pub async fn start_ws_server(app: AppHandle) -> Result<u16, String> {
 
 // Browsers always send Origin on a WebSocket handshake and our MCP clients
 // never do; without this, any web page could find the port and drive the app.
-#[allow(clippy::result_large_err)] // signature fixed by tungstenite's handshake Callback
+#[expect(
+    clippy::result_large_err,
+    reason = "signature fixed by tungstenite's handshake Callback"
+)]
 fn reject_browser_origin(request: &Request, response: Response) -> Result<Response, ErrorResponse> {
     if request.headers().contains_key("origin") {
         let mut error = ErrorResponse::new(None);

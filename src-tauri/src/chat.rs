@@ -441,7 +441,10 @@ pub async fn chat_init(
     ensure_agent(&app, &provider_id, login_type).await
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Tauri maps each field of the invoke payload to an argument"
+)]
 #[tauri::command]
 pub async fn chat_send(
     app: AppHandle,
