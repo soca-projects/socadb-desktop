@@ -11,9 +11,13 @@ use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, 
 use tokio_tungstenite::tungstenite::http::StatusCode;
 use tokio_tungstenite::tungstenite::Message;
 
-type WsSink = futures_util::stream::SplitSink<
-    tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
-    Message,
+type WsSink = Arc<
+    Mutex<
+        futures_util::stream::SplitSink<
+            tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
+            Message,
+        >,
+    >,
 >;
 type WsClients = Arc<Mutex<HashMap<u64, WsSink>>>;
 
@@ -27,12 +31,13 @@ fn get_clients() -> &'static WsClients {
 }
 
 pub async fn send_to_client(connection_id: u64, message: String) {
-    let mut clients = get_clients().lock().await;
-    if let Some(sink) = clients.get_mut(&connection_id) {
-        if let Err(e) = sink.send(Message::Text(message.into())).await {
-            crate::log_event!(Level::Warn, "mcp.ws.send_failed", e, "connection" => connection_id);
-            clients.remove(&connection_id);
-        }
+    let Some(sink) = get_clients().lock().await.get(&connection_id).cloned() else {
+        return;
+    };
+    let sent = sink.lock().await.send(Message::Text(message.into())).await;
+    if let Err(e) = sent {
+        crate::log_event!(Level::Warn, "mcp.ws.send_failed", e, "connection" => connection_id);
+        get_clients().lock().await.remove(&connection_id);
     }
 }
 
@@ -76,7 +81,10 @@ pub async fn start_ws_server(app: AppHandle) -> Result<u16, String> {
 
 // Browsers always send Origin on a WebSocket handshake and our MCP clients
 // never do; without this, any web page could find the port and drive the app.
-#[allow(clippy::result_large_err)] // signature fixed by tungstenite's handshake Callback
+#[expect(
+    clippy::result_large_err,
+    reason = "signature fixed by tungstenite's handshake Callback"
+)]
 fn reject_browser_origin(request: &Request, response: Response) -> Result<Response, ErrorResponse> {
     if request.headers().contains_key("origin") {
         let mut error = ErrorResponse::new(None);
@@ -100,7 +108,7 @@ async fn handle_connection(stream: tokio::net::TcpStream, app: AppHandle) {
 
     {
         let mut clients = get_clients().lock().await;
-        clients.insert(connection_id, sender);
+        clients.insert(connection_id, Arc::new(Mutex::new(sender)));
     }
     crate::log_event!(Level::Debug, "mcp.ws.connected", "MCP client connected", "connection" => connection_id);
 
@@ -135,5 +143,51 @@ fn write_port_file(port: u16) -> Result<(), String> {
 pub fn cleanup_port_file() {
     if let Some(home) = dirs::home_dir() {
         let _ = std::fs::remove_file(home.join(".socadb").join(".port"));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+    use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+
+    async fn register(
+        connection_id: u64,
+    ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            tokio_tungstenite::accept_async(stream).await.unwrap()
+        });
+        let (client, _) = tokio_tungstenite::connect_async(format!("ws://{addr}"))
+            .await
+            .unwrap();
+        let (sink, _) = server.await.unwrap().split();
+        get_clients()
+            .lock()
+            .await
+            .insert(connection_id, Arc::new(Mutex::new(sink)));
+        client
+    }
+
+    #[tokio::test]
+    async fn a_client_that_stops_reading_does_not_block_the_others() {
+        let _stuck = register(1001).await;
+        let mut live = register(1002).await;
+
+        let blocked = tokio::spawn(send_to_client(1001, "x".repeat(32 << 20)));
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        assert!(!blocked.is_finished());
+
+        tokio::time::timeout(Duration::from_secs(5), send_to_client(1002, "ping".into()))
+            .await
+            .expect("the send to the live client waited on the stuck one");
+        let received = live.next().await.unwrap().unwrap();
+        assert_eq!(received.into_text().unwrap().as_str(), "ping");
+
+        blocked.abort();
+        get_clients().lock().await.clear();
     }
 }

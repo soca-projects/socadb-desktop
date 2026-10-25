@@ -214,8 +214,10 @@ fn prefers_french() -> bool {
 fn front_app(mtm: MainThreadMarker) {
     let app = NSApplication::sharedApplication(mtm);
     app.setActivationPolicy(NSApplicationActivationPolicy::Regular);
-    // Its replacement, activate(), only exists from macOS 14.
-    #[allow(deprecated)]
+    #[expect(
+        deprecated,
+        reason = "its replacement, activate(), only exists from macOS 14"
+    )]
     app.activateIgnoringOtherApps(true);
 }
 
