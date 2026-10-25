@@ -7,9 +7,6 @@ import type { LogCode } from "./logCodes";
 type Context = Record<string, unknown>;
 type Write = (message: string) => Promise<void>;
 
-// tauri-plugin-log's own command, called directly: its npm wrapper must match
-// the crate's minor version, and the versions that match our Tauri pull either
-// a second @tauri-apps/api or a vulnerable crate (rkyv via byte-unit).
 const LEVELS = { debug: 2, info: 3, warn: 4, error: 5 } as const;
 
 function command(level: keyof typeof LEVELS): Write {

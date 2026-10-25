@@ -173,6 +173,15 @@ fn open_terminal() {
     }
 }
 
+fn stop_agents_and_bridge() {
+    static DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if DONE.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
+    chat::cleanup_agents();
+    ws::cleanup_port_file();
+}
+
 // Must run in setup, before Sparkle's first check. Every appcast item is tagged
 // with a channel, and Sparkle only reads allowed channels from its delegate (no
 // Info.plist key). Handling the install on quit replaces Sparkle's reminders
@@ -259,8 +268,7 @@ pub fn run() {
         })
         .on_window_event(|_window, event| {
             if let tauri::WindowEvent::Destroyed = event {
-                chat::cleanup_agents();
-                ws::cleanup_port_file();
+                stop_agents_and_bridge();
             }
         })
         .build(tauri::generate_context!());
@@ -270,7 +278,9 @@ pub fn run() {
     )]
     let app = app.expect("error while building tauri application");
     app.run(|_app, event| {
+        // Windows logoff and the Restart Manager close the app without destroying its window.
         if let tauri::RunEvent::Exit = event {
+            stop_agents_and_bridge();
             logging::log_stop();
         }
     });

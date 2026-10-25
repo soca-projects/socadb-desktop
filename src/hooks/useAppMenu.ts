@@ -6,7 +6,7 @@ import { getRecentFiles, clearRecentFiles, loadRecentFiles } from "../utils/rece
 import { handleOpenRecent, handleShowLogs, MENU_SHORTCUTS } from "../utils/menuActions";
 import { handleUpdateMenuAction, updateMenuItemState } from "../utils/updater";
 import { useUpdateStore } from "../stores/updateStore";
-import { IS_MAC } from "../utils/platform";
+import { IS_LINUX, IS_MAC } from "../utils/platform";
 import i18next from "../i18n";
 import { logInfo } from "../utils/log";
 
@@ -261,7 +261,8 @@ async function setupMenu() {
   const windowSubmenu = await Submenu.new({
     text: t("menu.window"),
     items: [
-      await PredefinedMenuItem.new({ item: "Minimize" }),
+      // muda renders Minimize as a dead entry on Linux.
+      ...(IS_LINUX ? [] : [await PredefinedMenuItem.new({ item: "Minimize" })]),
       // The predefined CloseWindow is hardwired to Cmd+W, which closes the
       // schema here.
       await MenuItem.new({
@@ -301,6 +302,8 @@ async function setupMenu() {
           ],
         }),
       ];
+  // Never close the previous menu: Tauri drops the click handler of an id when
+  // its item is freed, and every rebuild reuses the same ids.
   const menu = await Menu.new({ items });
 
   if (IS_MAC) {
