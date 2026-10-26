@@ -46,7 +46,7 @@ export const SidePanel = memo(function SidePanel({
   );
 
   const handleAddTable = () => {
-    const newId = createTable();
+    const newId = createTable({ reveal: true });
     onOpenTable(newId);
   };
 

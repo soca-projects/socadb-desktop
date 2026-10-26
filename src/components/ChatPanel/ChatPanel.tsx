@@ -225,6 +225,7 @@ export function ChatPanel() {
   if (!isPanelOpen) {
     return (
       <div
+        data-chat-panel
         className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
         onClick={togglePanel}
       >
@@ -246,6 +247,7 @@ export function ChatPanel() {
   return (
     <div
       ref={panelRef}
+      data-chat-panel
       className="fixed bottom-4 right-4 z-50 flex max-h-[calc(100vh-4rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-float animate-fade-in"
       style={{ width: size.width, height: size.height }}
     >
