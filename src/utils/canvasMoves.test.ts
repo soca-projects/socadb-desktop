@@ -2,20 +2,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Node, NodeChange } from "@xyflow/react";
 import {
   finishedMoves,
-  keepSelection,
+  mergeStoreNodes,
   newMoveTracker,
   NUDGE_MERGE_MS,
   saveMoves,
 } from "./canvasMoves";
 import { createTable } from "./schemaActions";
 import { createEmptySchema, useSchemaStore } from "../stores/schemaStore";
-
-const table = (id: string, x = 0, selected?: boolean): Node => ({
-  id,
-  position: { x, y: 0 },
-  data: { name: id },
-  ...(selected === undefined ? {} : { selected }),
-});
+import type { Column, SchemaEnum, Table } from "../types/schema";
 
 const moveTo = (id: string, x: number, dragging: boolean): NodeChange => ({
   id,
@@ -126,31 +120,89 @@ describe("saveMoves", () => {
   });
 });
 
-describe("keepSelection", () => {
-  it("keeps the selected tables on the nodes the store sends next", () => {
-    const local = [
-      table("books", 40, true),
-      table("authors", 300, true),
-      table("loans", 0, false),
-    ];
-    const store = [table("books", 45), table("authors", 305), table("loans", 0)];
+describe("mergeStoreNodes", () => {
+  const column = (id: string): Column => ({
+    id,
+    name: id,
+    type: "integer",
+    isPrimaryKey: false,
+    isForeignKey: false,
+    isNullable: false,
+    isUnique: false,
+    isAutoIncrement: false,
+    defaultValue: null,
+  });
+  const books: Table = {
+    id: "books",
+    name: "books",
+    position: { x: 0, y: 0 },
+    columns: [column("id"), column("title")],
+  };
+  const node = (
+    table: Table,
+    extra: Partial<Node> = {},
+    enums: SchemaEnum[] = [],
+  ): Node => ({
+    id: table.id,
+    position: table.position,
+    data: { table, enums, dbType: "postgresql" },
+    ...extra,
+  });
+  const measured = { width: 240, height: 120 };
 
-    expect(keepSelection(store, local)).toEqual([
-      { ...store[0], selected: true },
-      { ...store[1], selected: true },
-      store[2],
+  it("hands back the shown node of a table the change left alone", () => {
+    const shown = node(books, { selected: true, measured });
+
+    expect(mergeStoreNodes([node(books)], [shown])[0]).toBe(shown);
+  });
+
+  it("keeps the size of a table that only moved", () => {
+    const moved = { ...books, position: { x: 40, y: 0 } };
+
+    expect(
+      mergeStoreNodes([node(moved)], [node(books, { selected: true, measured })]),
+    ).toEqual([{ ...node(moved), selected: true, measured }]);
+  });
+
+  it("measures again a table whose columns were only reordered", () => {
+    const reordered = { ...books, columns: [...books.columns].reverse() };
+    const [next] = mergeStoreNodes(
+      [node(reordered)],
+      [node(books, { selected: true, measured })],
+    );
+
+    expect(next).toEqual({ ...node(reordered), selected: true });
+    expect(next.measured).toBeUndefined();
+  });
+
+  it("measures again a table whose enums changed", () => {
+    const status: SchemaEnum = { id: "status", name: "status", values: ["draft"] };
+    const edited = { ...status, values: ["draft", "done"] };
+    const [next] = mergeStoreNodes(
+      [node(books, {}, [edited])],
+      [node(books, { measured }, [status])],
+    );
+
+    expect(next.measured).toBeUndefined();
+  });
+
+  it("puts a table still being dragged back where the store has it", () => {
+    const dragged = node(books, {
+      position: { x: 300, y: 80 },
+      dragging: true,
+      measured,
+    });
+
+    expect(mergeStoreNodes([node(books)], [dragged])).toEqual([
+      { ...node(books), measured },
     ]);
   });
 
-  it("drops a selected table the store no longer has", () => {
-    const local = [table("books", 0, true), table("authors", 0, true)];
-    const store = [table("authors", 0)];
+  it("drops tables the store no longer has and takes new ones as they come", () => {
+    const authors = { ...books, id: "authors", name: "authors" };
 
-    expect(keepSelection(store, local)).toEqual([{ ...store[0], selected: true }]);
-  });
-
-  it("hands back to the store when nothing is selected", () => {
-    expect(keepSelection([table("books")], [table("books", 0, false)])).toBeNull();
-    expect(keepSelection([table("books")], null)).toBeNull();
+    expect(
+      mergeStoreNodes([node(authors)], [node(books, { selected: true, measured })]),
+    ).toEqual([node(authors)]);
   });
 });

@@ -74,16 +74,51 @@ export function saveMoves(changes: NodeChange[], tracker: MoveTracker, now: numb
   tracker.run = nudge ? { ids, schema: useSchemaStore.getState().schema, at: now } : null;
 }
 
-export function keepSelection<N extends Node>(
-  storeNodes: N[],
-  localNodes: readonly Node[] | null,
-): N[] | null {
-  if (!localNodes) return null;
-  const selected = new Set(
-    localNodes.filter((node) => node.selected).map((node) => node.id),
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function sameItems(a: unknown, b: unknown): boolean {
+  return (
+    Array.isArray(a) &&
+    Array.isArray(b) &&
+    a.length === b.length &&
+    a.every((item, i) => item === b[i])
   );
-  if (selected.size === 0) return null;
-  return storeNodes.map((node) =>
-    selected.has(node.id) ? { ...node, selected: true } : node,
+}
+
+function sameApartFrom(a: unknown, b: unknown, skipped: string): boolean {
+  if (!isRecord(a) || !isRecord(b)) return false;
+  const keys = Object.keys(b);
+  return (
+    Object.keys(a).length === keys.length &&
+    keys.every((key) => key === skipped || (key in a && a[key] === b[key]))
   );
+}
+
+// React Flow re-measures any node it gets without `measured` and remounts its
+// edges, so an unchanged table keeps its node. A table whose content changed is
+// re-measured even at the same size: its column handles may have moved.
+export function mergeStoreNodes(
+  storeNodes: readonly Node[],
+  localNodes: readonly Node[],
+): Node[] {
+  const shown = new Map(localNodes.map((node) => [node.id, node]));
+  return storeNodes.map((node) => {
+    const local = shown.get(node.id);
+    if (!local) return node;
+    const sameContext =
+      local.data.dbType === node.data.dbType &&
+      sameItems(local.data.enums, node.data.enums);
+    const samePosition =
+      local.position.x === node.position.x && local.position.y === node.position.y;
+    if (sameContext && samePosition && local.data.table === node.data.table) return local;
+    const sameContent =
+      sameContext && sameApartFrom(local.data.table, node.data.table, "position");
+    return {
+      ...node,
+      ...(local.selected ? { selected: true } : {}),
+      ...(sameContent && local.measured ? { measured: local.measured } : {}),
+    };
+  });
 }

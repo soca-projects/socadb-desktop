@@ -32,7 +32,7 @@ import { listen } from "@tauri-apps/api/event";
 import { Trans } from "react-i18next";
 import { formatShortcut } from "../../utils/platform";
 import { removableByKey } from "../../utils/canvasDeletion";
-import { keepSelection, newMoveTracker, saveMoves } from "../../utils/canvasMoves";
+import { mergeStoreNodes, newMoveTracker, saveMoves } from "../../utils/canvasMoves";
 import { NARROW_WINDOW_QUERY } from "../../utils/layout";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
@@ -212,7 +212,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   if (storeNodes !== lastStoreNodes) {
     setLastStoreNodes(storeNodes);
     if (localNodes !== null) {
-      setLocalNodes(keepSelection(storeNodes, localNodes));
+      setLocalNodes(mergeStoreNodes(storeNodes, localNodes));
     }
   }
 
