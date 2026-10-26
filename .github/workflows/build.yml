@@ -54,7 +54,7 @@ jobs:
     steps:
       # Actions are pinned by SHA because this workflow runs with
       # TAURI_SIGNING_PRIVATE_KEY in scope when called from release.yml.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Keep in sync with ci.yml and release.yml: this bun compiles the MCP
       # binary, so its runtime ships in the release.
@@ -123,7 +123,7 @@ jobs:
 
       - name: Upload build artifacts (no publish)
         if: ${{ !inputs.publish }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bundle-${{ matrix.bunTarget }}
           path: |
@@ -216,7 +216,7 @@ jobs:
 
       - name: Upload AppImage debug artifacts on failure
         if: failure() && matrix.platform == 'ubuntu-22.04'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-bundle-debug-${{ inputs.tag-name || github.run_id }}
           # Restrict to the partial AppImage tree and any tool logs. Exclude
