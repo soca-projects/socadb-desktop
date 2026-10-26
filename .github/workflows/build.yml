@@ -181,6 +181,7 @@ jobs:
 
       - name: Check the agent runtime
         shell: bash
+        timeout-minutes: 10
         env:
           BUN_TARGET: ${{ matrix.bunTarget }}
         run: bun scripts/check-runtime.ts
