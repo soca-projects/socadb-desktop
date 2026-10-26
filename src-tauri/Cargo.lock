@@ -3744,7 +3744,7 @@ dependencies = [
 [[package]]
 name = "sparkle-updater"
 version = "0.1.0"
-source = "git+https://github.com/Cassidy321/tauri-plugin-sparkle-updater?rev=61f040d092581ff706590e7d25bd5128a0290d4c#61f040d092581ff706590e7d25bd5128a0290d4c"
+source = "git+https://github.com/Cassidy321/tauri-plugin-sparkle-updater?rev=3a39dd7c755f07e9cb826d168f187217066d1736#3a39dd7c755f07e9cb826d168f187217066d1736"
 dependencies = [
  "block2",
  "log",
@@ -4198,7 +4198,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-sparkle-updater"
 version = "0.3.0"
-source = "git+https://github.com/Cassidy321/tauri-plugin-sparkle-updater?rev=61f040d092581ff706590e7d25bd5128a0290d4c#61f040d092581ff706590e7d25bd5128a0290d4c"
+source = "git+https://github.com/Cassidy321/tauri-plugin-sparkle-updater?rev=3a39dd7c755f07e9cb826d168f187217066d1736#3a39dd7c755f07e9cb826d168f187217066d1736"
 dependencies = [
  "dispatch",
  "log",
