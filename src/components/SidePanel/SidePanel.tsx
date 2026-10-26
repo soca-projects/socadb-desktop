@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlusIcon as Plus } from "@phosphor-icons/react";
 import { useSchemaStore } from "../../stores/schemaStore";
@@ -12,7 +12,11 @@ interface SidePanelProps {
   onOpenTable: (id: string | null) => void;
 }
 
-export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) {
+export const SidePanel = memo(function SidePanel({
+  isOpen,
+  openTableId,
+  onOpenTable,
+}: SidePanelProps) {
   const { t } = useTranslation();
   const tables = useSchemaStore((s) => s.schema.tables);
   const [renamingTableId, setRenamingTableId] = useState<string | null>(null);
@@ -24,6 +28,22 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
     setShownTableId(openTableId);
     if (editing && editing.tableId !== openTableId) setEditing(null);
   }
+
+  const renameTable = useCallback(
+    (id: string) => {
+      onOpenTable(id);
+      setRenamingTableId(id);
+    },
+    [onOpenTable],
+  );
+  const endRename = useCallback(() => setRenamingTableId(null), []);
+  const goToColumn = useCallback(
+    (tableId: string, columnId: string) => {
+      setEditing({ tableId, columnId, note: false, selectName: false });
+      onOpenTable(tableId);
+    },
+    [onOpenTable],
+  );
 
   const handleAddTable = () => {
     const newId = createTable();
@@ -58,19 +78,12 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
               table={table}
               isOpen={openTableId === table.id}
               isRenaming={renamingTableId === table.id}
-              onToggle={() => onOpenTable(openTableId === table.id ? null : table.id)}
-              onOpen={() => onOpenTable(table.id)}
-              onRename={() => {
-                onOpenTable(table.id);
-                setRenamingTableId(table.id);
-              }}
-              onRenameEnd={() => setRenamingTableId(null)}
+              onOpenTable={onOpenTable}
+              onRename={renameTable}
+              onRenameEnd={endRename}
               editing={editing?.tableId === table.id ? editing : null}
               onEdit={setEditing}
-              onGoToColumn={(tableId, columnId) => {
-                setEditing({ tableId, columnId, note: false, selectName: false });
-                onOpenTable(tableId);
-              }}
+              onGoToColumn={goToColumn}
             />
           ))
         )}
@@ -87,4 +100,4 @@ export function SidePanel({ isOpen, openTableId, onOpenTable }: SidePanelProps) 
       </div>
     </div>
   );
-}
+});
