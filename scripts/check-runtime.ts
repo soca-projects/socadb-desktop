@@ -1,7 +1,17 @@
 #!/usr/bin/env bun
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { createInterface } from "node:readline";
+import { z } from "zod";
 import {
   agentRuntimeDir,
   getMcpBinaryPath,
@@ -29,6 +39,94 @@ function size(path: string): number {
   const stat = statSync(path);
   if (!stat.isDirectory()) return stat.size;
   return readdirSync(path).reduce((sum, name) => sum + size(join(path, name)), 0);
+}
+
+const AgentEventZ = z.object({
+  type: z.string(),
+  event: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+type AgentEvent = z.infer<typeof AgentEventZ>;
+
+// The empty home and config folders keep the developer's own login out: without
+// them, the check would send a real message on their account instead of hitting
+// the login error.
+function sendFirstMessage(
+  provider: string,
+  answered: (event: AgentEvent) => boolean,
+): Promise<string | null> {
+  const home = mkdtempSync(join(tmpdir(), "socadb-check-"));
+  const claudeConfig = join(home, ".claude");
+  const codexHome = join(home, ".codex");
+  mkdirSync(claudeConfig);
+  mkdirSync(codexHome);
+  const env: NodeJS.ProcessEnv = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([key]) => !/^(ANTHROPIC_|CLAUDE_|CLAUDECODE$|OPENAI_|CODEX_)/.test(key),
+      ),
+    ),
+    HOME: home,
+    USERPROFILE: home,
+    CFFIXED_USER_HOME: home,
+    CLAUDE_CONFIG_DIR: claudeConfig,
+    CODEX_HOME: codexHome,
+  };
+  const agent = spawn(mcp, ["agent", provider], { env });
+  let result: string | null | undefined;
+  let settled = false;
+  let stderr = "";
+  return new Promise((done) => {
+    const finish = (failure: string | null) => {
+      if (result !== undefined) return;
+      result = failure;
+      clearTimeout(timer);
+      // Killing the runner would orphan the CLI, which keeps going on its own;
+      // stopping the turn first ends the CLI with it.
+      agent.stdin.end(JSON.stringify({ type: "chat_stop" }) + "\n");
+      setTimeout(() => agent.kill(), 5_000).unref();
+    };
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      try {
+        rmSync(home, { recursive: true, force: true });
+      } catch {}
+      done(result ?? null);
+    };
+    const timer = setTimeout(() => finish("no answer within 90 s"), 90_000);
+    agent.on("error", (error) => {
+      finish(String(error));
+      settle();
+    });
+    agent.stdin.on("error", () => {});
+    agent.stderr.on("data", (chunk) => (stderr += chunk));
+    createInterface({ input: agent.stdout }).on("line", (line) => {
+      let parsed;
+      try {
+        parsed = AgentEventZ.safeParse(JSON.parse(line));
+      } catch {
+        return;
+      }
+      if (!parsed.success) return;
+      const event = parsed.data;
+      if (event.type === "ready") {
+        agent.stdin.write(
+          JSON.stringify({ type: "chat_send", message: "hello", systemPrompt: "check" }) +
+            "\n",
+        );
+      } else if (answered(event)) {
+        finish(null);
+      } else if (event.event === "error") {
+        finish(event.message ?? line);
+      }
+    });
+    agent.on("exit", (code) => {
+      finish(`exited with ${code} before answering: ${stderr.trim()}`);
+      settle();
+    });
+  });
 }
 
 const mcp = join(DIST, `socadb-mcp-${target}${ext}`);
@@ -112,6 +210,16 @@ if (target === host) {
       `the ${provider} agent doesn't start from the MCP binary: ${agent.stderr || agent.error}`,
     );
   }
+  const claudeFailure = await sendFirstMessage(
+    "claude",
+    (event) => event.event === "error" && event.code === "auth",
+  );
+  check(!claudeFailure, `the claude agent doesn't reach its CLI: ${claudeFailure}`);
+  const codexFailure = await sendFirstMessage(
+    "codex",
+    (event) => event.event === "session_init",
+  );
+  check(!codexFailure, `the codex agent doesn't reach its CLI: ${codexFailure}`);
   check(
     getMcpBinaryPath(ROOT, mcp) === mcp,
     "the agents don't give their own binary as the MCP server",
