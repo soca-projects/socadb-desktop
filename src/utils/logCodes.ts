@@ -553,19 +553,28 @@ export const LOG_CODES = {
   },
   "mcp.server.start": {
     level: "info",
-    meaning: "The MCP server binary connected to SocaDB and is serving tools.",
+    meaning:
+      "The MCP server binary is serving tools; it connects to SocaDB on the first tool call.",
     check: "One per agent run or AI app session; ctx-free.",
   },
   "mcp.server.start_failed": {
     level: "error",
     meaning: "The MCP server binary could not start; the AI app sees no SocaDB tools.",
-    check: "The message; usually mcp.server.app_not_running just before.",
+    check: "The message; stdio failed, since SocaDB being closed no longer stops it.",
   },
   "mcp.server.app_not_running": {
-    level: "error",
-    meaning: "The MCP server found no ~/.socadb/.port, so SocaDB wasn't running.",
+    level: "info",
+    meaning:
+      "A tool call found no ~/.socadb/.port: SocaDB wasn't running, and the agent was told to ask for it.",
     check:
-      "Open SocaDB first; if it is open, look for mcp.port_file.write_failed in socadb.log.",
+      "Normal when SocaDB is closed; if it was open, look for mcp.port_file.write_failed in socadb.log.",
+  },
+  "mcp.server.not_socadb": {
+    level: "warn",
+    meaning:
+      "The port in ~/.socadb/.port didn't answer hello like SocaDB, so the server treated the app as closed.",
+    check:
+      "A port file left by a crash, now used by another program, or an app hung at launch.",
   },
   "mcp.server.port_invalid": {
     level: "error",
@@ -575,7 +584,8 @@ export const LOG_CODES = {
   "mcp.server.connected": {
     level: "info",
     meaning: "The MCP server connected to SocaDB's bridge.",
-    check: "ctx.port must match the app's mcp.ws.listening.",
+    check:
+      "ctx.port must match the app's mcp.ws.listening; ctx.client is chat for SocaDB's own chat, external for an AI app.",
   },
   "mcp.server.socket_error": {
     level: "error",

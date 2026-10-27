@@ -46,6 +46,7 @@ const bunBuildTarget = `bun-${targetTag}`;
 
 const mcpBinary = `socadb-mcp-${targetTag}${ext}`;
 const mcpOutfile = `dist/${mcpBinary}`;
+const serverVersion: string = JSON.parse(readFileSync("package.json", "utf-8")).version;
 
 mkdirSync("dist", { recursive: true });
 
@@ -65,6 +66,8 @@ execFileSync(
     "--no-compile-autoload-bunfig",
     "--no-compile-autoload-dotenv",
     `--target=${bunBuildTarget}`,
+    "--define",
+    `process.env.SOCADB_VERSION=${JSON.stringify(serverVersion)}`,
     "src/index.ts",
     "--outfile",
     mcpOutfile,

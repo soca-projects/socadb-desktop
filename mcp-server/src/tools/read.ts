@@ -1,19 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { send } from "../bridge.js";
-
-function ok(data: unknown) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-  };
-}
-
-function err(message: string) {
-  return {
-    content: [{ type: "text" as const, text: message }],
-    isError: true,
-  };
-}
+import { err, okJson } from "./result.js";
 
 export function registerReadTools(server: McpServer) {
   server.registerTool(
@@ -23,7 +11,7 @@ export function registerReadTools(server: McpServer) {
         "Get the complete database schema: tables with notes, columns (type parameters, default and its kind, enum values, note) and indexes, relations, and PostgreSQL enum types",
       inputSchema: {},
     },
-    async () => ok(await send("get_schema")),
+    async () => okJson(await send("get_schema")),
   );
 
   server.registerTool(
@@ -36,7 +24,7 @@ export function registerReadTools(server: McpServer) {
     },
     async ({ name }) => {
       const table = await send("get_table", { name });
-      return table ? ok(table) : err(`Table "${name}" not found`);
+      return table ? okJson(table) : err(`Table "${name}" not found`);
     },
   );
 
@@ -47,6 +35,6 @@ export function registerReadTools(server: McpServer) {
         "Get the current editor state: file path, schema name, number of tables and relations",
       inputSchema: {},
     },
-    async () => ok(await send("get_editor_state")),
+    async () => okJson(await send("get_editor_state")),
   );
 }

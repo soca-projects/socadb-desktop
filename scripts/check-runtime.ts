@@ -7,7 +7,9 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -129,6 +131,104 @@ function sendFirstMessage(
   });
 }
 
+const RpcResponseZ = z.object({
+  id: z.number(),
+  result: z
+    .object({
+      tools: z.array(z.object({ name: z.string() })).optional(),
+      isError: z.boolean().optional(),
+      content: z.array(z.object({ text: z.string().optional() })).optional(),
+    })
+    .optional(),
+});
+
+function closedPort(): Promise<number> {
+  return new Promise((resolve) => {
+    const probe = createServer().listen(0, "127.0.0.1", () => {
+      const address = probe.address();
+      probe.close(() => resolve(typeof address === "object" && address ? address.port : 1));
+    });
+  });
+}
+
+async function serveWithoutApp(
+  args: string[],
+): Promise<{ failure: string | null; tools: string[] }> {
+  const home = mkdtempSync(join(tmpdir(), "socadb-check-"));
+  // A port file left behind by a crash: the server tries the dead port.
+  mkdirSync(join(home, ".socadb"));
+  writeFileSync(join(home, ".socadb", ".port"), String(await closedPort()));
+  const server = spawn(mcp, args, {
+    env: { ...process.env, HOME: home, USERPROFILE: home, CFFIXED_USER_HOME: home },
+  });
+  const rpc = (id: number, method: string, params: unknown = {}) =>
+    server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
+  const responses = new Map<number, z.infer<typeof RpcResponseZ>>();
+  let stderr = "";
+  let settled = false;
+  let exitTimer: ReturnType<typeof setTimeout> | undefined;
+  return new Promise((done) => {
+    const finish = (failure: string | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearTimeout(exitTimer);
+      server.kill();
+      try {
+        rmSync(home, { recursive: true, force: true });
+      } catch {}
+      const tools = responses.get(2)?.result?.tools?.map((t) => t.name) ?? [];
+      done({ failure, tools });
+    };
+    const timer = setTimeout(() => finish("no answer within 30 s"), 30_000);
+    server.on("error", (error) => finish(String(error)));
+    server.stderr.on("data", (chunk) => (stderr += chunk));
+    createInterface({ input: server.stdout }).on("line", (line) => {
+      let parsed;
+      try {
+        parsed = RpcResponseZ.safeParse(JSON.parse(line));
+      } catch {
+        return;
+      }
+      if (!parsed.success) return;
+      responses.set(parsed.data.id, parsed.data);
+      if (parsed.data.id === 1) {
+        server.stdin.write(
+          JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n",
+        );
+        rpc(2, "tools/list");
+        rpc(3, "tools/call", { name: "get_schema", arguments: {} });
+      }
+      if (parsed.data.id === 3 || parsed.data.id === 4) {
+        const text = parsed.data.result?.content?.[0]?.text ?? "";
+        if (!parsed.data.result?.isError || !text.includes("isn't open")) {
+          finish(`a tool call without SocaDB answered ${line}`);
+          return;
+        }
+      }
+      if (parsed.data.id === 3) {
+        setTimeout(() => rpc(4, "tools/call", { name: "get_schema", arguments: {} }), 1_500);
+      }
+      if (parsed.data.id === 4) {
+        server.stdin.end();
+        exitTimer = setTimeout(
+          () => finish("still running 5 s after its client closed stdin"),
+          5_000,
+        );
+      }
+    });
+    server.on("exit", (code) => {
+      if (!responses.has(4)) finish(`exited with ${code} before answering: ${stderr.trim()}`);
+      else finish(code === 0 ? null : `exited with ${code} after stdin closed: ${stderr.trim()}`);
+    });
+    rpc(1, "initialize", {
+      protocolVersion: "2025-11-25",
+      capabilities: {},
+      clientInfo: { name: "check-runtime", version: "1" },
+    });
+  });
+}
+
 const mcp = join(DIST, `socadb-mcp-${target}${ext}`);
 const claudePackage = `@anthropic-ai/claude-agent-sdk-${npmOs}-${arch}`;
 const codexPackage = `@openai/codex-${npmOs}-${arch}`;
@@ -220,6 +320,12 @@ if (target === host) {
     (event) => event.event === "session_init",
   );
   check(!codexFailure, `the codex agent doesn't reach its CLI: ${codexFailure}`);
+  const external = await serveWithoutApp([]);
+  check(!external.failure, `the MCP server doesn't serve AI apps without SocaDB: ${external.failure}`);
+  check(
+    ["get_schema", "create_table"].every((tool) => external.tools.includes(tool)),
+    `AI apps don't get the schema tools: ${external.tools.join(", ")}`,
+  );
   check(
     getMcpBinaryPath(ROOT, mcp) === mcp,
     "the agents don't give their own binary as the MCP server",

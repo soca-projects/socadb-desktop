@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { send } from "../bridge.js";
+import { err, ok } from "./result.js";
 
 const columnFields = {
   type: z
@@ -34,14 +35,6 @@ const ColumnSchema = z.object({
   type: columnFields.type.optional(),
   note: z.string().optional().describe("What the column holds, written as a COMMENT in the SQL export"),
 });
-
-function ok(message: string) {
-  return { content: [{ type: "text" as const, text: message }] };
-}
-
-function err(message: string) {
-  return { content: [{ type: "text" as const, text: message }], isError: true };
-}
 
 export function registerWriteTools(server: McpServer) {
   server.registerTool(
