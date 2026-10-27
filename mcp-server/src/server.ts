@@ -1,17 +1,27 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { disconnect } from "./bridge.js";
+import { disconnect, isChatClient } from "./bridge.js";
 import { mcpLog } from "./log.js";
 import { registerReadTools } from "./tools/read.js";
+import { registerSchemaTools } from "./tools/schemas.js";
 import { registerWriteTools } from "./tools/write.js";
 
-const server = new McpServer({
-  name: "socadb",
-  version: process.env.SOCADB_VERSION ?? "dev",
-});
+const INSTRUCTIONS = `SocaDB is a desktop app for designing database schemas. These tools read and change what it shows.
+- SocaDB has to be open. When a tool says it isn't, ask the user to open it.
+- Tools act on the schema shown in SocaDB's editor. On its home screen no schema is shown: open one with open_schema, or create one with new_schema.
+- Create a new schema only when the user clearly asks for a new or separate database. Otherwise work on the schema they were on, which get_editor_state names. When you can't tell which schema they mean, ask them, suggesting the last one they had open.`;
+
+const external = !isChatClient();
+
+const server = new McpServer(
+  { name: "socadb", version: process.env.SOCADB_VERSION ?? "dev" },
+  external ? { instructions: INSTRUCTIONS } : undefined,
+);
 
 registerReadTools(server);
 registerWriteTools(server);
+// SocaDB's own chat belongs to the schema it was opened on.
+if (external) registerSchemaTools(server);
 
 async function main() {
   const transport = new StdioServerTransport();

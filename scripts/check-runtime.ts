@@ -323,8 +323,16 @@ if (target === host) {
   const external = await serveWithoutApp([]);
   check(!external.failure, `the MCP server doesn't serve AI apps without SocaDB: ${external.failure}`);
   check(
-    ["get_schema", "create_table"].every((tool) => external.tools.includes(tool)),
-    `AI apps don't get the schema tools: ${external.tools.join(", ")}`,
+    ["get_schema", "create_table", "new_schema", "open_schema"].every((tool) =>
+      external.tools.includes(tool),
+    ),
+    `AI apps don't get every tool: ${external.tools.join(", ")}`,
+  );
+  const chat = await serveWithoutApp(["--chat"]);
+  check(!chat.failure, `the MCP server doesn't serve SocaDB's chat: ${chat.failure}`);
+  check(
+    chat.tools.includes("create_table") && !chat.tools.includes("new_schema"),
+    `SocaDB's chat gets the wrong tools: ${chat.tools.join(", ")}`,
   );
   check(
     getMcpBinaryPath(ROOT, mcp) === mcp,

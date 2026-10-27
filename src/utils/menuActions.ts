@@ -15,7 +15,7 @@ import {
 import { importFromHome } from "./homeImport";
 import { addRecentFile } from "./recentFiles";
 import { closeSchema, handleRedo, handleUndo } from "./schemaActions";
-import { isWorthResuming } from "./schemaQueries";
+import { hasUnsavedChanges, isWorthResuming } from "./schemaQueries";
 import { logError, logInfo } from "./log";
 
 // Inline editors (e.g. column rename inputs in SidePanel) commit their value
@@ -52,7 +52,7 @@ export async function handleSaveAs() {
 
 function isDirty() {
   const { schema, filePath, savedAt } = useSchemaStore.getState();
-  return savedAt !== schema.updatedAt && isWorthResuming(schema, filePath);
+  return hasUnsavedChanges(schema, filePath, savedAt);
 }
 
 export function handleOpen() {

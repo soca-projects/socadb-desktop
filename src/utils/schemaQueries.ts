@@ -87,3 +87,11 @@ export function serializeRelation(schema: Schema, r: Relation) {
 export function isWorthResuming(schema: Schema, filePath: string | null): boolean {
   return filePath !== null || schema.tables.length > 0;
 }
+
+export function hasUnsavedChanges(
+  schema: Schema,
+  filePath: string | null,
+  savedAt: string | null,
+): boolean {
+  return savedAt !== schema.updatedAt && isWorthResuming(schema, filePath);
+}

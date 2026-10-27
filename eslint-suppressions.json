@@ -9,11 +9,6 @@
       "count": 1
     }
   },
-  "src/hooks/useMcpBridge.ts": {
-    "@typescript-eslint/consistent-type-assertions": {
-      "count": 1
-    }
-  },
   "src/i18n.ts": {
     "@typescript-eslint/consistent-type-assertions": {
       "count": 1

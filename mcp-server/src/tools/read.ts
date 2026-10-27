@@ -32,7 +32,7 @@ export function registerReadTools(server: McpServer) {
     "get_editor_state",
     {
       description:
-        "Get the current editor state: file path, schema name, number of tables and relations",
+        "Get what SocaDB shows: its home screen, or a schema in the editor with its file path, name, database, and number of tables and relations. On the home screen, it names the last schema the user had open",
       inputSchema: {},
     },
     async () => okJson(await send("get_editor_state")),

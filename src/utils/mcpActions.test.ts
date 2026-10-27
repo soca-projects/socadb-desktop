@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { dispatchMcpAction } from "./mcpActions";
 import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
+import { useViewStore } from "../stores/viewStore";
 
 function resetStore(dbType: "mysql" | "postgresql" = "postgresql") {
   useSchemaStore.setState({
@@ -8,6 +9,7 @@ function resetStore(dbType: "mysql" | "postgresql" = "postgresql") {
     filePath: null,
     savedAt: null,
   });
+  useViewStore.setState({ view: "editor" });
 }
 
 describe("dispatchMcpAction", () => {
