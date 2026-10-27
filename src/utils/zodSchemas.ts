@@ -153,6 +153,28 @@ export const McpTableNameZ = z.object({
   name: z.string(),
 });
 
+export const McpClientZ = z.enum(["external", "chat"]);
+
+export const McpRequestZ = z.object({
+  connectionId: z.number(),
+  data: z.object({
+    id: z.number(),
+    action: z.string(),
+    payload: z.record(z.string(), z.unknown()).optional(),
+    client: McpClientZ.optional(),
+  }),
+});
+
+export const McpNewSchemaZ = z.object({
+  name: z.string().optional(),
+  dbType: DbTypeZ.optional(),
+});
+
+export const McpOpenSchemaZ = z.object({
+  name: z.string(),
+  folder: z.string().optional(),
+});
+
 export const McpAddColumnZ = z.object({
   table: z.string(),
   column: McpColumnInputZ,

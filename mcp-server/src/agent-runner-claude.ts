@@ -80,7 +80,7 @@ async function handleSend(cmd: ChatSendCommand) {
       mcpServers: {
         socadb: {
           command: getMcpBinaryPath(__dirname),
-          args: [],
+          args: ["--chat"],
           env: {},
         },
       },

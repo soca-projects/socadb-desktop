@@ -39,7 +39,7 @@ function codexArgs(cmd: ChatSendCommand, threadId: string | undefined): string[]
     "--config",
     `mcp_servers.socadb.command=${JSON.stringify(getMcpBinaryPath(__dirname))}`,
     "--config",
-    "mcp_servers.socadb.args=[]",
+    'mcp_servers.socadb.args=["--chat"]',
     "--config",
     "mcp_servers.socadb.env={}",
     // SocaDB's own tools are the agent's job; under a read-only sandbox codex would
