@@ -19,7 +19,7 @@ import { useMediaQuery } from "./hooks/useMediaQuery";
 import { NARROW_WINDOW_QUERY, TOOLBAR_HEIGHT } from "./utils/layout";
 import { useThemeStore } from "./stores/themeStore";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
-import { syncIntegrations } from "./utils/mcpRegistration";
+import { notifyRegistered, syncIntegrations } from "./utils/mcpRegistration";
 import { initSessionPersistence, restoreLastSession } from "./utils/sessionPersistence";
 import { useViewStore } from "./stores/viewStore";
 import {
@@ -58,7 +58,7 @@ function App() {
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
   useEffect(() => {
-    void syncIntegrations();
+    void syncIntegrations().then(notifyRegistered);
   }, []);
 
   return (

@@ -8,6 +8,7 @@ import { CopyableCommand } from "./CopyableCommand";
 import { toMessage } from "../../utils/errorMessage";
 import { logError } from "../../utils/log";
 import {
+  CLIENT_NAMES,
   configErrorForLog,
   getIntegrationStatuses,
   getMcpServerPath,
@@ -21,19 +22,19 @@ const CLIENTS: Record<
   { name: string; Icon: typeof ClaudeIcon; tile: string; needsRestart: boolean }
 > = {
   claudeCode: {
-    name: "Claude Code",
+    name: CLIENT_NAMES.claudeCode,
     Icon: ClaudeIcon,
     tile: "bg-[#D97757]/10",
     needsRestart: false,
   },
   claudeDesktop: {
-    name: "Claude Desktop",
+    name: CLIENT_NAMES.claudeDesktop,
     Icon: ClaudeIcon,
     tile: "bg-[#D97757]/10",
     needsRestart: true,
   },
   codex: {
-    name: "Codex",
+    name: CLIENT_NAMES.codex,
     Icon: CodexIcon,
     tile: "bg-stone-500/10 dark:bg-stone-400/10",
     needsRestart: false,
@@ -107,7 +108,7 @@ function IntegrationRow({
     [tone, text] = ["note", t("integrations.unreadable")];
   } else if (status.removed) {
     [tone, text] = ["note", t("integrations.removed", { name: client.name })];
-  } else if (changed && client.needsRestart) {
+  } else if ((changed || status.pending) && client.needsRestart) {
     [tone, text] = [
       "note",
       t(status.enabled ? "integrations.restartToAdd" : "integrations.restartToRemove", {

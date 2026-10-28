@@ -1,4 +1,5 @@
 mod chat;
+mod claude_desktop;
 mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
@@ -242,6 +243,7 @@ pub fn run() {
             chat::chat_send,
             chat::chat_stop,
             chat::chat_reset,
+            claude_desktop::claude_desktop_config_path,
             codex_config::codex_mcp_entry,
             codex_config::codex_mcp_set,
             conversations::conversation_list,

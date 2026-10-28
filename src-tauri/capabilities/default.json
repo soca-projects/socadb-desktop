@@ -23,6 +23,7 @@
       "allow": [
         { "path": "$HOME/.claude.json" },
         { "path": "$DATA/Claude/**" },
+        { "path": "$LOCALDATA/Packages/Claude_*/LocalCache/Roaming/Claude/**" },
         { "path": "$HOME/.socadb/**" }
       ]
     }

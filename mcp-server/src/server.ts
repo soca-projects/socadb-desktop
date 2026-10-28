@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { disconnect, isChatClient } from "./bridge.js";
+import { recordLaunch, registeredClient } from "./clients.js";
 import { mcpLog } from "./log.js";
 import { registerReadTools } from "./tools/read.js";
 import { registerSchemaTools } from "./tools/schemas.js";
@@ -23,6 +24,18 @@ registerWriteTools(server);
 // SocaDB's own chat belongs to the schema it was opened on.
 if (external) registerSchemaTools(server);
 
+const registered = registeredClient();
+
+server.server.oninitialized = () => {
+  if (registered) recordLaunch(registered);
+  const app = server.server.getClientVersion();
+  mcpLog.info("mcp.server.start", "MCP server running", {
+    client: registered ?? (external ? "unregistered" : "chat"),
+    app: app?.name,
+    appVersion: app?.version,
+  });
+};
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -30,7 +43,6 @@ async function main() {
   // otherwise keep this process running after the app has gone.
   process.stdin.once("end", () => void disconnect().then(() => process.exit(0)));
   console.error("SocaDB MCP server running on stdio");
-  mcpLog.info("mcp.server.start", "MCP server running");
 }
 
 main().catch((error) => {
