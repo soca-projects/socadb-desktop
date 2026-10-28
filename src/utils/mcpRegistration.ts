@@ -1,5 +1,5 @@
 import { exists, readTextFile } from "@tauri-apps/plugin-fs";
-import { dataDir, homeDir, join } from "@tauri-apps/api/path";
+import { homeDir, join } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -224,7 +224,7 @@ const CLIENTS: Record<IntegrationId, Client> = {
     (command) => ({ command, args: serverArgs("claudeCode"), type: "stdio" }),
   ),
   claudeDesktop: jsonClient(
-    async () => join(await dataDir(), "Claude", "claude_desktop_config.json"),
+    () => invoke<string>("claude_desktop_config_path"),
     (command) => ({ command, args: serverArgs("claudeDesktop") }),
     true,
   ),
