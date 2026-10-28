@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -153,7 +154,7 @@ function closedPort(): Promise<number> {
 
 async function serveWithoutApp(
   args: string[],
-): Promise<{ failure: string | null; tools: string[] }> {
+): Promise<{ failure: string | null; tools: string[]; launches: string[] }> {
   const home = mkdtempSync(join(tmpdir(), "socadb-check-"));
   // A port file left behind by a crash: the server tries the dead port.
   mkdirSync(join(home, ".socadb"));
@@ -174,11 +175,17 @@ async function serveWithoutApp(
       clearTimeout(timer);
       clearTimeout(exitTimer);
       server.kill();
+      let launches: string[] = [];
+      try {
+        launches = Object.keys(
+          JSON.parse(readFileSync(join(home, ".socadb", "mcp-clients.json"), "utf8")),
+        );
+      } catch {}
       try {
         rmSync(home, { recursive: true, force: true });
       } catch {}
       const tools = responses.get(2)?.result?.tools?.map((t) => t.name) ?? [];
-      done({ failure, tools });
+      done({ failure, tools, launches });
     };
     const timer = setTimeout(() => finish("no answer within 30 s"), 30_000);
     server.on("error", (error) => finish(String(error)));
@@ -327,6 +334,16 @@ if (target === host) {
       external.tools.includes(tool),
     ),
     `AI apps don't get every tool: ${external.tools.join(", ")}`,
+  );
+  check(
+    external.launches.length === 0,
+    `an unregistered launch was recorded: ${external.launches.join(", ")}`,
+  );
+  const codexEntry = await serveWithoutApp(["--client", "codex"]);
+  check(!codexEntry.failure, `the MCP server doesn't serve Codex's entry: ${codexEntry.failure}`);
+  check(
+    codexEntry.launches.join() === "codex",
+    `the launch from Codex's entry wasn't recorded: ${codexEntry.launches.join(", ")}`,
   );
   const chat = await serveWithoutApp(["--chat"]);
   check(!chat.failure, `the MCP server doesn't serve SocaDB's chat: ${chat.failure}`);

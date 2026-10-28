@@ -466,6 +466,25 @@ export const LOG_CODES = {
     meaning: "The MCP server binary was not found, so no AI app was registered.",
     check: "The bundle lacks socadb-mcp-*; in dev run `bun run build:mcp`.",
   },
+  "mcp.registration.added": {
+    level: "info",
+    meaning:
+      "SocaDB added its entry to these AI apps at launch and told the user to restart them.",
+    check: "msg lists the clients; the entry only works after each app restarts.",
+  },
+  "mcp.registration.reapplied_off": {
+    level: "info",
+    meaning:
+      "SocaDB removed its entry from Claude Desktop again: it is turned off there, and Claude Desktop had put it back by rewriting its config.",
+    check: "Restart Claude Desktop so it drops SocaDB.",
+  },
+  "mcp.registration.launches_unreadable": {
+    level: "warn",
+    meaning:
+      "~/.socadb/mcp-clients.json couldn't be read, so every AI client counts as not having loaded SocaDB's entry yet.",
+    check:
+      "The message; the file is rewritten at the next launch of the MCP server by an AI app.",
+  },
   "mcp.registration.failed": {
     level: "warn",
     meaning: "Registering SocaDB with one AI app was skipped.",
@@ -554,8 +573,15 @@ export const LOG_CODES = {
   "mcp.server.start": {
     level: "info",
     meaning:
-      "The MCP server binary is serving tools; it connects to SocaDB on the first tool call.",
-    check: "One per agent run or AI app session; ctx-free.",
+      "An AI app finished connecting to the MCP server binary, which connects to SocaDB on the first tool call.",
+    check:
+      "One per AI app session. ctx.client is the registered entry that launched it (claudeDesktop, claudeCode, codex), chat for SocaDB's own chat, unregistered for an entry without --client; ctx.app is the name the app gives itself.",
+  },
+  "mcp.server.launch_record_failed": {
+    level: "warn",
+    meaning:
+      "The MCP server couldn't record its launch in ~/.socadb/mcp-clients.json, so SocaDB may still show the client as waiting for a restart.",
+    check: "The message; permissions on ~/.socadb.",
   },
   "mcp.server.start_failed": {
     level: "error",

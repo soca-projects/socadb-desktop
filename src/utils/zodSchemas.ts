@@ -231,6 +231,7 @@ export const McpClientConfigZ = z.looseObject({
 
 export const McpServerEntryZ = z.looseObject({
   command: z.string().optional(),
+  args: z.array(z.string()).optional(),
 });
 
 export const IntegrationChoiceZ = z.enum(["on", "off", "removed"]);
@@ -241,9 +242,18 @@ export const IntegrationChoicesZ = z.looseObject({
   codex: IntegrationChoiceZ.optional(),
 });
 
+export const IntegrationWritesZ = z.looseObject({
+  claudeCode: z.string().optional(),
+  claudeDesktop: z.string().optional(),
+  codex: z.string().optional(),
+});
+
+export const McpLaunchesZ = z.record(z.string(), z.string());
+
 export const CodexMcpEntryZ = z.object({
   installed: z.boolean(),
   command: z.string().nullable(),
+  args: z.array(z.string()).nullable(),
 });
 
 const ToolCallInfoZ = z.object({

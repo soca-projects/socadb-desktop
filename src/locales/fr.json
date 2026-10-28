@@ -305,7 +305,9 @@
   },
   "integrations": {
     "title": "Utiliser SocaDB depuis d'autres apps",
-    "description": "Les apps activées ici peuvent lire et modifier le schéma ouvert dans SocaDB. Elles n'y ont accès que pendant que SocaDB est ouverte, et vous demandent la permission avant d'utiliser ses outils.",
+    "description": "Les apps activées ici peuvent lire et modifier vos schémas dans SocaDB, les ouvrir et en créer. Elles n'y ont accès que pendant que SocaDB est ouverte, et vous demandent la permission avant d'utiliser ses outils.",
+    "registered_one": "SocaDB est maintenant disponible dans {{names}}. S'il est ouvert, redémarrez-le pour qu'il voie SocaDB.",
+    "registered_other": "SocaDB est maintenant disponible dans {{names}}. Redémarrez ceux qui sont ouverts pour qu'ils voient SocaDB.",
     "notInstalled": "Pas installé",
     "unreadable": "SocaDB ne modifie pas sa config, qu'il n'arrive pas à lire.",
     "removed": "Retiré à la main de la config de {{name}}. SocaDB ne s'y réinscrit plus, sauf si vous le réactivez ici.",

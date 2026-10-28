@@ -305,7 +305,9 @@
   },
   "integrations": {
     "title": "Use SocaDB from other apps",
-    "description": "The apps turned on here can read and edit the schema open in SocaDB. They only reach it while SocaDB is open, and ask for your permission before using its tools.",
+    "description": "The apps turned on here can read and edit your schemas in SocaDB, open them and create new ones. They only reach SocaDB while it's open, and ask for your permission before using its tools.",
+    "registered_one": "SocaDB is now available in {{names}}. If it's open, restart it so it picks up SocaDB.",
+    "registered_other": "SocaDB is now available in {{names}}. Restart the ones that are open so they pick up SocaDB.",
     "notInstalled": "Not installed",
     "unreadable": "SocaDB leaves its config alone because it can't read it.",
     "removed": "Removed from {{name}}'s config by hand. SocaDB won't add itself back unless you turn it on here.",
