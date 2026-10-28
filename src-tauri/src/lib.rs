@@ -1,3 +1,4 @@
+mod appimage;
 mod chat;
 mod claude_desktop;
 mod codex_config;
@@ -92,9 +93,9 @@ fn bundled_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     app.path().resource_dir().map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
-    let path = mcp_binary_path(&app)?;
+    let path = appimage::stable_mcp_binary(&app, mcp_binary_path(&app)?);
     path.to_str()
         .ok_or_else(|| format!("Path is not valid UTF-8: {}", path.display()))
         .map(|s| s.to_owned())

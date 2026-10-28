@@ -461,6 +461,13 @@ export const LOG_CODES = {
     meaning: "The reply to an MCP request could not be handed to the bridge.",
     check: "Usually the connection closed; see mcp.ws.* lines.",
   },
+  "mcp.binary.copy_failed": {
+    level: "warn",
+    meaning:
+      "The AppImage couldn't copy the MCP server out of its mount, so the AI apps get a path that disappears when SocaDB quits.",
+    check:
+      "The message; the copy goes to ~/.local/share/com.socadb.desktop/bin and is retried at each launch.",
+  },
   "mcp.registration.binary_missing": {
     level: "error",
     meaning: "The MCP server binary was not found, so no AI app was registered.",
