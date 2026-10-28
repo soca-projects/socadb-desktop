@@ -1,3 +1,4 @@
+mod appimage;
 mod chat;
 mod claude_desktop;
 mod codex_config;
@@ -65,10 +66,7 @@ pub(crate) fn mcp_binary_path(app: &tauri::AppHandle) -> Result<std::path::PathB
             .join(&binary_name)
     } else {
         // Prod: binary is bundled in the app resources
-        app.path()
-            .resource_dir()
-            .map_err(|e| e.to_string())?
-            .join(&binary_name)
+        bundled_dir(app)?.join(&binary_name)
     };
 
     if !path.exists() {
@@ -77,9 +75,27 @@ pub(crate) fn mcp_binary_path(app: &tauri::AppHandle) -> Result<std::path::PathB
     Ok(path)
 }
 
-#[tauri::command]
+// linuxdeploy rewrites every ELF file under usr/bin and usr/lib of the AppImage,
+// which crashes Codex, so tauri.linux.conf.json puts ours in usr/libexec there.
+fn bundled_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    if cfg!(target_os = "linux") {
+        let libexec = std::env::current_exe().ok().and_then(|exe| {
+            exe.parent()?
+                .join("../libexec")
+                .join(&app.package_info().name)
+                .canonicalize()
+                .ok()
+        });
+        if let Some(dir) = libexec {
+            return Ok(dir);
+        }
+    }
+    app.path().resource_dir().map_err(|e| e.to_string())
+}
+
+#[tauri::command(async)]
 fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
-    let path = mcp_binary_path(&app)?;
+    let path = appimage::stable_mcp_binary(&app, mcp_binary_path(&app)?);
     path.to_str()
         .ok_or_else(|| format!("Path is not valid UTF-8: {}", path.display()))
         .map(|s| s.to_owned())
