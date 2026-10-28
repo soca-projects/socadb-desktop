@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-config-schema/schema.json",
+  "bundle": {
+    "resources": [],
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/lib/SocaDB/socadb-mcp-linux-x64": "../mcp-server/dist/socadb-mcp-linux-x64",
+          "/usr/lib/SocaDB/runtime": "../mcp-server/dist/runtime"
+        }
+      },
+      "appimage": {
+        "files": {
+          "/usr/libexec/SocaDB/socadb-mcp-linux-x64": "../mcp-server/dist/socadb-mcp-linux-x64",
+          "/usr/libexec/SocaDB/runtime": "../mcp-server/dist/runtime"
+        }
+      }
+    }
+  }
+}

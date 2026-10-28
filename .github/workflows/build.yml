@@ -82,19 +82,6 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: ./scripts/macos/download-sparkle.sh
 
-      # Override Tauri's pinned linuxdeploy-plugin-gtk with our patched version
-      # that tolerates Bun-compiled / static binaries inside the AppDir. Without
-      # this, AppImage bundling crashes because linuxdeploy runs `ldd` on the
-      # bundled @anthropic-ai/claude-agent-sdk-linux-x64/claude binary and
-      # aborts on exit code 1. See scripts/linux/linuxdeploy-plugin-gtk.sh
-      # for the full rationale.
-      - name: Install patched linuxdeploy-plugin-gtk
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          mkdir -p ~/.cache/tauri
-          cp scripts/linux/linuxdeploy-plugin-gtk.sh ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
-          chmod +x ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
-
       - run: bun install --frozen-lockfile
 
       - name: Install MCP server dependencies

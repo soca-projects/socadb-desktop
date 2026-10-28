@@ -371,6 +371,61 @@ if (target === host) {
   console.log(`Host ${host} can't run ${target}: CLIs not started`);
 }
 
+function filesUnder(dir: string, prefix = ""): string[] {
+  return readdirSync(join(dir, prefix), { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory()
+      ? filesUnder(dir, join(prefix, entry.name))
+      : [join(prefix, entry.name)],
+  );
+}
+
+function checkPackaged(name: string, dir: string) {
+  const ours = [
+    `socadb-mcp-${target}${ext}`,
+    ...filesUnder(RUNTIME).map((file) => join("runtime", file)),
+  ];
+  const changed = ours.filter(
+    (file) => spawnSync("cmp", ["-s", join(DIST, file), join(dir, file)]).status !== 0,
+  );
+  check(
+    changed.length === 0,
+    `the ${name} doesn't ship ${changed.length} of our files as built: ${changed.slice(0, 5).join(", ")}`,
+  );
+}
+
+if (os === "linux") {
+  const bundle = join(ROOT, "src-tauri", "target", "release", "bundle");
+  const find = (dir: string, suffix: string) =>
+    existsSync(join(bundle, dir))
+      ? readdirSync(join(bundle, dir)).find((file) => file.endsWith(suffix))
+      : undefined;
+  const appImage = find("appimage", ".AppImage");
+  const deb = find("deb", ".deb");
+  if (appImage && deb) {
+    const unpacked = mkdtempSync(join(tmpdir(), "socadb-packages-"));
+    try {
+      execFileSync(join(bundle, "appimage", appImage), ["--appimage-extract"], {
+        cwd: unpacked,
+        stdio: "ignore",
+      });
+      execFileSync("dpkg-deb", ["-x", join(bundle, "deb", deb), join(unpacked, "deb")]);
+      const appDir = join(unpacked, "squashfs-root");
+      checkPackaged("AppImage", join(appDir, "usr", "libexec", "SocaDB"));
+      check(
+        !existsSync(join(appDir, "usr", "lib", "SocaDB")),
+        "the AppImage has files in usr/lib/SocaDB, where linuxdeploy rewrites them",
+      );
+      checkPackaged(".deb", join(unpacked, "deb", "usr", "lib", "SocaDB"));
+    } catch (error) {
+      failures.push(`the Linux packages couldn't be unpacked: ${String(error)}`);
+    } finally {
+      rmSync(unpacked, { recursive: true, force: true });
+    }
+  } else if (process.env.GITHUB_ACTIONS) {
+    failures.push(`missing the AppImage or the .deb in ${bundle}`);
+  }
+}
+
 const mb = (bytes: number) => `${(bytes / 1048576).toFixed(1)} MB`;
 console.log(`MCP binary ${mb(size(mcp))}, runtime ${mb(size(RUNTIME))}`);
 console.log(`  claude ${mb(size(claude))}, codex package ${mb(size(vendor))}`);
