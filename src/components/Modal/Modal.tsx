@@ -19,6 +19,7 @@ export function Modal({
 }: ModalProps) {
   const onCloseRef = useRef(onClose);
   const dismissibleRef = useRef(dismissible);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -33,9 +34,18 @@ export function Modal({
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
+  // With the focus left behind on the page, the canvas's Delete/Backspace
+  // shortcut would remove the selected relation under the dialog (nokey).
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (overlay && !overlay.contains(document.activeElement)) overlay.focus();
+  }, []);
+
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/30 p-4 backdrop-blur-[2px]"
+      ref={overlayRef}
+      tabIndex={-1}
+      className="nokey fixed inset-0 flex items-center justify-center bg-black/30 p-4 outline-none backdrop-blur-[2px]"
       style={{ zIndex }}
       onClick={dismissible ? onClose : undefined}
     >
