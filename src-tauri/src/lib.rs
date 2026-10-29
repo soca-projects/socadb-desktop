@@ -4,10 +4,10 @@ mod claude_desktop;
 mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
-mod fullscreen;
-#[cfg(target_os = "macos")]
 mod install_location;
 mod logging;
+#[cfg(target_os = "macos")]
+mod macos_window;
 mod schema_files;
 mod ws;
 
@@ -236,6 +236,15 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init());
 
+    // Off in dev: the dev app shares the installed app's config dir, and the
+    // window size passed with `tauri dev --config` must win.
+    #[cfg(not(target_os = "macos"))]
+    let builder = if tauri::is_dev() {
+        builder
+    } else {
+        builder.plugin(tauri_plugin_window_state::Builder::default().build())
+    };
+
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_plugin_sparkle_updater::init());
 
@@ -269,6 +278,8 @@ pub fn run() {
             conversations::conversation_delete,
             conversations::conversation_retire_legacy,
             conversations::claude_sessions_prune,
+            #[cfg(target_os = "macos")]
+            macos_window::set_document_edited,
         ])
         .setup(|app| {
             logging::init(app.handle());
@@ -278,7 +289,11 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             configure_sparkle(app);
             #[cfg(target_os = "macos")]
-            fullscreen::relay_exit_start(app);
+            macos_window::relay_exit_start(app);
+            #[cfg(target_os = "macos")]
+            if !tauri::is_dev() {
+                macos_window::remember_frame(app);
+            }
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {

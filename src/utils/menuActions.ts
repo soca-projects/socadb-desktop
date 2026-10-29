@@ -122,10 +122,19 @@ export function handleOpenRecent(filePath: string) {
   void openRecentFile(filePath);
 }
 
-export function handleOpenSettings() {
+function openDialog(open: () => void) {
   if (document.querySelector('[role="dialog"]')) return;
   commitActiveEdit();
-  useViewStore.getState().openSettings();
+  open();
+}
+
+export function handleOpenSettings() {
+  openDialog(useViewStore.getState().openSettings);
+}
+
+export function handleOpenAbout() {
+  logInfo("menu.action", "about");
+  openDialog(useViewStore.getState().openAbout);
 }
 
 export function handleShowLogs() {

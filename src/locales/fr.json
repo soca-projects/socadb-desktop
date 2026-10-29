@@ -428,6 +428,11 @@
     "focusMode": "Mode focus",
     "toggleTheme": "Changer le thème",
     "window": "Fenêtre",
+    "minimizeMac": "Placer dans le Dock",
+    "minimize": "Réduire",
+    "zoom": "Réduire/agrandir",
+    "maximize": "Agrandir",
+    "bringAllToFront": "Tout ramener au premier plan",
     "about": "À propos de SocaDB",
     "checkForUpdates": "Rechercher les mises à jour...",
     "checkingForUpdates": "Recherche des mises à jour...",
@@ -617,5 +622,9 @@
     "acceptHint": "Un schéma .soca par fichier SQL, DBML ou JSON. Les fichiers .soca s'ajoutent à l'accueil.",
     "reject": "Aucun de ces fichiers ne peut être importé",
     "rejectHint": "SocaDB lit les fichiers .sql, .dbml, .json et .soca."
+  },
+  "about": {
+    "version": "Version {{version}}",
+    "close": "Fermer"
   }
 }

@@ -4,6 +4,7 @@ import { Canvas } from "./components/Canvas/Canvas";
 import { Home } from "./components/Home/Home";
 import { ChatPanel } from "./components/ChatPanel/ChatPanel";
 import { SettingsModal } from "./components/SettingsModal/SettingsModal";
+import { AboutModal } from "./components/AboutModal/AboutModal";
 import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
 import { NewSchemaModal } from "./components/NewSchemaModal/NewSchemaModal";
 import { UnsavedChangesModal } from "./components/UnsavedChangesModal/UnsavedChangesModal";
@@ -32,14 +33,18 @@ import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
 import { initContextMenu } from "./utils/contextMenu";
+import { initWindowTheme } from "./utils/windowTheme";
+import { initDocumentEdited } from "./utils/documentEdited";
 
 const restored = restoreLastSession();
 useViewStore.setState({ view: initialView(restored, getStartupPreference()) });
 initSessionPersistence();
+initDocumentEdited();
 void loadStartupPreference();
 initChatPersistence();
 initThemePersistence();
 followSystemTheme();
+initWindowTheme();
 initLanguagePersistence();
 initContextMenu();
 
@@ -60,6 +65,8 @@ function App() {
   const view = useViewStore((s) => s.view);
   const settingsOpen = useViewStore((s) => s.settingsOpen);
   const closeSettings = useViewStore((s) => s.closeSettings);
+  const aboutOpen = useViewStore((s) => s.aboutOpen);
+  const closeAbout = useViewStore((s) => s.closeAbout);
 
   useEffect(() => {
     void syncIntegrations().then(notifyRegistered);
@@ -73,6 +80,7 @@ function App() {
         <ChatPanel />
       </div>
       {settingsOpen && <SettingsModal onClose={closeSettings} />}
+      {aboutOpen && <AboutModal onClose={closeAbout} />}
       {isOpen && <NewSchemaModal onClose={handleClose} onCreate={handleCreate} />}
       {unsavedGuard.isOpen && (
         <UnsavedChangesModal

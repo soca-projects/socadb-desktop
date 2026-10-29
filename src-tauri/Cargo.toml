@@ -42,6 +42,9 @@ plist = "1"
 semver = "1"
 tauri-plugin-sparkle-updater = { git = "https://github.com/Cassidy321/tauri-plugin-sparkle-updater", rev = "3a39dd7c755f07e9cb826d168f187217066d1736" }
 
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+tauri-plugin-window-state = "2.5.0"
+
 [lints.clippy]
 unwrap_used = "deny"
 expect_used = "deny"

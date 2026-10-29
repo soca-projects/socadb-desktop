@@ -45,6 +45,7 @@
       "../mcp-server/dist/socadb-mcp-*": "",
       "../mcp-server/dist/runtime/": "runtime/"
     },
+    "copyright": "© 2026 SocaDB",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -62,6 +63,9 @@
       "frameworks": [
         "./Sparkle.framework"
       ],
+      "files": {
+        "Resources/Credits.rtf": "./macos/Credits.rtf"
+      },
       "signingIdentity": "-",
       "hardenedRuntime": false
     }
