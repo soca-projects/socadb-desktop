@@ -99,8 +99,9 @@
     }
   },
   "theme": {
-    "switchToDark": "Switch to dark mode",
-    "switchToLight": "Switch to light mode"
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
   },
   "emptyCanvas": {
     "heading": "Your schema <mark>starts here</mark>",
@@ -294,6 +295,12 @@
     "deleteAllWhileAnswering": "Available once the agent has answered.",
     "cancel": "Cancel",
     "general": "General",
+    "appearance": "Appearance",
+    "appearanceHint": {
+      "mac": "System follows the macOS setting, even when it changes.",
+      "windows": "System follows the Windows color mode, even when it changes.",
+      "linux": "System follows the desktop theme."
+    },
     "startupTitle": "On launch, open",
     "startupDescription": "What SocaDB shows when you open it.",
     "startup": {
@@ -408,6 +415,7 @@
     "saveAs": "Save As...",
     "import": "Import...",
     "export": "Export...",
+    "settings": "Settings...",
     "home": "Home",
     "findSchema": "Find a Schema",
     "closeSchema": "Close Schema",
@@ -415,11 +423,21 @@
     "edit": "Edit",
     "undo": "Undo",
     "redo": "Redo",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select All",
     "view": "View",
     "toggleSidebar": "Toggle Sidebar",
     "focusMode": "Focus Mode",
     "toggleTheme": "Toggle Theme",
+    "fullscreen": "Full Screen",
     "window": "Window",
+    "minimizeMac": "Minimize",
+    "minimize": "Minimize",
+    "zoom": "Zoom",
+    "maximize": "Maximize",
+    "bringAllToFront": "Bring All to Front",
     "about": "About SocaDB",
     "checkForUpdates": "Check for Updates...",
     "checkingForUpdates": "Checking for Updates...",
@@ -427,6 +445,9 @@
     "help": "Help",
     "showLogs": "Show Logs",
     "hideSocaDB": "Hide SocaDB",
+    "services": "Services",
+    "hideOthers": "Hide Others",
+    "showAll": "Show All",
     "quitSocaDB": "Quit SocaDB",
     "exit": "Exit"
   },
@@ -609,5 +630,9 @@
     "acceptHint": "One .soca schema per SQL, DBML or JSON file. .soca files are added to the home.",
     "reject": "None of these files can be imported",
     "rejectHint": "SocaDB reads .sql, .dbml, .json and .soca files."
+  },
+  "about": {
+    "version": "Version {{version}}",
+    "close": "Close"
   }
 }

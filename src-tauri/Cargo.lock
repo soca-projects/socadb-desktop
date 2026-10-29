@@ -3637,6 +3637,7 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 name = "socadb-desktop"
 version = "0.1.5"
 dependencies = [
+ "block2",
  "dirs 6.0.0",
  "futures-util",
  "keyring",
@@ -3659,6 +3660,7 @@ dependencies = [
  "tauri-plugin-process",
  "tauri-plugin-sparkle-updater",
  "tauri-plugin-updater",
+ "tauri-plugin-window-state",
  "time",
  "tokio",
  "tokio-tungstenite",
@@ -4224,6 +4226,21 @@ dependencies = [
  "url",
  "windows-sys 0.61.2",
  "zip",
+]
+
+[[package]]
+name = "tauri-plugin-window-state"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d6815cab7b212f9cfe16a9d79d8d22f9e14159e4a9460f7dec1467167a008e3"
+dependencies = [
+ "bitflags 2.11.0",
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

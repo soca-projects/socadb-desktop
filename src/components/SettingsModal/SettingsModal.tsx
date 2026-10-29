@@ -12,6 +12,7 @@ import {
   SlidersHorizontalIcon as SlidersHorizontal,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
+import { useThemeStore } from "../../stores/themeStore";
 import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
 import { CodexIcon } from "../../assets/icons/CodexIcon";
 import {
@@ -39,6 +40,8 @@ import { toast } from "sonner";
 import { CopyableCommand } from "./CopyableCommand";
 import { IntegrationsSection } from "./IntegrationsSection";
 import { SelectMenu, type SelectOption } from "../SelectMenu/SelectMenu";
+import { ThemePreferenceZ } from "../../utils/zodSchemas";
+import { APPEARANCE_HINT_KEY } from "../../utils/platform";
 
 type Section = "agents" | "conversations" | "integrations" | "general";
 
@@ -167,7 +170,7 @@ function ApiKeyPanel({
         <button
           type="button"
           onClick={() => void openUrl(meta.consoleUrl)}
-          className="font-medium text-accent underline-offset-2 hover:underline"
+          className="cursor-pointer font-medium text-accent underline-offset-2 hover:underline"
         >
           {t(`provider.${providerId}.consoleName`)}
         </button>
@@ -302,6 +305,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
   const [section, setSection] = useState<Section>("agents");
   const [startup, setStartup] = useState(getStartupPreference);
+  const themePreference = useThemeStore((s) => s.preference);
+  const setThemePreference = useThemeStore((s) => s.setPreference);
 
   const handleLoginTypeChange = useCallback(
     (id: ProviderId, next: LoginType) => {
@@ -438,6 +443,37 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           {section === "integrations" && <IntegrationsSection />}
 
           <div className={section !== "general" ? "hidden" : "space-y-7"}>
+            <section>
+              <h3 className="mb-1 text-[13px] font-semibold text-secondary">
+                {t("settings.appearance")}
+              </h3>
+              <p className="mb-4 text-[13px] text-tertiary">{t(APPEARANCE_HINT_KEY)}</p>
+              <div
+                role="radiogroup"
+                aria-label={t("settings.appearance")}
+                className="grid grid-cols-3 gap-2"
+              >
+                {ThemePreferenceZ.options.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={themePreference === value}
+                    onClick={() => setThemePreference(value)}
+                    className={`flex items-center justify-between gap-2 rounded-lg border px-4 py-3 text-left text-[13px] font-medium transition-all ${
+                      themePreference === value
+                        ? "border-accent bg-accent/[0.05] text-accent"
+                        : "border-border text-secondary hover:border-border-hover hover:bg-surface-muted"
+                    }`}
+                  >
+                    <span className="truncate">{t(`theme.${value}`)}</span>
+                    {themePreference === value && (
+                      <CheckCircle size={16} weight="fill" className="shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
             <section>
               <h3 className="mb-1 text-[13px] font-semibold text-secondary">
                 {t("settings.startupTitle")}

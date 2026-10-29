@@ -137,6 +137,28 @@
   --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.4);
 }
 
+@layer base {
+  body {
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [data-sonner-toast] {
+    user-select: text;
+  }
+
+  button,
+  [role="button"] {
+    cursor: default;
+  }
+
+  img,
+  a {
+    -webkit-user-drag: none;
+  }
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -216,4 +238,10 @@ select:focus-visible,
    Flow panels sit over the viewport. */
 .react-flow__node:has(.group\/hover:hover) {
   z-index: 1001 !important;
+}
+
+/* React Flow's stylesheet loads after this one. */
+.react-flow .react-flow__edge.selectable,
+.react-flow .react-flow__pane.selection {
+  cursor: default;
 }

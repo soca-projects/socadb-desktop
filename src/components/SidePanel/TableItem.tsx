@@ -124,7 +124,7 @@ export const TableItem = memo(function TableItem({
     <div ref={setItem} className={`relative ${isOpen ? "bg-surface-muted/50" : ""}`}>
       <div
         ref={setHeader}
-        className="flex cursor-pointer items-center gap-2 px-3 py-2.5 transition-colors hover:bg-surface-muted"
+        className="flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-surface-muted"
         onClick={onToggle}
       >
         <div className="flex h-4 w-4 shrink-0 items-center justify-center">

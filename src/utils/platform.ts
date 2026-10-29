@@ -21,3 +21,9 @@ export const REVEAL_LABEL_KEY = IS_MAC
   : IS_WINDOWS
     ? "home.action.revealWindows"
     : "home.action.revealLinux";
+
+export const APPEARANCE_HINT_KEY = IS_MAC
+  ? "settings.appearanceHint.mac"
+  : IS_WINDOWS
+    ? "settings.appearanceHint.windows"
+    : "settings.appearanceHint.linux";

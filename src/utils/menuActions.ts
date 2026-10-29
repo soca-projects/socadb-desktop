@@ -17,6 +17,8 @@ import { addRecentFile } from "./recentFiles";
 import { closeSchema, handleRedo, handleUndo } from "./schemaActions";
 import { hasUnsavedChanges, isWorthResuming } from "./schemaQueries";
 import { logError, logInfo } from "./log";
+import { flushSync } from "react-dom";
+import { settleSchemaStep, stepInField } from "./fieldUndo";
 
 // Inline editors (e.g. column rename inputs in SidePanel) commit their value
 // on blur, not on every keystroke. Force a blur before any destructive or
@@ -85,6 +87,19 @@ function isEditor() {
   return useViewStore.getState().view === "editor";
 }
 
+function schemaCan(command: "undo" | "redo") {
+  if (!isEditor() || document.querySelector('[role="dialog"]')) return false;
+  const { pastStates, futureStates } = useSchemaStore.temporal.getState();
+  return (command === "undo" ? pastStates : futureStates).length > 0;
+}
+
+function undoOrRedo(command: "undo" | "redo") {
+  if (stepInField(command, schemaCan(command)) !== "schema") return;
+  // The focused field must show what the schema step brought before it is read.
+  flushSync(command === "undo" ? handleUndo : handleRedo);
+  settleSchemaStep();
+}
+
 export function handleShowHome() {
   commitActiveEdit();
   useViewStore.getState().showHome();
@@ -120,6 +135,21 @@ export function handleOpenRecent(filePath: string) {
     return;
   }
   void openRecentFile(filePath);
+}
+
+function openDialog(open: () => void) {
+  if (document.querySelector('[role="dialog"]')) return;
+  commitActiveEdit();
+  open();
+}
+
+export function handleOpenSettings() {
+  openDialog(useViewStore.getState().openSettings);
+}
+
+export function handleOpenAbout() {
+  logInfo("menu.action", "about");
+  openDialog(useViewStore.getState().openAbout);
 }
 
 export function handleShowLogs() {
@@ -188,13 +218,10 @@ export const MENU_SHORTCUTS = {
     commitActiveEdit();
     void emit("open-export");
   }),
+  settings: shortcut("settings", "CmdOrCtrl+,", () => handleOpenSettings()),
   quit: shortcut("quit", "CmdOrCtrl+Q", () => handleQuit()),
-  undo: shortcut("undo", "CmdOrCtrl+Z", () => {
-    if (isEditor()) handleUndo();
-  }),
-  redo: shortcut("redo", "CmdOrCtrl+Shift+Z", () => {
-    if (isEditor()) handleRedo();
-  }),
+  undo: shortcut("undo", "CmdOrCtrl+Z", () => undoOrRedo("undo")),
+  redo: shortcut("redo", "CmdOrCtrl+Shift+Z", () => undoOrRedo("redo")),
   toggleSidebar: shortcut(
     "toggleSidebar",
     "CmdOrCtrl+B",

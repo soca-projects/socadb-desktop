@@ -150,6 +150,29 @@ export const LOG_CODES = {
     meaning: "A reply could not be sent to an MCP client; the connection was dropped.",
     check: "The client is gone; the agent's tool call will time out.",
   },
+  "window.theme.set_failed": {
+    level: "warn",
+    meaning: "The window could not take the picked appearance.",
+    check:
+      "The page still follows the pick; dialogs, menus and the title bar keep the OS theme. Check core:window:allow-set-theme.",
+  },
+  "window.document_edited.failed": {
+    level: "warn",
+    meaning: "The unsaved-changes dot in the window's close button could not be updated.",
+    check: "Cosmetic: the toolbar still shows the unsaved dot next to the schema name.",
+  },
+  "window.frame.autosave_failed": {
+    level: "warn",
+    meaning: "macOS could not be asked to remember the window's size and position.",
+    check:
+      "The window opens at its default size at each launch; Tauri gave no native window handle at setup.",
+  },
+  "window.fullscreen.observe_failed": {
+    level: "warn",
+    meaning: "The app could not follow the start of a macOS full screen exit.",
+    check:
+      "Cosmetic: when leaving full screen, the toolbar moves clear of the window buttons only once the animation ends.",
+  },
   "updater.sparkle.config_failed": {
     level: "warn",
     meaning: "Sparkle could not be configured at start (channel or install-on-quit).",
@@ -358,6 +381,12 @@ export const LOG_CODES = {
     level: "error",
     meaning: "The theme could not be written to config.json.",
     check: "Permissions on ~/.socadb or a config.json that doesn't parse.",
+  },
+  "settings.theme.storage_failed": {
+    level: "warn",
+    meaning: "WebKit storage refused the appearance preference.",
+    check:
+      "The first paint may show the system theme until config.json loads; WebKit storage disabled or full.",
   },
   "session.save.failed": {
     level: "error",

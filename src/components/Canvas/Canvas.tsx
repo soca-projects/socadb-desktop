@@ -190,11 +190,7 @@ interface ContextMenuState {
   y: number;
 }
 
-interface CanvasProps {
-  onOpenSettings: () => void;
-}
-
-export function Canvas({ onOpenSettings }: CanvasProps) {
+export function Canvas() {
   const tables = useSchemaStore((s) => s.schema.tables);
   const relations = useSchemaStore((s) => s.schema.relations);
   const enums = useSchemaStore((s) => s.schema.enums ?? NO_ENUMS);
@@ -395,7 +391,6 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
           isSidePanelOpen={sidePanelOpen}
           onToggleSidePanel={toggleSidePanel}
           onToggleFocusMode={toggleFocusMode}
-          onOpenSettings={onOpenSettings}
         />
       )}
 

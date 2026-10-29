@@ -99,8 +99,9 @@
     }
   },
   "theme": {
-    "switchToDark": "Passer en mode sombre",
-    "switchToLight": "Passer en mode clair"
+    "system": "Système",
+    "light": "Clair",
+    "dark": "Sombre"
   },
   "emptyCanvas": {
     "heading": "Votre schéma <mark>commence ici</mark>",
@@ -294,6 +295,12 @@
     "deleteAllWhileAnswering": "Disponible une fois la réponse de l'agent terminée.",
     "cancel": "Annuler",
     "general": "Général",
+    "appearance": "Apparence",
+    "appearanceHint": {
+      "mac": "Système suit le réglage de macOS, même quand il change.",
+      "windows": "Système suit le mode de couleur de Windows, même quand il change.",
+      "linux": "Système suit le thème du bureau."
+    },
     "startupTitle": "Au lancement, ouvrir",
     "startupDescription": "Ce que SocaDB affiche quand vous l'ouvrez.",
     "startup": {
@@ -408,6 +415,7 @@
     "saveAs": "Enregistrer sous...",
     "import": "Importer...",
     "export": "Exporter...",
+    "settings": "Paramètres...",
     "home": "Accueil",
     "findSchema": "Rechercher un schéma",
     "closeSchema": "Fermer le schéma",
@@ -415,11 +423,21 @@
     "edit": "Édition",
     "undo": "Annuler",
     "redo": "Rétablir",
+    "cut": "Couper",
+    "copy": "Copier",
+    "paste": "Coller",
+    "selectAll": "Tout sélectionner",
     "view": "Présentation",
     "toggleSidebar": "Afficher/Masquer le panneau",
     "focusMode": "Mode focus",
     "toggleTheme": "Changer le thème",
+    "fullscreen": "Plein écran",
     "window": "Fenêtre",
+    "minimizeMac": "Placer dans le Dock",
+    "minimize": "Réduire",
+    "zoom": "Réduire/agrandir",
+    "maximize": "Agrandir",
+    "bringAllToFront": "Tout ramener au premier plan",
     "about": "À propos de SocaDB",
     "checkForUpdates": "Rechercher les mises à jour...",
     "checkingForUpdates": "Recherche des mises à jour...",
@@ -427,6 +445,9 @@
     "help": "Aide",
     "showLogs": "Afficher les journaux",
     "hideSocaDB": "Masquer SocaDB",
+    "services": "Services",
+    "hideOthers": "Masquer les autres",
+    "showAll": "Tout afficher",
     "quitSocaDB": "Quitter SocaDB",
     "exit": "Quitter"
   },
@@ -609,5 +630,9 @@
     "acceptHint": "Un schéma .soca par fichier SQL, DBML ou JSON. Les fichiers .soca s'ajoutent à l'accueil.",
     "reject": "Aucun de ces fichiers ne peut être importé",
     "rejectHint": "SocaDB lit les fichiers .sql, .dbml, .json et .soca."
+  },
+  "about": {
+    "version": "Version {{version}}",
+    "close": "Fermer"
   }
 }

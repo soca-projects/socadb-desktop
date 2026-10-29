@@ -12,9 +12,12 @@ import { IS_WINDOWS } from "../utils/platform";
 // macOS and Linux do not need this fallback — AppKit / GTK handle accelerators
 // when the menu is attached.
 
-const SIGNATURE_TO_RUN: Record<string, () => void | Promise<void>> = Object.fromEntries(
-  Object.values(MENU_SHORTCUTS).map((s) => [s.windowsSignature, s.run]),
-);
+const SIGNATURE_TO_RUN: Record<string, () => void | Promise<void>> = {
+  ...Object.fromEntries(
+    Object.values(MENU_SHORTCUTS).map((s) => [s.windowsSignature, s.run]),
+  ),
+  "ctrl+y": MENU_SHORTCUTS.redo.run,
+};
 
 function buildSignature(e: KeyboardEvent): string | null {
   if (!e.ctrlKey) return null;

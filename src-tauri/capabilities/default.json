@@ -8,6 +8,8 @@
     "core:menu:default",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
+    "core:window:allow-set-theme",
+    "core:app:allow-default-window-icon",
     "log:default",
     "dialog:allow-open",
     "dialog:allow-save",

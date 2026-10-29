@@ -1,12 +1,19 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from "@tauri-apps/api/menu";
+import { defaultWindowIcon, getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
 import { getRecentFiles, clearRecentFiles, loadRecentFiles } from "../utils/recentFiles";
-import { handleOpenRecent, handleShowLogs, MENU_SHORTCUTS } from "../utils/menuActions";
+import {
+  handleOpenAbout,
+  handleOpenRecent,
+  handleShowLogs,
+  MENU_SHORTCUTS,
+} from "../utils/menuActions";
+import { COPYRIGHT, WEBSITE } from "../utils/about";
 import { handleUpdateMenuAction, updateMenuItemState } from "../utils/updater";
 import { useUpdateStore } from "../stores/updateStore";
-import { IS_LINUX, IS_MAC } from "../utils/platform";
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from "../utils/platform";
 import i18next from "../i18n";
 import { logInfo } from "../utils/log";
 
@@ -82,6 +89,33 @@ async function syncUpdateMenuItem() {
   await updateMenuItem.setEnabled(enabled);
 }
 
+// macOS fills its standard panel from the bundle: icon, version, copyright and
+// Credits.rtf. On Windows, muda's panel is a message box with English labels.
+async function buildAboutItem(): Promise<MenuItem | PredefinedMenuItem> {
+  const text = i18next.t("menu.about");
+  if (IS_WINDOWS) return MenuItem.new({ id: "about", text, action: handleOpenAbout });
+  const about = IS_MAC
+    ? null
+    : {
+        name: "SocaDB",
+        version: await getVersion(),
+        copyright: COPYRIGHT,
+        website: WEBSITE,
+        websiteLabel: "socadb.com",
+        icon: (await defaultWindowIcon()) ?? undefined,
+      };
+  return PredefinedMenuItem.new({ item: { About: about }, text });
+}
+
+async function buildSettingsItem(): Promise<MenuItem> {
+  return MenuItem.new({
+    id: "settings",
+    text: i18next.t("menu.settings"),
+    accelerator: MENU_SHORTCUTS.settings.accelerator,
+    action: () => void MENU_SHORTCUTS.settings.run(),
+  });
+}
+
 // IS_MAC drives both the macOS-only "SocaDB" submenu (Hide/HideOthers/ShowAll/
 // Quit are PredefinedMenuItem variants that only render on macOS) and the
 // attach method (setAsAppMenu vs setAsWindowMenu).
@@ -91,18 +125,16 @@ async function buildAppSubmenu(updateItem: MenuItem): Promise<Submenu> {
   return Submenu.new({
     text: "SocaDB",
     items: [
-      await MenuItem.new({
-        id: "about",
-        text: t("menu.about"),
-        enabled: false,
-      }),
+      await buildAboutItem(),
       updateItem,
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await PredefinedMenuItem.new({ item: "Services" }),
+      await buildSettingsItem(),
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      await PredefinedMenuItem.new({ item: "Services", text: t("menu.services") }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Hide", text: t("menu.hideSocaDB") }),
-      await PredefinedMenuItem.new({ item: "HideOthers" }),
-      await PredefinedMenuItem.new({ item: "ShowAll" }),
+      await PredefinedMenuItem.new({ item: "HideOthers", text: t("menu.hideOthers") }),
+      await PredefinedMenuItem.new({ item: "ShowAll", text: t("menu.showAll") }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Quit", text: t("menu.quitSocaDB") }),
     ],
@@ -193,6 +225,8 @@ async function setupMenu() {
         ? []
         : [
             await PredefinedMenuItem.new({ item: "Separator" }),
+            await buildSettingsItem(),
+            await PredefinedMenuItem.new({ item: "Separator" }),
             await MenuItem.new({
               id: "exit",
               text: t("menu.exit"),
@@ -219,10 +253,10 @@ async function setupMenu() {
         action: () => void MENU_SHORTCUTS.redo.run(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await PredefinedMenuItem.new({ item: "Cut" }),
-      await PredefinedMenuItem.new({ item: "Copy" }),
-      await PredefinedMenuItem.new({ item: "Paste" }),
-      await PredefinedMenuItem.new({ item: "SelectAll" }),
+      await PredefinedMenuItem.new({ item: "Cut", text: t("menu.cut") }),
+      await PredefinedMenuItem.new({ item: "Copy", text: t("menu.copy") }),
+      await PredefinedMenuItem.new({ item: "Paste", text: t("menu.paste") }),
+      await PredefinedMenuItem.new({ item: "SelectAll", text: t("menu.selectAll") }),
     ],
   });
 
@@ -252,7 +286,10 @@ async function setupMenu() {
       ...(IS_MAC
         ? [
             await PredefinedMenuItem.new({ item: "Separator" }),
-            await PredefinedMenuItem.new({ item: "Fullscreen" }),
+            await PredefinedMenuItem.new({
+              item: "Fullscreen",
+              text: t("menu.fullscreen"),
+            }),
           ]
         : []),
     ],
@@ -261,8 +298,19 @@ async function setupMenu() {
   const windowSubmenu = await Submenu.new({
     text: t("menu.window"),
     items: [
-      // muda renders Minimize as a dead entry on Linux.
-      ...(IS_LINUX ? [] : [await PredefinedMenuItem.new({ item: "Minimize" })]),
+      // muda renders Minimize and Maximize as dead entries on Linux.
+      ...(IS_LINUX
+        ? []
+        : [
+            await PredefinedMenuItem.new({
+              item: "Minimize",
+              text: t(IS_MAC ? "menu.minimizeMac" : "menu.minimize"),
+            }),
+            await PredefinedMenuItem.new({
+              item: "Maximize",
+              text: t(IS_MAC ? "menu.zoom" : "menu.maximize"),
+            }),
+          ]),
       // The predefined CloseWindow is hardwired to Cmd+W, which closes the
       // schema here.
       await MenuItem.new({
@@ -271,6 +319,15 @@ async function setupMenu() {
         accelerator: MENU_SHORTCUTS.closeWindow.accelerator,
         action: () => void MENU_SHORTCUTS.closeWindow.run(),
       }),
+      ...(IS_MAC
+        ? [
+            await PredefinedMenuItem.new({ item: "Separator" }),
+            await PredefinedMenuItem.new({
+              item: "BringAllToFront",
+              text: t("menu.bringAllToFront"),
+            }),
+          ]
+        : []),
     ],
   });
 
@@ -299,6 +356,8 @@ async function setupMenu() {
             updateItem,
             await PredefinedMenuItem.new({ item: "Separator" }),
             showLogsItem,
+            await PredefinedMenuItem.new({ item: "Separator" }),
+            await buildAboutItem(),
           ],
         }),
       ];
@@ -308,6 +367,7 @@ async function setupMenu() {
 
   if (IS_MAC) {
     await menu.setAsAppMenu();
+    await windowSubmenu.setAsWindowsMenuForNSApp();
   } else {
     await menu.setAsWindowMenu();
   }

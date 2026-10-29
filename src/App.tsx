@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { Canvas } from "./components/Canvas/Canvas";
 import { Home } from "./components/Home/Home";
 import { ChatPanel } from "./components/ChatPanel/ChatPanel";
 import { SettingsModal } from "./components/SettingsModal/SettingsModal";
+import { AboutModal } from "./components/AboutModal/AboutModal";
 import { ErrorBoundary } from "./components/ErrorBoundary/ErrorBoundary";
 import { NewSchemaModal } from "./components/NewSchemaModal/NewSchemaModal";
 import { UnsavedChangesModal } from "./components/UnsavedChangesModal/UnsavedChangesModal";
@@ -16,8 +17,9 @@ import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useChatStream } from "./hooks/useChatStream";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
 import { useMediaQuery } from "./hooks/useMediaQuery";
+import { useFullscreenTracking } from "./hooks/useFullscreenTracking";
 import { NARROW_WINDOW_QUERY, TOOLBAR_HEIGHT } from "./utils/layout";
-import { useThemeStore } from "./stores/themeStore";
+import { followSystemTheme, useThemeStore } from "./stores/themeStore";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
 import { notifyRegistered, syncIntegrations } from "./utils/mcpRegistration";
 import { initSessionPersistence, restoreLastSession } from "./utils/sessionPersistence";
@@ -30,14 +32,23 @@ import {
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
+import { initContextMenu } from "./utils/contextMenu";
+import { initFieldUndo } from "./utils/fieldUndo";
+import { initWindowTheme } from "./utils/windowTheme";
+import { initDocumentEdited } from "./utils/documentEdited";
 
 const restored = restoreLastSession();
 useViewStore.setState({ view: initialView(restored, getStartupPreference()) });
 initSessionPersistence();
+initDocumentEdited();
 void loadStartupPreference();
 initChatPersistence();
 initThemePersistence();
+followSystemTheme();
+initWindowTheme();
 initLanguagePersistence();
+initContextMenu();
+initFieldUndo();
 
 function App() {
   useAppMenu();
@@ -47,15 +58,17 @@ function App() {
   useUpdateReadyToast();
   useMcpBridge();
   useChatStream();
+  useFullscreenTracking();
 
   const { isOpen, handleCreate, handleClose } = useNewSchemaModal();
   const unsavedGuard = useUnsavedChangesGuard();
   const narrowWindow = useMediaQuery(NARROW_WINDOW_QUERY);
   const theme = useThemeStore((s) => s.theme);
   const view = useViewStore((s) => s.view);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const openSettings = useCallback(() => setSettingsOpen(true), []);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const settingsOpen = useViewStore((s) => s.settingsOpen);
+  const closeSettings = useViewStore((s) => s.closeSettings);
+  const aboutOpen = useViewStore((s) => s.aboutOpen);
+  const closeAbout = useViewStore((s) => s.closeAbout);
 
   useEffect(() => {
     void syncIntegrations().then(notifyRegistered);
@@ -63,16 +76,13 @@ function App() {
 
   return (
     <ErrorBoundary>
-      {view === "home" ? (
-        <Home onOpenSettings={openSettings} />
-      ) : (
-        <Canvas onOpenSettings={openSettings} />
-      )}
+      {view === "home" ? <Home /> : <Canvas />}
       {/* Kept mounted so a draft message survives a trip to the home. */}
       <div hidden={view === "home"}>
         <ChatPanel />
       </div>
       {settingsOpen && <SettingsModal onClose={closeSettings} />}
+      {aboutOpen && <AboutModal onClose={closeAbout} />}
       {isOpen && <NewSchemaModal onClose={handleClose} onCreate={handleCreate} />}
       {unsavedGuard.isOpen && (
         <UnsavedChangesModal

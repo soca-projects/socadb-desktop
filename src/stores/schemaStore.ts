@@ -10,6 +10,7 @@ import type {
   TableIndex,
 } from "../types/schema";
 import { genId } from "../utils/id";
+import { noteSchemaChange } from "../utils/fieldUndo";
 import { findColumnById, findTableById } from "../utils/schemaQueries";
 import {
   normalizeSchema,
@@ -358,6 +359,7 @@ export const useSchemaStore = create<SchemaState>()(
       // would be an undo step that changes nothing.
       equality: (past, current) => past.schema === current.schema,
       limit: UNDO_LIMIT,
+      onSave: () => noteSchemaChange(),
     },
   ),
 );
