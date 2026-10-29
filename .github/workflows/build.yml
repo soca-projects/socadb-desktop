@@ -173,6 +173,11 @@ jobs:
           BUN_TARGET: ${{ matrix.bunTarget }}
         run: bun scripts/check-runtime.ts
 
+      - name: Check the installer
+        if: matrix.platform == 'windows-latest'
+        timeout-minutes: 15
+        run: bun scripts/check-installer.ts
+
       - name: Notarize the disk image
         if: ${{ inputs.publish && matrix.platform == 'macos-latest' }}
         timeout-minutes: 150

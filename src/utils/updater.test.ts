@@ -30,9 +30,14 @@ vi.mock("@tauri-apps/plugin-process", () => ({
   relaunch: vi.fn(),
 }));
 
+vi.mock("./chatCommands", () => ({
+  stopAllAgents: vi.fn(() => Promise.resolve()),
+}));
+
 interface FakeUpdate {
   version: string;
   download: () => Promise<void>;
+  install?: () => Promise<void>;
 }
 
 const check = vi.hoisted(() => vi.fn<() => Promise<FakeUpdate | null>>());
@@ -49,6 +54,7 @@ vi.mock("./sparkle", async (importOriginal) => ({
 
 import { toast } from "sonner";
 import { useUpdateStore } from "../stores/updateStore";
+import { stopAllAgents } from "./chatCommands";
 import {
   parseCycleFinishedPayload,
   sparkleCheckInBackground,
@@ -223,6 +229,26 @@ describe("updater on Windows and Linux", () => {
     useUpdateStore.setState({ status: "downloading" });
     await checkForUpdates({ userInitiated: true });
     expect(check).not.toHaveBeenCalled();
+  });
+
+  it("installs only once the agents are stopped", async () => {
+    let agentsStopped: ((value: undefined) => void) | undefined;
+    vi.mocked(stopAllAgents).mockImplementationOnce(
+      () => new Promise<undefined>((resolve) => (agentsStopped = resolve)),
+    );
+    const install = vi.fn(() => Promise.resolve());
+    check.mockResolvedValueOnce({
+      version: "0.1.4",
+      download: vi.fn(() => Promise.resolve()),
+      install,
+    });
+    await checkForUpdates({ userInitiated: true });
+    const installing = installAndRelaunch();
+    await vi.waitFor(() => expect(stopAllAgents).toHaveBeenCalledOnce());
+    expect(install).not.toHaveBeenCalled();
+    agentsStopped?.(undefined);
+    await installing;
+    expect(install).toHaveBeenCalledOnce();
   });
 });
 
