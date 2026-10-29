@@ -1,22 +1,72 @@
 !define SOCADB_MCP "socadb-mcp-windows-x64.exe"
 
 Var SocadbRmSession
-
-!macro SOCADB_WAIT_WHILE_IN_USE tries
-  StrCpy $R1 0
-  ${Do}
-    System::Call 'RSTRTMGR::RmGetList(i $SocadbRmSession, *i .r1, *i .r2, p 0, *i .r3) i .r0'
-    ${IfThen} $0 <> ${ERROR_MORE_DATA} ${|} ${Break} ${|}
-    ${IfThen} $R1 >= ${tries} ${|} ${Break} ${|}
-    Sleep 250
-    IntOp $R1 $R1 + 1
-  ${Loop}
-!macroend
+Var SocadbInUse
+Var SocadbTries
+Var SocadbMainExe
 
 Function SocadbRegisterRuntimeExe
   !insertmacro RestartManager_RegisterFile $SocadbRmSession "$R9"
   Push $0
 FunctionEnd
+
+Function SocadbRegisterRuntime
+  ${Locate} "$INSTDIR\runtime\node_modules\@anthropic-ai" "/L=F /M=*.exe" "SocadbRegisterRuntimeExe"
+  ${Locate} "$INSTDIR\runtime\node_modules\@openai" "/L=F /M=*.exe" "SocadbRegisterRuntimeExe"
+  ${If} ${FileExists} "$INSTDIR\runtime\bun.exe"
+    !insertmacro RestartManager_RegisterFile $SocadbRmSession "$INSTDIR\runtime\bun.exe"
+  ${EndIf}
+  ${If} ${FileExists} "$INSTDIR\runtime\${SOCADB_MCP}"
+    !insertmacro RestartManager_RegisterFile $SocadbRmSession "$INSTDIR\runtime\${SOCADB_MCP}"
+  ${EndIf}
+FunctionEnd
+
+; MAINBINARYNAME is defined after this file is included, so functions here
+; can't name it.
+Function SocadbRegisterMainExe
+  !insertmacro RestartManager_RegisterFile $SocadbRmSession "$SocadbMainExe"
+FunctionEnd
+
+; Restart Manager keeps listing a process its session found after the process
+; exits, so every check opens a session of its own.
+!macro SOCADB_CHECK_IN_USE register
+  StrCpy $SocadbInUse 0
+  !insertmacro RestartManager_StartSession $SocadbRmSession
+  ${If} $SocadbRmSession != ""
+    Call ${register}
+    System::Call 'RSTRTMGR::RmGetList(i $SocadbRmSession, *i .r1, *i .r2, p 0, *i .r3) i .r0'
+    ${IfThen} $0 = ${ERROR_MORE_DATA} ${|} StrCpy $SocadbInUse 1 ${|}
+    !insertmacro RestartManager_EndSession $SocadbRmSession
+  ${EndIf}
+!macroend
+
+Function SocadbMainExeInUse
+  !insertmacro SOCADB_CHECK_IN_USE SocadbRegisterMainExe
+FunctionEnd
+
+Function SocadbRuntimeInUse
+  !insertmacro SOCADB_CHECK_IN_USE SocadbRegisterRuntime
+FunctionEnd
+
+Function SocadbStopRuntime
+  !insertmacro RestartManager_StartSession $SocadbRmSession
+  ${If} $SocadbRmSession != ""
+    Call SocadbRegisterRuntime
+    System::Call 'RSTRTMGR::RmShutdown(i $SocadbRmSession, i ${RmForceShutdown}, p 0)'
+    !insertmacro RestartManager_EndSession $SocadbRmSession
+  ${EndIf}
+FunctionEnd
+
+!macro SOCADB_WAIT_UNTIL_FREE check tries
+  StrCpy $SocadbTries 0
+  ${Do}
+    Call ${check}
+    ${IfThen} $SocadbInUse = 0 ${|} ${Break} ${|}
+    ${IfThen} $SocadbTries >= ${tries} ${|} ${Break} ${|}
+    Sleep 250
+    IntOp $SocadbTries $SocadbTries + 1
+  ${Loop}
+!macroend
 
 ; What any version put under runtime/, never the folder itself, which may hold
 ; the user's files when the install folder was typed by hand. An update never
@@ -38,14 +88,8 @@ FunctionEnd
   ; app that started the update is still quitting, and gives up with "Failed to
   ; kill". Drop this wait once tauri-apps/tauri#16277 is fixed.
   ${If} $UpdateMode = 1
-    !insertmacro RestartManager_StartSession $SocadbRmSession
-    ${If} $SocadbRmSession != ""
-      !insertmacro RestartManager_RegisterFile $SocadbRmSession "$INSTDIR\${MAINBINARYNAME}.exe"
-      ${If} $0 = 0
-        !insertmacro SOCADB_WAIT_WHILE_IN_USE 80
-      ${EndIf}
-      !insertmacro RestartManager_EndSession $SocadbRmSession
-    ${EndIf}
+    StrCpy $SocadbMainExe "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro SOCADB_WAIT_UNTIL_FREE SocadbMainExeInUse 80
   ${EndIf}
   !insertmacro CheckIfAppIsRunning "$INSTDIR\${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
 
@@ -66,31 +110,15 @@ FunctionEnd
 
   ; With SocaDB closed, only its own agents can still run from runtime/: the
   ; updater quits without stopping them in versions before 0.1.6.
-  !insertmacro RestartManager_StartSession $SocadbRmSession
-  ${If} $SocadbRmSession != ""
-    ${Locate} "$INSTDIR\runtime\node_modules\@anthropic-ai" "/L=F /M=*.exe" "SocadbRegisterRuntimeExe"
-    ${Locate} "$INSTDIR\runtime\node_modules\@openai" "/L=F /M=*.exe" "SocadbRegisterRuntimeExe"
-    ${If} ${FileExists} "$INSTDIR\runtime\bun.exe"
-      !insertmacro RestartManager_RegisterFile $SocadbRmSession "$INSTDIR\runtime\bun.exe"
-    ${EndIf}
-    ${If} ${FileExists} "$INSTDIR\runtime\${SOCADB_MCP}"
-      !insertmacro RestartManager_RegisterFile $SocadbRmSession "$INSTDIR\runtime\${SOCADB_MCP}"
-    ${EndIf}
-    StrCpy $R3 0
-    !insertmacro SOCADB_WAIT_WHILE_IN_USE 40
-    ${If} $0 = ${ERROR_MORE_DATA}
-      System::Call 'RSTRTMGR::RmShutdown(i $SocadbRmSession, i ${RmForceShutdown}, p 0)'
-      !insertmacro SOCADB_WAIT_WHILE_IN_USE 20
-      ${IfThen} $0 = ${ERROR_MORE_DATA} ${|} StrCpy $R3 1 ${|}
-    ${EndIf}
-    !insertmacro RestartManager_EndSession $SocadbRmSession
-  ${Else}
-    StrCpy $R3 0
+  !insertmacro SOCADB_WAIT_UNTIL_FREE SocadbRuntimeInUse 40
+  ${If} $SocadbInUse = 1
+    Call SocadbStopRuntime
+    !insertmacro SOCADB_WAIT_UNTIL_FREE SocadbRuntimeInUse 20
   ${EndIf}
 
   ; A runtime still in use stays whole, so an install that fails on it leaves
   ; the previous version working.
-  ${If} $R3 = 0
+  ${If} $SocadbInUse = 0
   ${AndIf} ${FileExists} "$INSTDIR\${MAINBINARYNAME}.exe"
     !insertmacro SOCADB_REMOVE_RUNTIME
   ${EndIf}
