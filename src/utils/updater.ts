@@ -4,6 +4,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import { useUpdateStore, type UpdateStatus } from "../stores/updateStore";
+import { stopAllAgents } from "./chatCommands";
 import { toMessage } from "./errorMessage";
 import { logError, logInfo } from "./log";
 import { IS_MAC } from "./platform";
@@ -157,6 +158,9 @@ export async function installAndRelaunch() {
       throw new Error(`SocaDB did not quit within ${MAC_QUIT_TIMEOUT_MS / 1000}s`);
     }
     if (!update) throw new Error("No update is downloaded");
+    // The updater quits the app without its exit cleanup: an agent still
+    // answering would leave its CLI running, holding files the installer replaces.
+    await stopAllAgents();
     await update.install();
     await relaunch();
   } catch (error) {

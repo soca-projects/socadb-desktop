@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { useChatStore } from "../stores/chatStore";
 import type { EffortLevel, LoginType, ProviderId } from "../types/chat";
-import { DEFAULT_MODEL } from "../types/chat";
+import { DEFAULT_MODEL, PROVIDER_IDS } from "../types/chat";
 import { logWarn } from "./log";
 
 export interface SendChatMessageInput {
@@ -39,4 +40,13 @@ export function initChat(providerId: ProviderId, loginType: LoginType) {
 
 export function resetAgent(providerId: ProviderId) {
   void invoke("chat_reset", { providerId });
+}
+
+export async function stopAllAgents() {
+  await Promise.all(
+    PROVIDER_IDS.map((providerId) => invoke("chat_reset", { providerId })),
+  );
+  // A reset agent sends no end of turn: the chat would stay streaming.
+  const chat = useChatStore.getState();
+  if (chat.isStreaming) chat.finishResponse(chat.sessionId ?? "");
 }
