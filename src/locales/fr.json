@@ -99,8 +99,9 @@
     }
   },
   "theme": {
-    "switchToDark": "Passer en mode sombre",
-    "switchToLight": "Passer en mode clair"
+    "system": "Système",
+    "light": "Clair",
+    "dark": "Sombre"
   },
   "emptyCanvas": {
     "heading": "Votre schéma <mark>commence ici</mark>",
@@ -294,6 +295,12 @@
     "deleteAllWhileAnswering": "Disponible une fois la réponse de l'agent terminée.",
     "cancel": "Annuler",
     "general": "Général",
+    "appearance": "Apparence",
+    "appearanceHint": {
+      "mac": "Système suit le réglage de macOS, même quand il change.",
+      "windows": "Système suit le mode de couleur de Windows, même quand il change.",
+      "linux": "Système suit le thème du bureau."
+    },
     "startupTitle": "Au lancement, ouvrir",
     "startupDescription": "Ce que SocaDB affiche quand vous l'ouvrez.",
     "startup": {
@@ -408,6 +415,7 @@
     "saveAs": "Enregistrer sous...",
     "import": "Importer...",
     "export": "Exporter...",
+    "settings": "Paramètres...",
     "home": "Accueil",
     "findSchema": "Rechercher un schéma",
     "closeSchema": "Fermer le schéma",

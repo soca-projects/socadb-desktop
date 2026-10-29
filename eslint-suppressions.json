@@ -68,10 +68,5 @@
     "@typescript-eslint/consistent-type-assertions": {
       "count": 1
     }
-  },
-  "src/utils/themePersistence.ts": {
-    "@typescript-eslint/consistent-type-assertions": {
-      "count": 1
-    }
   }
 }

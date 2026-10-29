@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { Canvas } from "./components/Canvas/Canvas";
 import { Home } from "./components/Home/Home";
@@ -16,8 +16,9 @@ import { useMcpBridge } from "./hooks/useMcpBridge";
 import { useChatStream } from "./hooks/useChatStream";
 import { useNewSchemaModal } from "./hooks/useNewSchemaModal";
 import { useMediaQuery } from "./hooks/useMediaQuery";
+import { useFullscreenTracking } from "./hooks/useFullscreenTracking";
 import { NARROW_WINDOW_QUERY, TOOLBAR_HEIGHT } from "./utils/layout";
-import { useThemeStore } from "./stores/themeStore";
+import { followSystemTheme, useThemeStore } from "./stores/themeStore";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
 import { notifyRegistered, syncIntegrations } from "./utils/mcpRegistration";
 import { initSessionPersistence, restoreLastSession } from "./utils/sessionPersistence";
@@ -30,6 +31,7 @@ import {
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
+import { initContextMenu } from "./utils/contextMenu";
 
 const restored = restoreLastSession();
 useViewStore.setState({ view: initialView(restored, getStartupPreference()) });
@@ -37,7 +39,9 @@ initSessionPersistence();
 void loadStartupPreference();
 initChatPersistence();
 initThemePersistence();
+followSystemTheme();
 initLanguagePersistence();
+initContextMenu();
 
 function App() {
   useAppMenu();
@@ -47,15 +51,15 @@ function App() {
   useUpdateReadyToast();
   useMcpBridge();
   useChatStream();
+  useFullscreenTracking();
 
   const { isOpen, handleCreate, handleClose } = useNewSchemaModal();
   const unsavedGuard = useUnsavedChangesGuard();
   const narrowWindow = useMediaQuery(NARROW_WINDOW_QUERY);
   const theme = useThemeStore((s) => s.theme);
   const view = useViewStore((s) => s.view);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const openSettings = useCallback(() => setSettingsOpen(true), []);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const settingsOpen = useViewStore((s) => s.settingsOpen);
+  const closeSettings = useViewStore((s) => s.closeSettings);
 
   useEffect(() => {
     void syncIntegrations().then(notifyRegistered);
@@ -63,11 +67,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      {view === "home" ? (
-        <Home onOpenSettings={openSettings} />
-      ) : (
-        <Canvas onOpenSettings={openSettings} />
-      )}
+      {view === "home" ? <Home /> : <Canvas />}
       {/* Kept mounted so a draft message survives a trip to the home. */}
       <div hidden={view === "home"}>
         <ChatPanel />

@@ -49,7 +49,7 @@ export function MissingFiles({ entries, onLocate, onRemove }: MissingFilesProps)
                     {entry.name}
                   </span>
                   <span
-                    className="truncate font-mono text-[11px] text-tertiary"
+                    className="select-text truncate font-mono text-[11px] text-tertiary"
                     title={entry.path}
                   >
                     {entry.path}

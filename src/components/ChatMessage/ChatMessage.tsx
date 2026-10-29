@@ -42,7 +42,9 @@ export const ChatMessage = memo(function ChatMessage({
         {isEmpty && !isUser ? (
           <ThinkingIndicator />
         ) : (
-          <div className="whitespace-pre-wrap break-words">{message.content.trim()}</div>
+          <div className="select-text whitespace-pre-wrap break-words">
+            {message.content.trim()}
+          </div>
         )}
 
         {message.toolCalls.length > 0 && (

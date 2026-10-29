@@ -226,7 +226,7 @@ export function ChatPanel() {
     return (
       <div
         data-chat-panel
-        className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
+        className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float"
         onClick={togglePanel}
       >
         <div className="border-b border-border px-3 py-1.5">

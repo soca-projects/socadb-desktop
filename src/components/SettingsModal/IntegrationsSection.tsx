@@ -261,7 +261,7 @@ export function IntegrationsSection() {
           <li>{t("integrations.howToOpen")}</li>
           <li>
             {t("integrations.howToAsk")}
-            <p className="mt-1.5 rounded-md bg-surface px-3 py-1.5 font-mono text-[11px] text-tertiary">
+            <p className="mt-1.5 select-text rounded-md bg-surface px-3 py-1.5 font-mono text-[11px] text-tertiary">
               {t("integrations.howToExample")}
             </p>
           </li>

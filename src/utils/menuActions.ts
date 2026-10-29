@@ -122,6 +122,12 @@ export function handleOpenRecent(filePath: string) {
   void openRecentFile(filePath);
 }
 
+export function handleOpenSettings() {
+  if (document.querySelector('[role="dialog"]')) return;
+  commitActiveEdit();
+  useViewStore.getState().openSettings();
+}
+
 export function handleShowLogs() {
   logInfo("menu.action", "showLogs");
   invoke("show_logs").catch((e: unknown) => logError("app.show_logs.failed", e));
@@ -188,6 +194,7 @@ export const MENU_SHORTCUTS = {
     commitActiveEdit();
     void emit("open-export");
   }),
+  settings: shortcut("settings", "CmdOrCtrl+,", () => handleOpenSettings()),
   quit: shortcut("quit", "CmdOrCtrl+Q", () => handleQuit()),
   undo: shortcut("undo", "CmdOrCtrl+Z", () => {
     if (isEditor()) handleUndo();

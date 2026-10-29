@@ -4,6 +4,8 @@ mod claude_desktop;
 mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
+mod fullscreen;
+#[cfg(target_os = "macos")]
 mod install_location;
 mod logging;
 mod schema_files;
@@ -275,6 +277,8 @@ pub fn run() {
 
             #[cfg(target_os = "macos")]
             configure_sparkle(app);
+            #[cfg(target_os = "macos")]
+            fullscreen::relay_exit_start(app);
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {

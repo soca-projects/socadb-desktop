@@ -82,6 +82,15 @@ async function syncUpdateMenuItem() {
   await updateMenuItem.setEnabled(enabled);
 }
 
+async function buildSettingsItem(): Promise<MenuItem> {
+  return MenuItem.new({
+    id: "settings",
+    text: i18next.t("menu.settings"),
+    accelerator: MENU_SHORTCUTS.settings.accelerator,
+    action: () => void MENU_SHORTCUTS.settings.run(),
+  });
+}
+
 // IS_MAC drives both the macOS-only "SocaDB" submenu (Hide/HideOthers/ShowAll/
 // Quit are PredefinedMenuItem variants that only render on macOS) and the
 // attach method (setAsAppMenu vs setAsWindowMenu).
@@ -97,6 +106,8 @@ async function buildAppSubmenu(updateItem: MenuItem): Promise<Submenu> {
         enabled: false,
       }),
       updateItem,
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      await buildSettingsItem(),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Services" }),
       await PredefinedMenuItem.new({ item: "Separator" }),
@@ -192,6 +203,8 @@ async function setupMenu() {
       ...(IS_MAC
         ? []
         : [
+            await PredefinedMenuItem.new({ item: "Separator" }),
+            await buildSettingsItem(),
             await PredefinedMenuItem.new({ item: "Separator" }),
             await MenuItem.new({
               id: "exit",

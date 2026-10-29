@@ -57,7 +57,7 @@ export function ChatToolCall({ toolCall }: ChatToolCallProps) {
       </button>
 
       {expanded && (
-        <pre className="ml-5 mt-1 max-h-32 overflow-auto rounded bg-surface-muted px-2 py-1.5 font-mono text-[11px] text-tertiary">
+        <pre className="ml-5 mt-1 max-h-32 select-text overflow-auto rounded bg-surface-muted px-2 py-1.5 font-mono text-[11px] text-tertiary">
           {JSON.stringify(toolCall.input, null, 2)}
           {toolCall.result && (
             <>
