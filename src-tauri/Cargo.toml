@@ -36,7 +36,7 @@ time = { version = "0.3", features = ["formatting"] }
 block2 = "0.6"
 libc = "0.2"
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSAlert", "NSApplication", "NSResponder", "NSRunningApplication", "NSWindow"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSAlert", "NSApplication", "NSResponder", "NSRunningApplication", "NSView", "NSWindow"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSEnumerator", "NSError", "NSFileManager", "NSLocale", "NSNotification", "NSOperation", "NSString", "NSURL"] }
 plist = "1"
 semver = "1"

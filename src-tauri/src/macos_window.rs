@@ -61,13 +61,21 @@ pub fn remember_frame(app: &tauri::App) {
     }
 }
 
+// Changing the close button puts the window buttons back in AppKit's default
+// place; Tauri's content view moves them to trafficLightPosition when it redraws.
 #[tauri::command]
 pub fn set_document_edited(window: tauri::WebviewWindow, edited: bool) {
     let target = window.clone();
     let result = window.run_on_main_thread(move || match target.ns_window() {
         // SAFETY: `ns_window` is this window's live NSWindow, used on the main
         // thread for the duration of the call.
-        Ok(ns_window) => unsafe { (*ns_window.cast::<NSWindow>()).setDocumentEdited(edited) },
+        Ok(ns_window) => unsafe {
+            let ns_window: &NSWindow = &*ns_window.cast();
+            ns_window.setDocumentEdited(edited);
+            if let Some(view) = ns_window.contentView() {
+                view.setNeedsDisplay(true);
+            }
+        },
         Err(e) => log_event!(log::Level::Warn, "window.document_edited.failed", e),
     });
     if let Err(e) = result {
