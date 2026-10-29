@@ -130,11 +130,11 @@ async function buildAppSubmenu(updateItem: MenuItem): Promise<Submenu> {
       await PredefinedMenuItem.new({ item: "Separator" }),
       await buildSettingsItem(),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await PredefinedMenuItem.new({ item: "Services" }),
+      await PredefinedMenuItem.new({ item: "Services", text: t("menu.services") }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Hide", text: t("menu.hideSocaDB") }),
-      await PredefinedMenuItem.new({ item: "HideOthers" }),
-      await PredefinedMenuItem.new({ item: "ShowAll" }),
+      await PredefinedMenuItem.new({ item: "HideOthers", text: t("menu.hideOthers") }),
+      await PredefinedMenuItem.new({ item: "ShowAll", text: t("menu.showAll") }),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Quit", text: t("menu.quitSocaDB") }),
     ],
@@ -253,10 +253,10 @@ async function setupMenu() {
         action: () => void MENU_SHORTCUTS.redo.run(),
       }),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await PredefinedMenuItem.new({ item: "Cut" }),
-      await PredefinedMenuItem.new({ item: "Copy" }),
-      await PredefinedMenuItem.new({ item: "Paste" }),
-      await PredefinedMenuItem.new({ item: "SelectAll" }),
+      await PredefinedMenuItem.new({ item: "Cut", text: t("menu.cut") }),
+      await PredefinedMenuItem.new({ item: "Copy", text: t("menu.copy") }),
+      await PredefinedMenuItem.new({ item: "Paste", text: t("menu.paste") }),
+      await PredefinedMenuItem.new({ item: "SelectAll", text: t("menu.selectAll") }),
     ],
   });
 
@@ -286,7 +286,10 @@ async function setupMenu() {
       ...(IS_MAC
         ? [
             await PredefinedMenuItem.new({ item: "Separator" }),
-            await PredefinedMenuItem.new({ item: "Fullscreen" }),
+            await PredefinedMenuItem.new({
+              item: "Fullscreen",
+              text: t("menu.fullscreen"),
+            }),
           ]
         : []),
     ],
