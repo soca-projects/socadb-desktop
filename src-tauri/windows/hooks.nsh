@@ -80,7 +80,7 @@ FunctionEnd
     !insertmacro SOCADB_WAIT_WHILE_IN_USE 40
     ${If} $0 = ${ERROR_MORE_DATA}
       System::Call 'RSTRTMGR::RmShutdown(i $SocadbRmSession, i ${RmForceShutdown}, p 0)'
-      System::Call 'RSTRTMGR::RmGetList(i $SocadbRmSession, *i .r1, *i .r2, p 0, *i .r3) i .r0'
+      !insertmacro SOCADB_WAIT_WHILE_IN_USE 20
       ${IfThen} $0 = ${ERROR_MORE_DATA} ${|} StrCpy $R3 1 ${|}
     ${EndIf}
     !insertmacro RestartManager_EndSession $SocadbRmSession

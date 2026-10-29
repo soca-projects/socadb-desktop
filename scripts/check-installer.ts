@@ -102,18 +102,24 @@ function startServer() {
   return { server, answers };
 }
 
-function sameRuntime(installed: string, built: string) {
-  const files = runtimeFiles(built);
-  if (runtimeFiles(installed).join() !== files.join()) return false;
-  return files.every((file) => {
+function runtimeDifferences(installed: string, built: string): string[] {
+  const installedFiles = new Set(runtimeFiles(installed));
+  const builtFiles = runtimeFiles(built);
+  const differences = builtFiles.flatMap((file) => {
+    if (!installedFiles.has(file)) return [`missing ${file}`];
     const [a, b] = [join(installed, file), join(built, file)];
-    if (statSync(a).size !== statSync(b).size) return false;
-    return !file.endsWith(".exe") || readFileSync(a).equals(readFileSync(b));
+    const same =
+      statSync(a).size === statSync(b).size &&
+      (!file.endsWith(".exe") || readFileSync(a).equals(readFileSync(b)));
+    return same ? [] : [`different ${file}`];
   });
+  const extra = [...installedFiles].filter((file) => !builtFiles.includes(file));
+  return [...differences, ...extra.map((file) => `extra ${file}`)];
 }
 
 // A console of its own, like the app's agents: Restart Manager stops console
-// programs with Ctrl+C, which would reach this check on a shared console.
+// programs with Ctrl+C, which would reach this check on a shared console. The
+// helper reports when it lets go, since its exit lags behind on Windows.
 function hold(path: string, ms: number) {
   const startedAt = Date.now();
   const child = spawn(
@@ -122,11 +128,16 @@ function hold(path: string, ms: number) {
       "-e",
       `const fs = require("fs");
        const fd = fs.openSync(${JSON.stringify(path)}, "r");
-       setTimeout(() => { fs.closeSync(fd); process.exit(0); }, ${ms});`,
+       setTimeout(() => {
+         fs.closeSync(fd);
+         process.stdout.write("released\\n", () => process.exit(0));
+       }, ${ms});`,
     ],
     { windowsHide: true },
   );
-  return { startedAt, exit: exited(child) };
+  let releasedAt: number | null = null;
+  child.stdout.on("data", () => (releasedAt ??= Date.now()));
+  return { startedAt, released: () => releasedAt, exit: exited(child) };
 }
 
 try {
@@ -168,10 +179,16 @@ try {
   const watch = setInterval(() => {
     if (movedAt === null && oldCopies().length > 0) movedAt = Date.now();
   }, 100);
+  const updateStart = Date.now();
   const update = await install("/UPDATE");
   clearInterval(watch);
   const appHeld = await app.exit;
   const agentHeld = await agent.exit;
+  const releasedAt = app.released();
+  const at = (time: number | null) =>
+    time === null ? "never" : `${time - updateStart} ms`;
+  const timeline = `from the update's start: app let go ${at(releasedAt)}, MCP server set aside ${at(movedAt)}, runtime process gone ${at(agentHeld.at)}, update done ${at(update.at)}`;
+  console.log(timeline);
 
   check(update.code === 0, `the update exited with ${update.code}`);
   check(
@@ -179,15 +196,18 @@ try {
     `the update killed the app instead of waiting (exit ${appHeld.code})`,
   );
   check(
-    movedAt !== null && movedAt >= appHeld.at && movedAt - appHeld.at < 3_000,
-    "the update didn't wait for the app to let go of its executable, or went on long after",
+    releasedAt !== null &&
+      movedAt !== null &&
+      movedAt >= releasedAt - 200 &&
+      movedAt - releasedAt < 3_000,
+    `the update didn't wait for the app to let go of its executable, or went on long after (${timeline})`,
   );
   check(
     runtimeExe !== undefined &&
       movedAt !== null &&
       agentHeld.at > movedAt &&
       agentHeld.at - agent.startedAt < 38_000,
-    "the update didn't stop a process still using runtime/",
+    `the update didn't stop a process still using runtime/ (${timeline})`,
   );
   check(
     oldCopies().length === 1,
@@ -200,9 +220,10 @@ try {
   );
   check(existsSync(notes), "the update deleted a file in runtime/ that isn't SocaDB's");
   rmSync(notes, { force: true });
+  const differences = runtimeDifferences(join(dir, "runtime"), join(DIST, "runtime"));
   check(
-    sameRuntime(join(dir, "runtime"), join(DIST, "runtime")),
-    "the runtime after the update isn't the one built",
+    differences.length === 0,
+    `the runtime after the update isn't the one built: ${differences.slice(0, 5).join(", ")}`,
   );
   check(
     await answers(2, "tools/list"),
