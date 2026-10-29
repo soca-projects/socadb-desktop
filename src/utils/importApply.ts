@@ -1,10 +1,12 @@
+import { emit } from "@tauri-apps/api/event";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import { createEmptySchema, useSchemaStore } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
 import type { DbType, Relation, SchemaEnum, Table } from "../types/schema";
 import { describeImportIssues } from "./importReport";
-import { handleAutoLayout } from "./schemaActions";
+import { handleAutoLayout, replaceSchema } from "./schemaActions";
+import { hasUnsavedChanges } from "./schemaQueries";
 import type { ImportIssue } from "./sqlColumns";
 import { colorTables } from "./tableColors";
 
@@ -44,22 +46,51 @@ export function showImportSummary({
   }
 }
 
-export function replaceWithImport(
+export async function replaceWithImport(
   tables: Table[],
   relations: Relation[],
   enums: SchemaEnum[],
   dbType: DbType,
   name: string,
 ) {
-  const store = useSchemaStore.getState();
   const schema = createEmptySchema(name, dbType);
   schema.tables = colorTables(tables);
   schema.relations = relations;
   if (enums.length) schema.enums = enums;
-  store.setSchema(schema);
-  store.setFilePath(null);
+  replaceSchema(schema, null);
+  useSchemaStore.setState({ savedAt: null });
   useViewStore.getState().showEditor();
-  void handleAutoLayout();
+  await handleAutoLayout();
+  // Undoing the first layout would pile every imported table at the origin.
+  // If anything was edited while it ran, the history stays whole.
+  const history = useSchemaStore.temporal.getState();
+  if (history.pastStates.length === 1 && history.pastStates[0]?.schema === schema) {
+    history.clear();
+  }
+}
+
+let pendingReplace: (() => void) | null = null;
+
+// A replacing import leaves nothing to undo, so unsaved work gets the same
+// prompt as a new schema first.
+export function replaceOrAskFirst(replace: () => void) {
+  const { schema, filePath, savedAt } = useSchemaStore.getState();
+  if (!hasUnsavedChanges(schema, filePath, savedAt)) {
+    replace();
+    return;
+  }
+  pendingReplace = replace;
+  void emit("unsaved-guard-replace-import");
+}
+
+export function runPendingReplace() {
+  const replace = pendingReplace;
+  pendingReplace = null;
+  replace?.();
+}
+
+export function dropPendingReplace() {
+  pendingReplace = null;
 }
 
 export function mergeImport(tables: Table[], relations: Relation[], enums: SchemaEnum[]) {

@@ -111,6 +111,10 @@ export function handleCloseSchema() {
 
 export function handleOpenRecent(filePath: string) {
   commitActiveEdit();
+  if (useSchemaStore.getState().filePath === filePath) {
+    useViewStore.getState().showEditor();
+    return;
+  }
   if (isDirty()) {
     void emit("unsaved-guard-open-recent", filePath);
     return;

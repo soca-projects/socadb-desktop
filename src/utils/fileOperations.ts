@@ -12,6 +12,7 @@ import { IS_MAC } from "./platform";
 import { pathForLog } from "./logPrivacy";
 import { logError, logInfo, logWarn } from "./log";
 import { normalizeSchema } from "./schemaIntegrity";
+import { replaceSchema } from "./schemaActions";
 
 export function migrateSchema(data: unknown) {
   if (!data || typeof data !== "object") return;
@@ -122,11 +123,9 @@ export async function saveCurrentSchema(): Promise<boolean> {
 
 export async function openAndApplySchema(): Promise<void> {
   try {
-    const { setSchema, setFilePath } = useSchemaStore.getState();
     const result = await openSchemaFile();
     if (result) {
-      setSchema(result.schema);
-      setFilePath(result.path);
+      replaceSchema(result.schema, result.path);
       addRecentFile(result.path);
       useViewStore.getState().showEditor();
       logInfo("file.open", "Schema opened", {
@@ -148,9 +147,7 @@ export async function openRecentFile(filePath: string): Promise<void> {
   try {
     const content = await invoke<string>("read_schema_file", { path: filePath });
     const schema = parseSchemaContent(content);
-    const { setSchema, setFilePath } = useSchemaStore.getState();
-    setSchema(schema);
-    setFilePath(filePath);
+    replaceSchema(schema, filePath);
     addRecentFile(filePath);
     useViewStore.getState().showEditor();
     logInfo("file.open", "Schema opened", {
