@@ -354,6 +354,9 @@ export const useSchemaStore = create<SchemaState>()(
     }),
     {
       partialize: ({ schema }) => ({ schema }),
+      // Switching files or saving leaves the schema as it was: recorded, it
+      // would be an undo step that changes nothing.
+      equality: (past, current) => past.schema === current.schema,
       limit: UNDO_LIMIT,
     },
   ),

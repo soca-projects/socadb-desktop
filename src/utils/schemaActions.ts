@@ -124,10 +124,16 @@ export function duplicateTable(tableId: string): string | null {
   return newId;
 }
 
-export function closeSchema() {
+// Undoing past this point would show the previous schema under the new file's
+// path, and saving would write it there.
+export function replaceSchema(schema: Schema, filePath: string | null) {
   const store = useSchemaStore.getState();
-  store.setSchema(createEmptySchema());
-  store.setFilePath(null);
+  store.setSchema(schema);
+  store.setFilePath(filePath);
   useSchemaStore.temporal.getState().clear();
+}
+
+export function closeSchema() {
+  replaceSchema(createEmptySchema(), null);
   useViewStore.getState().showHome();
 }
