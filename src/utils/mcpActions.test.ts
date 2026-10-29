@@ -1,7 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { dispatchMcpAction } from "./mcpActions";
+import { noteSchemaChange } from "./fieldUndo";
 import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
+
+vi.mock("./fieldUndo", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./fieldUndo")>()),
+  noteSchemaChange: vi.fn(),
+}));
 
 function resetStore(dbType: "mysql" | "postgresql" = "postgresql") {
   useSchemaStore.setState({
@@ -678,6 +684,15 @@ describe("agent review cases", () => {
     useSchemaStore.temporal.getState().undo();
     expect(schema().tables).toHaveLength(0);
     expect(schema().enums ?? []).toHaveLength(0);
+  });
+
+  it("tells the field being typed in about each agent call, once", async () => {
+    vi.mocked(noteSchemaChange).mockClear();
+    await dispatchMcpAction("create_table", {
+      name: "posts",
+      columns: [{ name: "status", enumName: "post_status", enumValues: ["draft"] }],
+    });
+    expect(noteSchemaChange).toHaveBeenCalledTimes(1);
   });
 
   it("applies the editor's rules when the agent changes a type", async () => {

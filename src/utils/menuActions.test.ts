@@ -5,6 +5,7 @@ vi.mock("@tauri-apps/api/event", () => ({ emit: vi.fn(() => Promise.resolve()) }
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: vi.fn() }));
 vi.mock("../stores/themeStore", () => ({ useThemeStore: { getState: vi.fn() } }));
 
+import { createEmptySchema, useSchemaStore } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
 import { MENU_SHORTCUTS } from "./menuActions";
 
@@ -52,5 +53,47 @@ describe("settings shortcut", () => {
 
   it("matches Ctrl+, in the Windows fallback", () => {
     expect(MENU_SHORTCUTS.settings.windowsSignature).toBe("ctrl+,");
+  });
+});
+
+class FakeInput extends FakeField {
+  value = "";
+}
+
+describe("undo shortcut", () => {
+  beforeEach(() => {
+    useViewStore.setState({ view: "editor" });
+    useSchemaStore.getState().setSchema(createEmptySchema());
+    useSchemaStore.temporal.getState().clear();
+    useSchemaStore
+      .getState()
+      .addTable({ id: "t1", name: "users", position: { x: 0, y: 0 }, columns: [] });
+    vi.stubGlobal("HTMLInputElement", FakeInput);
+    vi.stubGlobal("HTMLTextAreaElement", FakeInput);
+  });
+
+  function focus(element: object, dialog: object | null = null) {
+    vi.stubGlobal("document", {
+      activeElement: element,
+      querySelector: () => dialog,
+    });
+  }
+
+  it("undoes the agent's change while the chat box keeps the focus", async () => {
+    focus(new FakeInput());
+    await MENU_SHORTCUTS.undo.run();
+    expect(useSchemaStore.getState().schema.tables).toHaveLength(0);
+  });
+
+  it("undoes the last schema change anywhere else", async () => {
+    focus(new FakeField());
+    await MENU_SHORTCUTS.undo.run();
+    expect(useSchemaStore.getState().schema.tables).toHaveLength(0);
+  });
+
+  it("leaves the schema alone under an open dialog", async () => {
+    focus(new FakeField(), {});
+    await MENU_SHORTCUTS.undo.run();
+    expect(useSchemaStore.getState().schema.tables).toHaveLength(1);
   });
 });

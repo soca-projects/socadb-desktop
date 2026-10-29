@@ -2,6 +2,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import i18next from "../i18n";
 import { UNDO_LIMIT, createEmptySchema, useSchemaStore } from "../stores/schemaStore";
 import { genId } from "./id";
+import { noteSchemaChange } from "./fieldUndo";
 import { computeAutoLayout } from "./autoLayout";
 import { useViewStore } from "../stores/viewStore";
 import { createTable } from "./schemaActions";
@@ -603,6 +604,8 @@ function asOneUndoStep(
         pastStates: [...pastStates, { schema: before }].slice(-UNDO_LIMIT),
         futureStates: [],
       }));
+      // Pushed by hand, so the store's onSave never sees it.
+      noteSchemaChange();
     }
   }
 }

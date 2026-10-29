@@ -33,6 +33,7 @@ import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
 import { initContextMenu } from "./utils/contextMenu";
+import { initFieldUndo } from "./utils/fieldUndo";
 import { initWindowTheme } from "./utils/windowTheme";
 import { initDocumentEdited } from "./utils/documentEdited";
 
@@ -47,6 +48,7 @@ followSystemTheme();
 initWindowTheme();
 initLanguagePersistence();
 initContextMenu();
+initFieldUndo();
 
 function App() {
   useAppMenu();
