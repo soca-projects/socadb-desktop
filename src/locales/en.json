@@ -301,6 +301,14 @@
       "linux": "System follows the desktop theme."
     },
     "startupTitle": "On launch, open",
+    "newTables": "New tables",
+    "primaryKeyPostgresql": "Primary key in PostgreSQL",
+    "primaryKeyMysql": "Primary key in MySQL",
+    "primaryKey": {
+      "uuid": "UUID",
+      "int": "Integer",
+      "bigint": "Big integer"
+    },
     "startup": {
       "home": "The schema list",
       "homeHint": "The home with all your schemas. An unsaved draft shows at the top.",

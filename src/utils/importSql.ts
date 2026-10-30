@@ -50,7 +50,10 @@ export function adaptColumnsToDbType(tables: Table[], targetDbType: DbType): Ada
     columns: table.columns.map((col): Column => {
       const type = dialectType(col.type, targetDbType);
       if (type === col.type) return col;
-      if (type) return { ...col, type };
+      if (type) {
+        const serial = col.type === "serial" || col.type === "bigserial";
+        return serial ? { ...col, type, isAutoIncrement: true } : { ...col, type };
+      }
       adaptedCount++;
       return { ...col, type: "varchar" };
     }),

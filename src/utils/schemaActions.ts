@@ -2,6 +2,7 @@ import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
 import { genId } from "./id";
 import { createDefaultIdColumn } from "./columnDefaults";
+import { getPrimaryKeyPreference } from "./primaryKeyPreference";
 import { computeAutoLayout } from "./autoLayout";
 import { getNextTableColor } from "./tableColors";
 import { findEnumById, findTableById, findTableByName } from "./schemaQueries";
@@ -53,7 +54,9 @@ export function createTable(options?: {
   const tables = schema.tables;
   const newId = genId();
   const name = uniqueTableName(options?.name ?? `new_table_${tables.length + 1}`, schema);
-  const columns = options?.columns ?? [createDefaultIdColumn(schema.dbType)];
+  const columns = options?.columns ?? [
+    createDefaultIdColumn(schema.dbType, getPrimaryKeyPreference()[schema.dbType]),
+  ];
   const view = getCanvasView();
   const area = view?.visibleArea();
   const size = estimateTableSize({ name, columns });

@@ -5,11 +5,22 @@ import { arrowTarget } from "../../utils/arrowKeys";
 export const SETTINGS_SELECT =
   "rounded-md border border-border bg-surface py-1.5 pl-3 pr-2 text-[12px] font-medium text-secondary outline-none transition-colors hover:border-border-hover focus:border-accent";
 
-export function SettingsGroup({ children }: { children: ReactNode }) {
+export function SettingsGroup({
+  title,
+  children,
+}: {
+  title?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-      {children}
-    </div>
+    <section>
+      {title && (
+        <h3 className="mb-2 px-1 text-[12px] font-medium text-tertiary">{title}</h3>
+      )}
+      <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+        {children}
+      </div>
+    </section>
   );
 }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { dispatchMcpAction } from "./mcpActions";
 import { noteSchemaChange } from "./fieldUndo";
 import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
@@ -634,6 +634,41 @@ describe("primary keys the agent creates", () => {
       updates: { isPrimaryKey: true },
     });
     expect(columns()[0]).toMatchObject({ isPrimaryKey: true, isNullable: false });
+  });
+});
+
+describe("the user's primary key for new tables", () => {
+  beforeEach(() => resetStore());
+  afterEach(() => vi.unstubAllGlobals());
+
+  function preferPrimaryKeys(value: { postgresql: string; mysql: string }) {
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) =>
+        key === "socadb_primary_key" ? JSON.stringify(value) : null,
+      setItem: vi.fn(),
+    });
+  }
+
+  it("gives a table created without columns the chosen id column", async () => {
+    preferPrimaryKeys({ postgresql: "bigint", mysql: "int" });
+    await dispatchMcpAction("create_table", { name: "orders" });
+    const [id] = useSchemaStore.getState().schema.tables[0].columns;
+    expect(id).toMatchObject({ name: "id", type: "bigserial", isPrimaryKey: true });
+  });
+
+  it("tells the agent which id column new tables start with", async () => {
+    preferPrimaryKeys({ postgresql: "int", mysql: "uuid" });
+    resetStore("mysql");
+    const result = await dispatchMcpAction("get_schema", {});
+    expect(result.ok && result.data).toMatchObject({
+      primaryKeyForNewTables: {
+        name: "id",
+        type: "char",
+        length: 36,
+        defaultValue: "(UUID())",
+        defaultKind: "expression",
+      },
+    });
   });
 });
 

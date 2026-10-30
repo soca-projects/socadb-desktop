@@ -410,11 +410,18 @@ export const LOG_CODES = {
     check:
       "The message names the bad field; the old list was copied to ~/.socadb/recent.invalid-<time>.json.",
   },
+  "settings.primary_key.persist_failed": {
+    level: "error",
+    meaning:
+      "The primary key setting for new tables could not be written to config.json.",
+    check:
+      "The write itself failed (permissions, full disk). The choice holds until the next launch, when config.json's older value comes back.",
+  },
   "settings.startup.persist_failed": {
     level: "error",
     meaning: "The launch setting could not be written to config.json.",
     check:
-      "A config.json that doesn't parse blocks the write on purpose; check the file.",
+      "The write itself failed (permissions, full disk). The choice holds until the next launch, when config.json's older value comes back.",
   },
   "settings.language.persist_failed": {
     level: "error",

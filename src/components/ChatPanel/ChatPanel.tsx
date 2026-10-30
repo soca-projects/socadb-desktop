@@ -26,6 +26,7 @@ import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
 import { ChatHistory } from "../ChatHistory/ChatHistory";
 import { logError } from "../../utils/log";
+import { getPrimaryKeyPreference } from "../../utils/primaryKeyPreference";
 import {
   CHAT_PANEL_MIN_WIDTH,
   CHAT_PANEL_MIN_HEIGHT,
@@ -153,7 +154,11 @@ export function ChatPanel() {
       addUserMessage(content);
       startAssistantMessage();
 
-      const systemPrompt = buildSystemPrompt(useSchemaStore.getState().schema);
+      const { schema } = useSchemaStore.getState();
+      const systemPrompt = buildSystemPrompt(
+        schema,
+        getPrimaryKeyPreference()[schema.dbType],
+      );
       try {
         await sendChatMessage({
           message: content,

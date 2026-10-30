@@ -34,6 +34,12 @@ import {
 } from "../../types/chat";
 import { SUPPORTED_LANGUAGES, isLanguage, type Language } from "../../i18n";
 import {
+  getPrimaryKeyPreference,
+  setPrimaryKeyPreference,
+} from "../../utils/primaryKeyPreference";
+import { idColumnSql, type PrimaryKeyKind } from "../../utils/columnDefaults";
+import type { DbType } from "../../types/schema";
+import {
   getStartupPreference,
   setStartupPreference,
   type StartupPreference,
@@ -44,7 +50,7 @@ import { toast } from "sonner";
 import { CopyableCommand } from "./CopyableCommand";
 import { IntegrationsSection } from "./IntegrationsSection";
 import { SelectMenu, type SelectOption } from "../SelectMenu/SelectMenu";
-import { ThemePreferenceZ } from "../../utils/zodSchemas";
+import { PrimaryKeyKindZ, ThemePreferenceZ } from "../../utils/zodSchemas";
 import { APPEARANCE_HINT_KEY } from "../../utils/platform";
 import type { ThemePreference } from "../../stores/themeStore";
 import {
@@ -72,6 +78,11 @@ const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
 };
 
 const STARTUP_OPTIONS: StartupPreference[] = ["home", "lastSchema"];
+
+const PRIMARY_KEY_DBS: { dbType: DbType; labelKey: string }[] = [
+  { dbType: "postgresql", labelKey: "settings.primaryKeyPostgresql" },
+  { dbType: "mysql", labelKey: "settings.primaryKeyMysql" },
+];
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -332,6 +343,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     scroller.current?.scrollTo({ top: 0 });
   };
   const [startup, setStartup] = useState(getStartupPreference);
+  const [primaryKeys, setPrimaryKeys] = useState(getPrimaryKeyPreference);
+  const choosePrimaryKey = (dbType: DbType, kind: PrimaryKeyKind) => {
+    const next = { ...primaryKeys, [dbType]: kind };
+    setPrimaryKeys(next);
+    void setPrimaryKeyPreference(next);
+  };
   const themePreference = useThemeStore((s) => s.preference);
   const setThemePreference = useThemeStore((s) => s.setPreference);
 
@@ -529,6 +546,32 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   />
                 </SettingsRow>
               </SettingsGroup>
+              <div className="mt-6">
+                <SettingsGroup title={t("settings.newTables")}>
+                  {PRIMARY_KEY_DBS.map(({ dbType, labelKey }) => (
+                    <SettingsRow
+                      key={dbType}
+                      label={t(labelKey)}
+                      description={
+                        <code className="select-text font-mono text-[11.5px]">
+                          {idColumnSql(dbType, primaryKeys[dbType])}
+                        </code>
+                      }
+                    >
+                      <SelectMenu
+                        value={primaryKeys[dbType]}
+                        ariaLabel={t(labelKey)}
+                        options={PrimaryKeyKindZ.options.map((kind) => ({
+                          value: kind,
+                          label: t(`settings.primaryKey.${kind}`),
+                        }))}
+                        onChange={(kind) => choosePrimaryKey(dbType, kind)}
+                        className={SETTINGS_SELECT}
+                      />
+                    </SettingsRow>
+                  ))}
+                </SettingsGroup>
+              </div>
             </div>
           </div>
         </div>

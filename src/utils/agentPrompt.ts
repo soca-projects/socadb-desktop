@@ -1,9 +1,13 @@
 import type { Schema } from "../types/schema";
 import { COLUMN_TYPES_BY_DB } from "../types/schema";
+import { DEFAULT_PRIMARY_KEYS, idColumnSql, type PrimaryKeyKind } from "./columnDefaults";
 import { DB_LABEL } from "./mcpColumns";
 import { serializeRelation } from "./schemaQueries";
 
-export function buildSystemPrompt(schema: Schema): string {
+export function buildSystemPrompt(
+  schema: Schema,
+  primaryKey: PrimaryKeyKind = DEFAULT_PRIMARY_KEYS[schema.dbType],
+): string {
   const db = DB_LABEL[schema.dbType];
   const pg = schema.dbType === "postgresql";
 
@@ -30,6 +34,7 @@ ${relations.length > 0 ? "\n## Relations\n" + relations.join("\n") : ""}
 - Use the SocaDB MCP tools to modify the schema (create_table, add_column, create_relation, add_index, etc.)
 - Use get_table to inspect a table (types, constraints, notes, indexes) before modifying it
 - Column types must exist in ${db}: ${COLUMN_TYPES_BY_DB[schema.dbType].join(", ")}. Write lengths and precision inline, like varchar(120) or ${pg ? "numeric" : "decimal"}(10,2)
+- New tables start with the user's primary key: ${idColumnSql(schema.dbType, primaryKey)}. Give a new table that id column unless the user asks for another
 - Give a table or column a note when its name doesn't say what it holds; notes become comments in the SQL export
 - For a fixed set of values, use an enum column with enumValues.${pg ? " In PostgreSQL an enum is a named type: set enumName, and reuse that name on columns that share the same values." : ""}
 - Add indexes with add_index on columns that are often searched or joined${pg ? ", including foreign key columns, which PostgreSQL doesn't index by itself" : ""}
