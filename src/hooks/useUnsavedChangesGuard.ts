@@ -15,6 +15,7 @@ type PendingAction =
 
 export function useUnsavedChangesGuard() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [ready, setReady] = useState(false);
   const recentPathRef = useRef<string | null>(null);
   const importPathRef = useRef<string | null>(null);
   const pendingRef = useRef<PendingAction>(null);
@@ -35,11 +36,17 @@ export function useUnsavedChangesGuard() {
         setPendingAction("import-file");
       }),
       listen<string>("unsaved-guard-open-recent", (event) => {
+        if (pendingRef.current) return;
         recentPathRef.current = event.payload;
         setPendingAction("open-recent");
       }),
     ];
+    let live = true;
+    void Promise.all(unlistens).then(() => {
+      if (live) setReady(true);
+    });
     return () => {
+      live = false;
       for (const u of unlistens) void u.then((fn) => fn());
     };
   }, []);
@@ -87,6 +94,7 @@ export function useUnsavedChangesGuard() {
   }, [pendingAction, executePendingAction]);
 
   return {
+    ready,
     isOpen: pendingAction !== null,
     handleCancel,
     handleDiscard,

@@ -21,6 +21,8 @@ import { useFullscreenTracking } from "./hooks/useFullscreenTracking";
 import { NARROW_WINDOW_QUERY, TOOLBAR_HEIGHT } from "./utils/layout";
 import { followSystemTheme, useThemeStore } from "./stores/themeStore";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
+import { useOpenedFiles } from "./hooks/useOpenedFiles";
+import { useRecentFilesLoaded } from "./hooks/useRecentFiles";
 import { notifyRegistered, syncIntegrations } from "./utils/mcpRegistration";
 import { initSessionPersistence, restoreLastSession } from "./utils/sessionPersistence";
 import { useViewStore } from "./stores/viewStore";
@@ -62,6 +64,10 @@ function App() {
 
   const { isOpen, handleCreate, handleClose } = useNewSchemaModal();
   const unsavedGuard = useUnsavedChangesGuard();
+  const recentsLoaded = useRecentFilesLoaded();
+  // A file opened at launch would ask the guard before it listens, and its
+  // recents entry would overwrite the list before it is read.
+  useOpenedFiles(unsavedGuard.ready && recentsLoaded);
   const narrowWindow = useMediaQuery(NARROW_WINDOW_QUERY);
   const theme = useThemeStore((s) => s.theme);
   const view = useViewStore((s) => s.view);

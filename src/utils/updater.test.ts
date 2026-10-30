@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 const env = vi.hoisted(() => {
   // updateStore exposes itself on window in dev builds.
   Object.assign(globalThis, { window: globalThis });
-  return { isMac: true };
+  return { isMac: true, isWindows: false };
 });
 
 vi.mock("./platform", () => ({
@@ -11,7 +11,9 @@ vi.mock("./platform", () => ({
     return env.isMac;
   },
   IS_LINUX: false,
-  IS_WINDOWS: false,
+  get IS_WINDOWS() {
+    return env.isWindows;
+  },
 }));
 
 vi.mock("../i18n", () => ({
@@ -26,6 +28,10 @@ vi.mock("@tauri-apps/api/app", () => ({
   getVersion: vi.fn(() => Promise.resolve("0.1.3")),
 }));
 
+vi.mock("./relaunchMark", () => ({
+  markRelaunch: vi.fn(() => Promise.resolve()),
+  clearRelaunchMark: vi.fn(() => Promise.resolve()),
+}));
 vi.mock("@tauri-apps/plugin-process", () => ({
   relaunch: vi.fn(),
 }));
@@ -249,6 +255,47 @@ describe("updater on Windows and Linux", () => {
     agentsStopped?.(undefined);
     await installing;
     expect(install).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["Windows, whose install() quits", true, ["mark", "install"]],
+    ["Linux, back from install()", false, ["install", "mark"]],
+  ])(
+    "notes the relaunch at the right time on %s",
+    async (_label, isWindows, expected) => {
+      env.isWindows = isWindows;
+      const { markRelaunch } = await import("./relaunchMark");
+      const order: string[] = [];
+      vi.mocked(markRelaunch).mockImplementationOnce(async () => {
+        order.push("mark");
+      });
+      const install = vi.fn(async () => {
+        order.push("install");
+      });
+      check.mockResolvedValueOnce({
+        version: "0.1.4",
+        download: vi.fn(() => Promise.resolve()),
+        install,
+      });
+      await checkForUpdates({ userInitiated: true });
+      await installAndRelaunch();
+      expect(order).toEqual(expected);
+      env.isWindows = false;
+    },
+  );
+
+  it("clears the relaunch note when the install fails", async () => {
+    env.isWindows = true;
+    const { clearRelaunchMark } = await import("./relaunchMark");
+    check.mockResolvedValueOnce({
+      version: "0.1.4",
+      download: vi.fn(() => Promise.resolve()),
+      install: vi.fn(() => Promise.reject(new Error("blocked"))),
+    });
+    await checkForUpdates({ userInitiated: true });
+    await installAndRelaunch();
+    expect(clearRelaunchMark).toHaveBeenCalled();
+    env.isWindows = false;
   });
 });
 

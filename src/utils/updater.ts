@@ -7,7 +7,8 @@ import { useUpdateStore, type UpdateStatus } from "../stores/updateStore";
 import { stopAllAgents } from "./chatCommands";
 import { toMessage } from "./errorMessage";
 import { logError, logInfo } from "./log";
-import { IS_MAC } from "./platform";
+import { IS_MAC, IS_WINDOWS } from "./platform";
+import { clearRelaunchMark, markRelaunch } from "./relaunchMark";
 import {
   sparkleCheckInBackground,
   sparkleInstallPendingUpdate,
@@ -161,9 +162,14 @@ export async function installAndRelaunch() {
     // The updater quits the app without its exit cleanup: an agent still
     // answering would leave its CLI running, holding files the installer replaces.
     await stopAllAgents();
+    // Windows quits inside install() and its installer relaunches SocaDB; Linux
+    // comes back here once installed.
+    if (IS_WINDOWS) await markRelaunch();
     await update.install();
+    if (!IS_WINDOWS) await markRelaunch();
     await relaunch();
   } catch (error) {
+    if (!IS_MAC) void clearRelaunchMark();
     const message = toMessage(error);
     logError("updater.install.failed", error);
     setError(message);

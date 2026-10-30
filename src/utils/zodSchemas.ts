@@ -294,6 +294,8 @@ export const StartupPreferenceZ = z.enum(["home", "lastSchema"]);
 
 export const ThemePreferenceZ = z.enum(["system", "light", "dark"]);
 
+export const OpenedFilesZ = z.array(z.string());
+
 export const LastSessionZ = z.object({
   schema: z.unknown(),
   filePath: z.string().nullable().optional(),

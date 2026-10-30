@@ -15,5 +15,36 @@
     <true/>
     <key>SUAutomaticallyUpdate</key>
     <true/>
+    <!-- Declared here rather than in fileAssociations: Tauri has no field for the
+         type's icon, and this key replaces the declaration Tauri would generate. -->
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.socadb.schema</string>
+            <key>UTTypeDescription</key>
+            <string>SocaDB schema</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.json</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>soca</string>
+                </array>
+                <key>public.mime-type</key>
+                <string>application/x-socadb</string>
+            </dict>
+            <key>UTTypeIcons</key>
+            <dict>
+                <key>UTTypeIconBadgeName</key>
+                <string>icon</string>
+                <key>UTTypeIconText</key>
+                <string>soca</string>
+            </dict>
+        </dict>
+    </array>
 </dict>
 </plist>
