@@ -15,9 +15,12 @@ import {
   findTableByName,
   hasUnsavedChanges,
   isWorthResuming,
+  serializeColumn,
   serializeRelation,
   serializeTable,
 } from "./schemaQueries";
+import { createDefaultIdColumn } from "./columnDefaults";
+import { getPrimaryKeyPreference } from "./primaryKeyPreference";
 import {
   McpCreateTableZ,
   McpUpdateTableZ,
@@ -312,6 +315,10 @@ const handlers: Record<string, ActionHandler> = {
       ...(schema.dbType === "postgresql" && schema.enums?.length
         ? { enums: schema.enums.map((e) => ({ name: e.name, values: e.values })) }
         : {}),
+      primaryKeyForNewTables: serializeColumn(
+        schema,
+        createDefaultIdColumn(schema.dbType, getPrimaryKeyPreference()[schema.dbType]),
+      ),
     });
   },
 

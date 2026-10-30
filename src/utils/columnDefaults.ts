@@ -1,31 +1,65 @@
+import type { z } from "zod";
 import type { Column, ColumnType, DbType, DefaultKind } from "../types/schema";
 import { MYSQL_NUMERIC_TYPES } from "../types/schema";
+import type { PrimaryKeyKindZ, PrimaryKeyPreferenceZ } from "./zodSchemas";
 import { genId } from "./id";
 
-export function createDefaultIdColumn(dbType: DbType): Column {
-  return dbType === "mysql"
-    ? {
-        id: genId(),
-        name: "id",
-        type: "int",
-        isPrimaryKey: true,
-        isForeignKey: false,
-        isNullable: false,
-        isUnique: true,
-        isAutoIncrement: true,
-        defaultValue: null,
-      }
-    : {
-        id: genId(),
-        name: "id",
-        type: "uuid",
-        isPrimaryKey: true,
-        isForeignKey: false,
-        isNullable: false,
-        isUnique: true,
-        isAutoIncrement: false,
-        defaultValue: "gen_random_uuid()",
-      };
+export type PrimaryKeyKind = z.infer<typeof PrimaryKeyKindZ>;
+export type PrimaryKeyPreference = z.infer<typeof PrimaryKeyPreferenceZ>;
+
+export const DEFAULT_PRIMARY_KEYS: PrimaryKeyPreference = {
+  postgresql: "uuid",
+  mysql: "int",
+};
+
+export function createDefaultIdColumn(
+  dbType: DbType,
+  kind: PrimaryKeyKind = DEFAULT_PRIMARY_KEYS[dbType],
+): Column {
+  const column: Column = {
+    id: genId(),
+    name: "id",
+    type: "uuid",
+    isPrimaryKey: true,
+    isForeignKey: false,
+    isNullable: false,
+    isUnique: true,
+    isAutoIncrement: false,
+    defaultValue: null,
+  };
+  if (kind === "uuid") {
+    return dbType === "mysql"
+      ? {
+          ...column,
+          type: "char",
+          length: 36,
+          defaultValue: "(UUID())",
+          defaultKind: "expression",
+        }
+      : { ...column, defaultValue: "gen_random_uuid()" };
+  }
+  return {
+    ...column,
+    type: dbType === "mysql" ? kind : kind === "int" ? "serial" : "bigserial",
+    isAutoIncrement: true,
+  };
+}
+
+const ID_COLUMN_SQL: Record<DbType, Record<PrimaryKeyKind, string>> = {
+  postgresql: {
+    uuid: "id UUID NOT NULL DEFAULT gen_random_uuid()",
+    int: "id SERIAL NOT NULL",
+    bigint: "id BIGSERIAL NOT NULL",
+  },
+  mysql: {
+    uuid: "id CHAR(36) NOT NULL DEFAULT (UUID())",
+    int: "id INT NOT NULL AUTO_INCREMENT",
+    bigint: "id BIGINT NOT NULL AUTO_INCREMENT",
+  },
+};
+
+export function idColumnSql(dbType: DbType, kind: PrimaryKeyKind): string {
+  return ID_COLUMN_SQL[dbType][kind];
 }
 
 // A default without a kind (older files, the agent, text just typed) holds

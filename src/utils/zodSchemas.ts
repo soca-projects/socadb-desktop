@@ -294,6 +294,13 @@ export const StartupPreferenceZ = z.enum(["home", "lastSchema"]);
 
 export const ThemePreferenceZ = z.enum(["system", "light", "dark"]);
 
+export const PrimaryKeyKindZ = z.enum(["uuid", "int", "bigint"]);
+
+export const PrimaryKeyPreferenceZ = z.object({
+  postgresql: PrimaryKeyKindZ,
+  mysql: PrimaryKeyKindZ,
+});
+
 export const OpenedFilesZ = z.array(z.string());
 
 export const LastSessionZ = z.object({

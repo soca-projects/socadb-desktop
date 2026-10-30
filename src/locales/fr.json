@@ -301,6 +301,14 @@
       "linux": "Système suit le thème du bureau."
     },
     "startupTitle": "Au lancement, ouvrir",
+    "newTables": "Nouvelles tables",
+    "primaryKeyPostgresql": "Clé primaire en PostgreSQL",
+    "primaryKeyMysql": "Clé primaire en MySQL",
+    "primaryKey": {
+      "uuid": "UUID",
+      "int": "Entier",
+      "bigint": "Grand entier"
+    },
     "startup": {
       "home": "La liste des schémas",
       "homeHint": "L'accueil avec tous vos schémas. Un brouillon non enregistré apparaît en tête.",

@@ -47,6 +47,15 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("- loans.member_id → members.id (N:1)");
   });
 
+  it("gives the agent the user's primary key for new tables", () => {
+    expect(buildSystemPrompt(library("postgresql"), "bigint")).toContain(
+      "New tables start with the user's primary key: id BIGSERIAL NOT NULL",
+    );
+    expect(buildSystemPrompt(library("mysql"))).toContain(
+      "New tables start with the user's primary key: id INT NOT NULL AUTO_INCREMENT",
+    );
+  });
+
   it("lists the types of the schema's database and its enum rules", () => {
     const pg = buildSystemPrompt(library("postgresql"));
     expect(pg).toContain("Column types must exist in PostgreSQL:");

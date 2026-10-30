@@ -43,7 +43,7 @@ export function registerWriteTools(server: McpServer) {
       description: "Create a new table with columns",
       inputSchema: {
         name: z.string().describe("Table name"),
-        columns: z.array(ColumnSchema).optional().describe("Table columns (if omitted, defaults to id column based on schema dbType: UUID PK for PostgreSQL, INT AUTO_INCREMENT PK for MySQL)"),
+        columns: z.array(ColumnSchema).optional().describe("Table columns. If omitted, the table gets the user's default id column (primaryKeyForNewTables in get_schema). When you list the columns yourself, give the primary key that type, length, default and auto increment unless the user asks for another"),
         note: z.string().optional().describe("What the table holds, written as a COMMENT in the SQL export"),
       },
     },

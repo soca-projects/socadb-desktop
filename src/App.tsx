@@ -31,6 +31,7 @@ import {
   initialView,
   loadStartupPreference,
 } from "./utils/startupPreference";
+import { loadPrimaryKeyPreference } from "./utils/primaryKeyPreference";
 import { initChatPersistence } from "./utils/chatPersistence";
 import { initThemePersistence } from "./utils/themePersistence";
 import { initLanguagePersistence } from "./utils/languagePersistence";
@@ -44,6 +45,7 @@ useViewStore.setState({ view: initialView(restored, getStartupPreference()) });
 initSessionPersistence();
 initDocumentEdited();
 void loadStartupPreference();
+void loadPrimaryKeyPreference();
 initChatPersistence();
 initThemePersistence();
 followSystemTheme();

@@ -8,7 +8,7 @@ export function registerReadTools(server: McpServer) {
     "get_schema",
     {
       description:
-        "Get the complete database schema: tables with notes, columns (type parameters, default and its kind, enum values, note) and indexes, relations, and PostgreSQL enum types",
+        "Get the complete database schema: tables with notes, columns (type parameters, default and its kind, enum values, note) and indexes, relations, PostgreSQL enum types, and primaryKeyForNewTables: the id column the user wants new tables to start with",
       inputSchema: {},
     },
     async () => okJson(await send("get_schema")),
