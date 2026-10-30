@@ -285,7 +285,6 @@
     "agents": "Agents",
     "integrations": "Intégrations",
     "language": "Langue",
-    "languageDescription": "Choisissez la langue de l'application.",
     "close": "Fermer",
     "conversations": "Conversations",
     "deleteAllDescription": "Les conversations sont gardées jusqu'à ce que vous les supprimiez. La suppression efface aussi la mémoire de l'agent pour les conversations Claude.",
@@ -302,7 +301,6 @@
       "linux": "Système suit le thème du bureau."
     },
     "startupTitle": "Au lancement, ouvrir",
-    "startupDescription": "Ce que SocaDB affiche quand vous l'ouvrez.",
     "startup": {
       "home": "La liste des schémas",
       "homeHint": "L'accueil avec tous vos schémas. Un brouillon non enregistré apparaît en tête.",
@@ -311,8 +309,7 @@
     }
   },
   "integrations": {
-    "title": "Utiliser SocaDB depuis d'autres apps",
-    "description": "Les apps activées ici peuvent lire et modifier vos schémas dans SocaDB, les ouvrir et en créer. Elles n'y ont accès que pendant que SocaDB est ouverte, et vous demandent la permission avant d'utiliser ses outils.",
+    "description": "Les apps activées ici peuvent ouvrir, lire, modifier et créer vos schémas pendant que SocaDB est ouverte. Elles vous demandent la permission avant d'utiliser ses outils.",
     "registered_one": "SocaDB est maintenant disponible dans {{names}}. S'il est ouvert, redémarrez-le pour qu'il voie SocaDB.",
     "registered_other": "SocaDB est maintenant disponible dans {{names}}. Redémarrez ceux qui sont ouverts pour qu'ils voient SocaDB.",
     "notInstalled": "Pas installé",
@@ -338,8 +335,7 @@
     "stepInstall": "1. Installer {{name}} (si nécessaire)",
     "stepSignIn": "2. Démarrer {{name}} et se connecter",
     "stepLogin": "3. Ou se connecter manuellement",
-    "showSetupSteps": "Afficher la configuration {{name}}",
-    "hideSetupSteps": "Masquer la configuration {{name}}",
+    "setUp": "Configurer {{name}}",
     "apiKeyGetFrom": "Récupérez votre clé API sur la",
     "apiKeySave": "Enregistrer",
     "apiKeyUpdate": "Mettre à jour",
@@ -392,7 +388,7 @@
       "signInHint": "Sélectionnez « Claude account with subscription » pour vous connecter."
     },
     "codex": {
-      "consoleName": "Dashboard OpenAI",
+      "consoleName": "plateforme OpenAI",
       "subscriptionLabel": "Abonnement ChatGPT (Plus, Pro...)",
       "signInHint": "Connectez-vous avec votre abonnement ChatGPT."
     }
