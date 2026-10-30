@@ -285,7 +285,6 @@
     "agents": "Agents",
     "integrations": "Integrations",
     "language": "Language",
-    "languageDescription": "Choose the application language.",
     "close": "Close",
     "conversations": "Conversations",
     "deleteAllDescription": "Conversations are kept until you delete them. Deleting also erases the agent's memory of Claude conversations.",
@@ -302,7 +301,6 @@
       "linux": "System follows the desktop theme."
     },
     "startupTitle": "On launch, open",
-    "startupDescription": "What SocaDB shows when you open it.",
     "startup": {
       "home": "The schema list",
       "homeHint": "The home with all your schemas. An unsaved draft shows at the top.",
@@ -311,8 +309,7 @@
     }
   },
   "integrations": {
-    "title": "Use SocaDB from other apps",
-    "description": "The apps turned on here can read and edit your schemas in SocaDB, open them and create new ones. They only reach SocaDB while it's open, and ask for your permission before using its tools.",
+    "description": "The apps turned on here can open, read, edit and create your schemas while SocaDB is open. They ask for your permission before using its tools.",
     "registered_one": "SocaDB is now available in {{names}}. If it's open, restart it so it picks up SocaDB.",
     "registered_other": "SocaDB is now available in {{names}}. Restart the ones that are open so they pick up SocaDB.",
     "notInstalled": "Not installed",
@@ -338,8 +335,7 @@
     "stepInstall": "1. Install {{name}} (if needed)",
     "stepSignIn": "2. Start {{name}} and sign in",
     "stepLogin": "3. Or login manually",
-    "showSetupSteps": "Show {{name}} setup steps",
-    "hideSetupSteps": "Hide {{name}} setup steps",
+    "setUp": "Set up {{name}}",
     "apiKeyGetFrom": "Get your API key from the",
     "apiKeySave": "Save",
     "apiKeyUpdate": "Update",
