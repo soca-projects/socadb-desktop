@@ -46,6 +46,17 @@
       "../mcp-server/dist/runtime/": "runtime/"
     },
     "copyright": "© 2026 SocaDB",
+    "fileAssociations": [
+      {
+        "ext": ["soca"],
+        "name": "SocaDB Schema",
+        "description": "SocaDB schema",
+        "role": "Editor",
+        "rank": "Owner",
+        "mimeType": "application/x-socadb",
+        "contentTypes": ["com.socadb.schema"]
+      }
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

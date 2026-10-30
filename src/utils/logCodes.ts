@@ -167,6 +167,13 @@ export const LOG_CODES = {
     check:
       "The window opens at its default size at each launch; Tauri gave no native window handle at setup.",
   },
+  "window.focus.failed": {
+    level: "warn",
+    meaning:
+      "The window could not be brought to the front for a file or a second launch.",
+    check:
+      "Cosmetic: the file still opens; the window may stay minimized or behind others.",
+  },
   "window.fullscreen.observe_failed": {
     level: "warn",
     meaning: "The app could not follow the start of a macOS full screen exit.",
@@ -273,6 +280,43 @@ export const LOG_CODES = {
     meaning: "macOS privacy or file permissions refused to read the schema.",
     check:
       "ctx.file.where: ~/Documents, ~/Desktop or iCloud Drive → System Settings › Privacy & Security › Files & Folders.",
+  },
+  "file.opened": {
+    level: "info",
+    meaning:
+      "The system handed SocaDB .soca files: a double-click in the Finder or the file manager, or Open With; ctx.count.",
+    check: "Context for the file.open or file.open.* line that follows in the UI.",
+  },
+  "file.opened.emit_failed": {
+    level: "warn",
+    meaning: "Files the system opened could not be passed to the window.",
+    check: "Nothing opens; the user can still open the file from the app.",
+  },
+  "file.opened.relaunch_mark_failed": {
+    level: "warn",
+    meaning:
+      "SocaDB could not write or clear the note for its restart after an update (Windows, Linux).",
+    check:
+      "~/.socadb is not writable. After the update, a .soca the app was first launched with opens again.",
+  },
+  "file.opened.relaunch_marker_failed": {
+    level: "warn",
+    meaning:
+      "The note left for the restart after an update could not be removed (~/.socadb/.relaunch).",
+    check: "Permissions on ~/.socadb; it is ignored after 10 minutes anyway.",
+  },
+  "file.opened.skipped_after_update": {
+    level: "info",
+    meaning:
+      "After an update, the restart skipped the .soca files SocaDB was first launched with; ctx.count.",
+    check:
+      "Expected: they were opened before the update. ~/.socadb/.relaunch listed them.",
+  },
+  "file.opened.invalid": {
+    level: "warn",
+    meaning: "The window got files to open in an unexpected shape and ignored them.",
+    check:
+      "A mismatch between the Rust payload of files-opened / take_opened_files and OpenedFilesZ.",
   },
   "file.save": {
     level: "info",

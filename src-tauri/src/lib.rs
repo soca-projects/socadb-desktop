@@ -8,6 +8,7 @@ mod install_location;
 mod logging;
 #[cfg(target_os = "macos")]
 mod macos_window;
+mod opened_files;
 mod schema_files;
 mod ws;
 
@@ -229,7 +230,21 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     install_location::ensure_installed();
 
-    let builder = tauri::Builder::default()
+    let builder = tauri::Builder::default().manage(opened_files::OpenedFiles::default());
+
+    // First: a second instance hands its files over and exits from this plugin's
+    // setup, before any other plugin or our own setup runs. Off in dev, which
+    // shares the installed app's identifier and would hand its launch over to it.
+    #[cfg(not(target_os = "macos"))]
+    let builder = if tauri::is_dev() {
+        builder
+    } else {
+        builder.plugin(tauri_plugin_single_instance::init(
+            opened_files::from_second_instance,
+        ))
+    };
+
+    let builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -252,6 +267,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             read_schema_file,
+            opened_files::take_opened_files,
+            opened_files::mark_relaunch,
+            opened_files::clear_relaunch,
             schema_files::schema_files_info,
             schema_files::rename_schema_file,
             schema_files::duplicate_schema_file,
@@ -286,6 +304,9 @@ pub fn run() {
             logging::install_panic_hook();
             logging::log_start(app.handle());
 
+            #[cfg(not(target_os = "macos"))]
+            opened_files::deliver(app.handle(), opened_files::files_to_open_at_launch());
+
             #[cfg(target_os = "macos")]
             configure_sparkle(app);
             #[cfg(target_os = "macos")]
@@ -315,6 +336,14 @@ pub fn run() {
     )]
     let app = app.expect("error while building tauri application");
     app.run(|_app, event| {
+        #[cfg(target_os = "macos")]
+        if let tauri::RunEvent::Opened { urls } = &event {
+            let paths = urls.iter().filter_map(|url| url.to_file_path().ok());
+            opened_files::deliver(
+                _app,
+                opened_files::soca_paths(paths, std::path::Path::new("/")),
+            );
+        }
         // Windows logoff and the Restart Manager close the app without destroying its window.
         if let tauri::RunEvent::Exit = event {
             stop_agents_and_bridge();

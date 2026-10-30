@@ -4,7 +4,9 @@
     "resources": [],
     "linux": {
       "deb": {
+        "desktopTemplate": "./linux/socadb.desktop",
         "files": {
+          "/usr/share/mime/packages/socadb.xml": "./linux/socadb-mime.xml",
           "/usr/lib/SocaDB/socadb-mcp-linux-x64": "../mcp-server/dist/socadb-mcp-linux-x64",
           "/usr/lib/SocaDB/runtime": "../mcp-server/dist/runtime"
         }
