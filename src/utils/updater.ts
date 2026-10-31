@@ -363,6 +363,26 @@ export function updateMenuItemState(status: UpdateStatus): {
   }
 }
 
+export function updateButtonState(status: UpdateStatus): {
+  labelKey: string;
+  enabled: boolean;
+} {
+  switch (status) {
+    case "checking":
+      return { labelKey: "settings.updatesChecking", enabled: false };
+    case "downloading":
+      return { labelKey: "updater.downloading", enabled: false };
+    case "available":
+      return { labelKey: "settings.updatesShow", enabled: true };
+    case "ready":
+      return { labelKey: "updater.restartNow", enabled: true };
+    case "installing":
+      return { labelKey: "updater.installing", enabled: false };
+    default:
+      return { labelKey: "settings.updatesCheckNow", enabled: true };
+  }
+}
+
 export function handleUpdateMenuAction() {
   const store = useUpdateStore.getState();
   if (store.status === "ready") {

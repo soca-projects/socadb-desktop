@@ -94,6 +94,7 @@ import {
   installAndRelaunch,
   runScheduledCheck,
   startUpdates,
+  updateButtonState,
   updateMenuItemState,
   updateToastShown,
 } from "./updater";
@@ -589,5 +590,20 @@ describe("update toast", () => {
     ).toBe(true);
     expect(updateToastShown({ ...base, status: "installing" })).toBe(true);
     expect(updateToastShown({ ...base, status: "checking" })).toBe(false);
+  });
+});
+
+describe("settings update button", () => {
+  it("checks when idle, shows or installs a found update, and waits while busy", () => {
+    expect(updateButtonState("idle")).toEqual({
+      labelKey: "settings.updatesCheckNow",
+      enabled: true,
+    });
+    expect(updateButtonState("error").enabled).toBe(true);
+    expect(updateButtonState("available").labelKey).toBe("settings.updatesShow");
+    expect(updateButtonState("ready").labelKey).toBe("updater.restartNow");
+    expect(updateButtonState("checking").enabled).toBe(false);
+    expect(updateButtonState("downloading").enabled).toBe(false);
+    expect(updateButtonState("installing").enabled).toBe(false);
   });
 });

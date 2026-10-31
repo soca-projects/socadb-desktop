@@ -314,7 +314,18 @@
       "homeHint": "L'accueil avec tous vos schémas. Un brouillon non enregistré apparaît en tête.",
       "lastSchema": "Le dernier schéma",
       "lastSchemaHint": "Reprend là où vous en étiez, brouillon compris."
-    }
+    },
+    "updates": "Mises à jour",
+    "updatesReleaseNotes": "Notes de version",
+    "updatesCheckNow": "Rechercher maintenant",
+    "updatesChecking": "Recherche...",
+    "updatesShow": "Voir la mise à jour",
+    "autoCheck": "Rechercher automatiquement",
+    "autoCheckHint": "Au lancement de SocaDB, puis toutes les 4 heures.",
+    "autoInstall": "Installer automatiquement",
+    "autoInstallOnHint": "Les mises à jour se téléchargent en arrière-plan et s'installent quand vous quittez SocaDB.",
+    "autoInstallPromptHint": "Les mises à jour se téléchargent en arrière-plan. SocaDB vous propose de redémarrer pour les installer.",
+    "autoInstallOffHint": "SocaDB vous demande avant de télécharger une mise à jour."
   },
   "integrations": {
     "description": "Les apps activées ici peuvent ouvrir, lire, modifier et créer vos schémas pendant que SocaDB est ouverte. Elles vous demandent la permission avant d'utiliser ses outils.",
