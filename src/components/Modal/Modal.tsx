@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { enterModal } from "../../utils/modalStack";
+import { enterModal, focusTopModal } from "../../utils/modalStack";
+import { takeFocus } from "../../utils/modalFocus";
 
 interface ModalProps {
   children: ReactNode;
@@ -28,7 +29,7 @@ export function Modal({
   });
 
   useEffect(() => {
-    const modal = enterModal();
+    const modal = enterModal(() => overlayRef.current?.focus());
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" && dismissibleRef.current && modal.isTop()) {
         onCloseRef.current();
@@ -43,13 +44,17 @@ export function Modal({
 
   // With the focus left behind on the page, the canvas's Delete/Backspace
   // shortcut would remove the selected relation under the dialog (nokey).
-  // Closing hands the focus back, so a dialog left underneath keeps it.
+  // Closing hands the focus back, so a dialog left underneath keeps it, even
+  // when the element that opened this one is gone (a toast).
   useEffect(() => {
     const overlay = overlayRef.current;
     const previous = document.activeElement;
-    if (overlay && !overlay.contains(previous)) overlay.focus();
+    if (overlay && !overlay.contains(previous)) {
+      takeFocus(overlay, () => document.activeElement);
+    }
     return () => {
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      else focusTopModal();
     };
   }, []);
 
