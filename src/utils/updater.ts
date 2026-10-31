@@ -1,27 +1,62 @@
-import { check } from "@tauri-apps/plugin-updater";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { getVersion } from "@tauri-apps/api/app";
+import { BundleType, getBundleType, getVersion } from "@tauri-apps/api/app";
 import { toast } from "sonner";
 import i18next from "../i18n";
-import { useUpdateStore, type UpdateStatus } from "../stores/updateStore";
+import {
+  useUpdateStore,
+  type AfterDownload,
+  type UpdateStatus,
+} from "../stores/updateStore";
 import { stopAllAgents } from "./chatCommands";
 import { toMessage } from "./errorMessage";
-import { logError, logInfo } from "./log";
+import { logError, logInfo, logWarn } from "./log";
 import { IS_MAC, IS_WINDOWS } from "./platform";
 import { clearRelaunchMark, markRelaunch } from "./relaunchMark";
 import {
-  sparkleCheckInBackground,
+  sparkleCheckInformation,
+  sparkleDownloadInBackground,
   sparkleInstallPendingUpdate,
   sparklePendingVersion,
   sparkleSessionInProgress,
   type SparkleCycleError,
 } from "./sparkle";
+import {
+  asksBeforeDownloading,
+  getUpdatePreferences,
+  loadUpdatePreferences,
+} from "./updatePreferences";
+
+export const CHANGELOG_URL = "https://socadb.com/changelog";
+export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
 // Sparkle quits the app before installing: still running after this means the
 // quit never happened.
 const MAC_QUIT_TIMEOUT_MS = 30_000;
 
+// An accepted download dies with the app: the next launch resumes it without
+// asking again.
+const ACCEPTED_KEY = "socadb_update_accepted";
+
 let userRequestedCheck = false;
+let sparkleProbing = false;
+
+function acceptedVersion(): string | null {
+  try {
+    return localStorage.getItem(ACCEPTED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberAccepted(version: string | null) {
+  try {
+    if (version === null) localStorage.removeItem(ACCEPTED_KEY);
+    else localStorage.setItem(ACCEPTED_KEY, version);
+  } catch {
+    // No localStorage.
+  }
+}
 
 function takeUserRequest(): boolean {
   const requested = userRequestedCheck;
@@ -38,19 +73,52 @@ function notifyCheckFailed(message: string) {
   toast.error(i18next.t("updater.checkFailed", { error: message }));
 }
 
+function notifyInstallFailed(message: string) {
+  toast.error(i18next.t("updater.failed", { error: message }), {
+    duration: Infinity,
+  });
+}
+
+export async function startUpdates() {
+  if (acceptedVersion() === (await getVersion())) rememberAccepted(null);
+  await loadUpdatePreferences();
+  await detectInstallOnQuit();
+  await runScheduledCheck();
+}
+
+// The updater installs .deb and .rpm packages through a password prompt, which
+// must not open while the user is leaving.
+async function detectInstallOnQuit() {
+  if (IS_MAC || IS_WINDOWS) return;
+  try {
+    const bundle = await getBundleType();
+    useUpdateStore
+      .getState()
+      .setCanInstallOnQuit(bundle !== BundleType.Deb && bundle !== BundleType.Rpm);
+  } catch (error) {
+    logWarn("updater.bundle_type.failed", error);
+  }
+}
+
+export function runScheduledCheck(): Promise<void> {
+  if (!getUpdatePreferences().autoCheck) return Promise.resolve();
+  return checkForUpdates({ userInitiated: false });
+}
+
 export async function checkForUpdates({ userInitiated }: { userInitiated: boolean }) {
   const { status } = useUpdateStore.getState();
   if (status !== "idle" && status !== "error") return;
   if (userInitiated) userRequestedCheck = true;
 
+  const askFirst = asksBeforeDownloading(getUpdatePreferences());
   if (IS_MAC) {
-    await sparkleCheck();
+    await sparkleCheck(askFirst);
   } else {
-    await tauriCheckAndDownload();
+    await tauriCheck(askFirst);
   }
 }
 
-async function sparkleCheck() {
+async function sparkleCheck(askFirst: boolean) {
   const store = useUpdateStore.getState();
   store.setStatus("checking");
   try {
@@ -60,9 +128,13 @@ async function sparkleCheck() {
       handleSparkleUpdateStaged(staged);
       return;
     }
-    // A scheduled check may be running; its outcome arrives through the same events.
-    if (!(await sparkleSessionInProgress())) {
-      await sparkleCheckInBackground();
+    // A download started before a WebView reload reports through the same events.
+    if (await sparkleSessionInProgress()) return;
+    sparkleProbing = askFirst;
+    if (askFirst) {
+      await sparkleCheckInformation();
+    } else {
+      await sparkleDownloadInBackground();
     }
   } catch (error) {
     const message = toMessage(error);
@@ -78,7 +150,7 @@ async function sparkleCheck() {
   }
 }
 
-async function tauriCheckAndDownload() {
+async function tauriCheck(askFirst: boolean) {
   const store = useUpdateStore.getState();
   store.setStatus("checking");
   try {
@@ -88,24 +160,16 @@ async function tauriCheckAndDownload() {
       if (takeUserRequest()) await notifyUpToDate();
       return;
     }
-
-    store.setUpdateAvailable(update.version, update);
     logInfo("updater.available", update.version);
-
-    let downloaded = 0;
-    let total: number | null = null;
-    await update.download((event) => {
-      if (event.event === "Started") {
-        total = event.data.contentLength ?? null;
-        useUpdateStore.getState().setProgress(0, total);
-      } else if (event.event === "Progress") {
-        downloaded += event.data.chunkLength;
-        useUpdateStore.getState().setProgress(downloaded, total);
-      }
-    });
-
+    if (askFirst) {
+      takeUserRequest();
+      store.setAvailable(update.version, update);
+      if (update.version === acceptedVersion()) await resumeAcceptedDownload();
+      return;
+    }
+    await tauriDownload(update);
     takeUserRequest();
-    useUpdateStore.getState().setStatus("ready");
+    onUpdateReady(update.version);
   } catch (error) {
     const message = toMessage(error);
     logError("updater.check.failed", error);
@@ -114,35 +178,116 @@ async function tauriCheckAndDownload() {
   }
 }
 
+async function tauriDownload(update: Update) {
+  useUpdateStore.getState().setDownloading(update.version, update);
+  let downloaded = 0;
+  let total: number | null = null;
+  await update.download((event) => {
+    if (event.event === "Started") {
+      total = event.data.contentLength ?? null;
+      useUpdateStore.getState().setProgress(0, total);
+    } else if (event.event === "Progress") {
+      downloaded += event.data.chunkLength;
+      useUpdateStore.getState().setProgress(downloaded, total);
+    }
+  });
+}
+
+function onUpdateReady(version: string) {
+  const store = useUpdateStore.getState();
+  const { afterDownload, canInstallOnQuit } = store;
+  store.setReady(version);
+  store.setAfterDownload(null);
+  if (afterDownload === "restart") {
+    void installAndRelaunch();
+    return;
+  }
+  if (canInstallOnQuit) store.setPendingUpdateVersion(version);
+  if (afterDownload === "quit") store.setDismissedVersion(version);
+}
+
+export function downloadAvailableUpdate(choice: AfterDownload): Promise<void> {
+  return acceptAndDownload(choice);
+}
+
+function resumeAcceptedDownload(): Promise<void> {
+  return acceptAndDownload(useUpdateStore.getState().canInstallOnQuit ? "quit" : null);
+}
+
+async function acceptAndDownload(choice: AfterDownload | null) {
+  const store = useUpdateStore.getState();
+  const { status, version, update } = store;
+  if (status !== "available" || !version) return;
+  rememberAccepted(version);
+  store.setAfterDownload(choice);
+  if (choice === "quit") store.setDismissedVersion(version);
+  try {
+    if (IS_MAC) {
+      store.setDownloading(version, null);
+      sparkleProbing = false;
+      if (!(await sparkleDownloadInBackground())) {
+        throw new Error("Another update session is in progress");
+      }
+      return;
+    }
+    if (!update) throw new Error("No update to download");
+    await tauriDownload(update);
+    onUpdateReady(update.version);
+  } catch (error) {
+    const message = toMessage(error);
+    logError("updater.download.failed", error);
+    useUpdateStore.getState().setError(message);
+    notifyInstallFailed(message);
+  }
+}
+
+export function dismissUpdate() {
+  const { version, setDismissedVersion } = useUpdateStore.getState();
+  setDismissedVersion(version);
+}
+
 export function handleSparkleUpdateFound(version: string) {
   logInfo("updater.available", version);
-  useUpdateStore.getState().setUpdateAvailable(version, null);
+  const store = useUpdateStore.getState();
+  if (sparkleProbing) {
+    store.setAvailable(version, null);
+    // The download resumes once the probe's cycle ends.
+    if (version === acceptedVersion()) store.setDismissedVersion(version);
+  } else {
+    store.setDownloading(version, null);
+  }
 }
 
 export function handleSparkleUpdateStaged(version: string) {
   takeUserRequest();
-  useUpdateStore.getState().setReady(version);
+  onUpdateReady(version);
 }
 
-// Sparkle ends a cycle when nothing was staged, or when a staged update fails.
+// Sparkle ends a cycle when nothing was staged, when a probe found an update,
+// or when a staged update fails.
 export function handleSparkleCycleFinished(error: SparkleCycleError | null) {
+  sparkleProbing = false;
   const store = useUpdateStore.getState();
   const userInitiated = takeUserRequest();
+  const userAccepted = store.afterDownload !== null;
   const hadStagedUpdate = store.status === "ready" || store.status === "installing";
 
   if (error && !error.noUpdate) {
     logError("updater.sparkle.update_failed", error.message);
     store.setError(error.message);
-    if (hadStagedUpdate) {
-      toast.error(i18next.t("updater.failed", { error: error.message }), {
-        duration: Infinity,
-      });
+    if (hadStagedUpdate || userAccepted) {
+      notifyInstallFailed(error.message);
     } else if (userInitiated) {
       notifyCheckFailed(error.message);
     }
     return;
   }
 
+  if (store.status === "available") {
+    if (store.version === acceptedVersion()) void resumeAcceptedDownload();
+    return;
+  }
+  store.setAfterDownload(null);
   store.setStatus("idle");
   if (error?.noUpdate && userInitiated) void notifyUpToDate();
 }
@@ -173,9 +318,28 @@ export async function installAndRelaunch() {
     const message = toMessage(error);
     logError("updater.install.failed", error);
     setError(message);
-    toast.error(i18next.t("updater.failed", { error: message }), {
-      duration: Infinity,
-    });
+    notifyInstallFailed(message);
+  }
+}
+
+interface ToastState {
+  status: UpdateStatus;
+  version: string | null;
+  dismissedVersion: string | null;
+  afterDownload: AfterDownload | null;
+}
+
+export function updateToastShown(state: ToastState): boolean {
+  switch (state.status) {
+    case "installing":
+      return true;
+    case "downloading":
+      return state.afterDownload === "restart";
+    case "available":
+    case "ready":
+      return state.version !== null && state.dismissedVersion !== state.version;
+    default:
+      return false;
   }
 }
 
@@ -199,9 +363,32 @@ export function updateMenuItemState(status: UpdateStatus): {
   }
 }
 
+export function updateButtonState(status: UpdateStatus): {
+  labelKey: string;
+  enabled: boolean;
+} {
+  switch (status) {
+    case "checking":
+      return { labelKey: "settings.updatesChecking", enabled: false };
+    case "downloading":
+      return { labelKey: "updater.downloading", enabled: false };
+    case "available":
+      return { labelKey: "settings.updatesShow", enabled: true };
+    case "ready":
+      return { labelKey: "updater.restartNow", enabled: true };
+    case "installing":
+      return { labelKey: "updater.installing", enabled: false };
+    default:
+      return { labelKey: "settings.updatesCheckNow", enabled: true };
+  }
+}
+
 export function handleUpdateMenuAction() {
-  if (useUpdateStore.getState().status === "ready") {
+  const store = useUpdateStore.getState();
+  if (store.status === "ready") {
     void installAndRelaunch();
+  } else if (store.status === "available") {
+    store.setDismissedVersion(null);
   } else {
     void checkForUpdates({ userInitiated: true });
   }

@@ -3,10 +3,10 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import { useUpdateStore } from "../stores/updateStore";
+import { stopAllAgents } from "../utils/chatCommands";
 import { toMessage } from "../utils/errorMessage";
 import { logError } from "../utils/log";
-import { IS_MAC, IS_WINDOWS } from "../utils/platform";
-import { clearRelaunchMark, markRelaunch } from "../utils/relaunchMark";
+import { IS_MAC } from "../utils/platform";
 
 // install() runs in-process on Linux; if it hangs, the preventDefault below
 // would trap the close click forever.
@@ -40,10 +40,10 @@ export function useInstallOnNextLaunch() {
       installing = true;
       setStatus("installing");
       try {
-        // The Windows installer starts SocaDB again once done; Linux doesn't.
-        if (IS_WINDOWS) await markRelaunch();
+        await stopAllAgents();
         await Promise.race([
-          update.install(),
+          // The user is leaving: the Windows installer must not reopen SocaDB.
+          update.install({ restartAfterInstall: false }),
           new Promise<never>((_, reject) =>
             setTimeout(
               () =>
@@ -58,7 +58,6 @@ export function useInstallOnNextLaunch() {
         setPendingUpdateVersion(null);
         await window.destroy();
       } catch (error) {
-        if (IS_WINDOWS) void clearRelaunchMark();
         const message = toMessage(error);
         logError("updater.install_on_launch.failed", message);
         setError(message);

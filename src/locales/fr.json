@@ -314,7 +314,18 @@
       "homeHint": "L'accueil avec tous vos schémas. Un brouillon non enregistré apparaît en tête.",
       "lastSchema": "Le dernier schéma",
       "lastSchemaHint": "Reprend là où vous en étiez, brouillon compris."
-    }
+    },
+    "updates": "Mises à jour",
+    "updatesReleaseNotes": "Notes de version",
+    "updatesCheckNow": "Rechercher maintenant",
+    "updatesChecking": "Recherche...",
+    "updatesShow": "Voir la mise à jour",
+    "autoCheck": "Rechercher automatiquement",
+    "autoCheckHint": "Au lancement de SocaDB, puis toutes les 4 heures.",
+    "autoInstall": "Installer automatiquement",
+    "autoInstallOnHint": "Les mises à jour se téléchargent en arrière-plan et s'installent quand vous quittez SocaDB.",
+    "autoInstallPromptHint": "Les mises à jour se téléchargent en arrière-plan. SocaDB vous propose de redémarrer pour les installer.",
+    "autoInstallOffHint": "SocaDB vous demande avant de télécharger une mise à jour."
   },
   "integrations": {
     "description": "Les apps activées ici peuvent ouvrir, lire, modifier et créer vos schémas pendant que SocaDB est ouverte. Elles vous demandent la permission avant d'utiliser ses outils.",
@@ -514,7 +525,12 @@
     "upToDate": "SocaDB est à jour (v{{version}})",
     "checkFailed": "Impossible de rechercher les mises à jour : {{error}}",
     "releaseNotes": "notes de version",
-    "failed": "Échec de l'installation : {{error}}"
+    "failed": "Échec de l'installation : {{error}}",
+    "availableTitle": "SocaDB {{version}} est disponible",
+    "downloadingTitle": "Téléchargement de SocaDB {{version}}",
+    "downloadingHint": "SocaDB redémarrera une fois la mise à jour prête.",
+    "downloading": "Téléchargement...",
+    "notNow": "Pas maintenant"
   },
   "recent": {
     "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé.",

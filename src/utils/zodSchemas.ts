@@ -301,6 +301,11 @@ export const PrimaryKeyPreferenceZ = z.object({
   mysql: PrimaryKeyKindZ,
 });
 
+export const UpdatePreferencesZ = z.object({
+  autoCheck: z.boolean(),
+  autoInstall: z.boolean(),
+});
+
 export const OpenedFilesZ = z.array(z.string());
 
 export const LastSessionZ = z.object({

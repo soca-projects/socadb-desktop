@@ -314,7 +314,18 @@
       "homeHint": "The home with all your schemas. An unsaved draft shows at the top.",
       "lastSchema": "The last schema",
       "lastSchemaHint": "Picks up where you left off, draft included."
-    }
+    },
+    "updates": "Updates",
+    "updatesReleaseNotes": "Release notes",
+    "updatesCheckNow": "Check now",
+    "updatesChecking": "Checking...",
+    "updatesShow": "Show update",
+    "autoCheck": "Check automatically",
+    "autoCheckHint": "When SocaDB starts, then every 4 hours.",
+    "autoInstall": "Install automatically",
+    "autoInstallOnHint": "Updates download in the background and install when you quit SocaDB.",
+    "autoInstallPromptHint": "Updates download in the background. SocaDB offers to restart to install them.",
+    "autoInstallOffHint": "SocaDB asks before downloading an update."
   },
   "integrations": {
     "description": "The apps turned on here can open, read, edit and create your schemas while SocaDB is open. They ask for your permission before using its tools.",
@@ -514,7 +525,12 @@
     "upToDate": "SocaDB is up to date (v{{version}})",
     "checkFailed": "Couldn't check for updates: {{error}}",
     "releaseNotes": "release notes",
-    "failed": "Update install failed: {{error}}"
+    "failed": "Update install failed: {{error}}",
+    "availableTitle": "SocaDB {{version}} is available",
+    "downloadingTitle": "Downloading SocaDB {{version}}",
+    "downloadingHint": "SocaDB will restart once the update is ready.",
+    "downloading": "Downloading...",
+    "notNow": "Not now"
   },
   "recent": {
     "fileNotFound": "File not found. It may have been moved or deleted.",

@@ -13,6 +13,7 @@ import {
   MonitorIcon as Monitor,
   SunIcon as Sun,
   MoonIcon as Moon,
+  ArrowsClockwiseIcon as ArrowsClockwise,
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { useThemeStore } from "../../stores/themeStore";
@@ -49,6 +50,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { CopyableCommand } from "./CopyableCommand";
 import { IntegrationsSection } from "./IntegrationsSection";
+import { UpdatesSection } from "./UpdatesSection";
 import { SelectMenu, type SelectOption } from "../SelectMenu/SelectMenu";
 import { PrimaryKeyKindZ, ThemePreferenceZ } from "../../utils/zodSchemas";
 import { APPEARANCE_HINT_KEY } from "../../utils/platform";
@@ -62,13 +64,14 @@ import {
 } from "./SettingsRow";
 import { arrowTarget } from "../../utils/arrowKeys";
 
-type Section = "agents" | "conversations" | "integrations" | "general";
+type Section = "agents" | "conversations" | "integrations" | "general" | "updates";
 
 const SECTIONS: { id: Section; Icon: typeof Robot }[] = [
   { id: "agents", Icon: Robot },
   { id: "conversations", Icon: ChatsCircle },
   { id: "integrations", Icon: PlugsConnected },
   { id: "general", Icon: SlidersHorizontal },
+  { id: "updates", Icon: ArrowsClockwise },
 ];
 
 const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
@@ -494,6 +497,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             </div>
 
             {section === "integrations" && <IntegrationsSection />}
+
+            {section === "updates" && <UpdatesSection />}
 
             <div className={section !== "general" ? "hidden" : ""}>
               <SettingsGroup>

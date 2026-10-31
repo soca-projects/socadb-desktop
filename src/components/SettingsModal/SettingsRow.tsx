@@ -27,18 +27,27 @@ export function SettingsGroup({
 export function SettingsRow({
   label,
   description,
+  labelId,
+  descriptionId,
   children,
 }: {
   label: ReactNode;
   description?: ReactNode;
+  labelId?: string;
+  descriptionId?: string;
   children: ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between gap-6 px-4 py-3.5">
       <div className="min-w-0">
-        <div className="text-[13px] font-medium text-primary">{label}</div>
+        <div id={labelId} className="text-[13px] font-medium text-primary">
+          {label}
+        </div>
         {description && (
-          <div className="mt-0.5 text-[12px] leading-snug text-tertiary">
+          <div
+            id={descriptionId}
+            className="mt-0.5 text-[12px] leading-snug text-tertiary"
+          >
             {description}
           </div>
         )}
@@ -144,5 +153,40 @@ export function SegmentedControl<T extends string>({
         );
       })}
     </div>
+  );
+}
+
+export function Switch({
+  checked,
+  disabled,
+  onClick,
+  labelledBy,
+  describedBy,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  labelledBy: string;
+  describedBy: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
+      disabled={disabled}
+      onClick={onClick}
+      className={`relative h-[18px] w-8 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        checked ? "border-accent bg-accent" : "border-border-hover bg-surface-muted"
+      }`}
+    >
+      <span
+        className={`pointer-events-none absolute left-[2px] top-[2px] h-3 w-3 rounded-full bg-white shadow transition-transform dark:bg-stone-200 ${
+          checked ? "translate-x-[14px]" : ""
+        }`}
+      />
+    </button>
   );
 }
