@@ -4,6 +4,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Modal } from "../Modal/Modal";
 import { COPYRIGHT, WEBSITE } from "../../utils/about";
+import { handleShowAcknowledgments } from "../../utils/menuActions";
 import appIcon from "../../../src-tauri/icons/128x128@2x.png";
 
 export function AboutModal({ onClose }: { onClose: () => void }) {
@@ -33,6 +34,13 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
           className="mt-1 cursor-pointer text-[12px] font-medium text-accent underline-offset-2 hover:underline"
         >
           socadb.com
+        </button>
+        <button
+          type="button"
+          onClick={handleShowAcknowledgments}
+          className="mt-1 cursor-pointer text-[12px] font-medium text-accent underline-offset-2 hover:underline"
+        >
+          {t("about.thirdPartyLicenses")}
         </button>
         <button
           type="button"

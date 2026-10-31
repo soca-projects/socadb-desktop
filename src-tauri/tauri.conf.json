@@ -37,7 +37,8 @@
     "targets": ["app", "dmg", "deb", "appimage", "nsis"],
     "resources": {
       "../mcp-server/dist/socadb-mcp-*": "",
-      "../mcp-server/dist/runtime/": "runtime/"
+      "../mcp-server/dist/runtime/": "runtime/",
+      "../build/Acknowledgments.html": "Acknowledgments.html"
     },
     "copyright": "© 2026 SocaDB",
     "fileAssociations": [
@@ -67,7 +68,8 @@
     "macOS": {
       "frameworks": ["./Sparkle.framework"],
       "files": {
-        "Resources/Credits.rtf": "./macos/Credits.rtf"
+        "Resources/Credits.rtf": "./macos/Credits.rtf",
+        "Resources/fr.lproj/Credits.rtf": "./macos/fr.lproj/Credits.rtf"
       },
       "signingIdentity": "-",
       "hardenedRuntime": false

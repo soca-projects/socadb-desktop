@@ -99,11 +99,12 @@ jobs:
         working-directory: src-tauri
         run: cargo fmt --check
 
-      - name: Create MCP placeholders for Tauri resource globs
+      - name: Create placeholders for Tauri resources
         run: |
-          mkdir -p mcp-server/dist mcp-server/dist/runtime
+          mkdir -p mcp-server/dist mcp-server/dist/runtime build
           touch mcp-server/dist/socadb-mcp-linux-x64
           touch mcp-server/dist/runtime/.placeholder
+          touch build/Acknowledgments.html
 
       - name: Clippy
         working-directory: src-tauri
@@ -141,11 +142,12 @@ jobs:
       - name: Download Sparkle.framework
         run: ./scripts/macos/download-sparkle.sh
 
-      - name: Create MCP placeholders for Tauri resource globs
+      - name: Create placeholders for Tauri resources
         run: |
-          mkdir -p mcp-server/dist mcp-server/dist/runtime
+          mkdir -p mcp-server/dist mcp-server/dist/runtime build
           touch mcp-server/dist/socadb-mcp-darwin-arm64
           touch mcp-server/dist/runtime/.placeholder
+          touch build/Acknowledgments.html
 
       - name: Clippy
         working-directory: src-tauri

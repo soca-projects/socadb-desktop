@@ -459,6 +459,7 @@
     "downloadingUpdate": "Téléchargement de la mise à jour...",
     "help": "Aide",
     "showLogs": "Afficher les journaux",
+    "thirdPartyLicenses": "Licences tierces",
     "hideSocaDB": "Masquer SocaDB",
     "services": "Services",
     "hideOthers": "Masquer les autres",
@@ -493,6 +494,7 @@
     "importAdapted_other": "{{count}} colonnes avaient des types incompatibles et ont été définies en varchar.",
     "saveFailed": "Échec de l'enregistrement : {{error}}",
     "openFailed": "Impossible d'ouvrir le fichier : {{error}}",
+    "acknowledgmentsFailed": "Impossible d'ouvrir les licences tierces : {{error}}",
     "autoLayoutFailed": "Échec de la disposition auto : {{error}}",
     "invalidFile": "Ce fichier n'est pas un schéma valide.",
     "exportSqlIssues_one": "SQL exporté avec 1 ajustement pour rester valide",
@@ -653,6 +655,7 @@
   },
   "about": {
     "version": "Version {{version}}",
+    "thirdPartyLicenses": "Licences tierces",
     "close": "Fermer"
   },
   "whatsNew": {

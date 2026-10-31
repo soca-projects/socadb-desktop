@@ -157,6 +157,14 @@ export function handleShowLogs() {
   invoke("show_logs").catch((e: unknown) => logError("app.show_logs.failed", e));
 }
 
+export function handleShowAcknowledgments() {
+  logInfo("menu.action", "showAcknowledgments");
+  invoke("show_acknowledgments").catch((e: unknown) => {
+    logError("app.acknowledgments.failed", e);
+    toast.error(i18next.t("toast.acknowledgmentsFailed", { error: String(e) }));
+  });
+}
+
 // Closing the window triggers WindowEvent::Destroyed which runs the agent +
 // port-file cleanup on the Rust side. exit() from plugin-process would skip
 // that cleanup and orphan agent runner subprocesses on Windows. In-memory schema
