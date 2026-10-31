@@ -7,9 +7,10 @@ const TOAST_ID = "whats-new";
 
 export function useWhatsNewToast() {
   const whatsNew = useReleaseNotesStore((s) => s.toast);
+  const notesOpen = useReleaseNotesStore((s) => s.modal !== null);
 
   useEffect(() => {
-    if (whatsNew) {
+    if (whatsNew && !notesOpen) {
       toast.custom(
         () => <WhatsNewToast since={whatsNew.since} version={whatsNew.version} />,
         { id: TOAST_ID, duration: Infinity, dismissible: false, unstyled: true },
@@ -17,5 +18,5 @@ export function useWhatsNewToast() {
     } else {
       toast.dismiss(TOAST_ID);
     }
-  }, [whatsNew]);
+  }, [whatsNew, notesOpen]);
 }

@@ -99,9 +99,7 @@ function App() {
       </div>
       {settingsOpen && <SettingsModal onClose={closeSettings} />}
       {aboutOpen && <AboutModal onClose={closeAbout} />}
-      {releaseNotes && (
-        <ReleaseNotesModal since={releaseNotes.since} onClose={closeNotes} />
-      )}
+      {releaseNotes && <ReleaseNotesModal notes={releaseNotes} onClose={closeNotes} />}
       {isOpen && <NewSchemaModal onClose={handleClose} onCreate={handleCreate} />}
       {unsavedGuard.isOpen && (
         <UnsavedChangesModal

@@ -591,6 +591,18 @@ describe("update toast", () => {
     expect(updateToastShown({ ...base, status: "installing" })).toBe(true);
     expect(updateToastShown({ ...base, status: "checking" })).toBe(false);
   });
+
+  it("steps aside for the release notes, except while an update is on its way", () => {
+    expect(updateToastShown({ ...base, status: "available" }, true)).toBe(false);
+    expect(updateToastShown({ ...base, status: "ready" }, true)).toBe(false);
+    expect(
+      updateToastShown(
+        { ...base, status: "downloading", afterDownload: "restart" },
+        true,
+      ),
+    ).toBe(true);
+    expect(updateToastShown({ ...base, status: "installing" }, true)).toBe(true);
+  });
 });
 
 describe("settings update button", () => {

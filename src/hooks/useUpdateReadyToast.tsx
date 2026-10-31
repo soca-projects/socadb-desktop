@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useUpdateStore } from "../stores/updateStore";
+import { useReleaseNotesStore } from "../stores/releaseNotesStore";
 import { updateToastShown } from "../utils/updater";
 import { UpdateReadyToast } from "../components/UpdateReadyToast/UpdateReadyToast";
 
@@ -11,9 +12,12 @@ export function useUpdateReadyToast() {
   const version = useUpdateStore((s) => s.version);
   const dismissedVersion = useUpdateStore((s) => s.dismissedVersion);
   const afterDownload = useUpdateStore((s) => s.afterDownload);
+  const notesOpen = useReleaseNotesStore((s) => s.modal !== null);
 
   useEffect(() => {
-    if (updateToastShown({ status, version, dismissedVersion, afterDownload })) {
+    if (
+      updateToastShown({ status, version, dismissedVersion, afterDownload }, notesOpen)
+    ) {
       toast.custom(() => <UpdateReadyToast />, {
         id: TOAST_ID,
         duration: Infinity,
@@ -23,5 +27,5 @@ export function useUpdateReadyToast() {
     } else {
       toast.dismiss(TOAST_ID);
     }
-  }, [status, version, dismissedVersion, afterDownload]);
+  }, [notesOpen, status, version, dismissedVersion, afterDownload]);
 }

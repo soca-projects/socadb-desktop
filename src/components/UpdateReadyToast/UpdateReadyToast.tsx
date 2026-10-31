@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { XIcon as X } from "@phosphor-icons/react";
 import { useUpdateStore } from "../../stores/updateStore";
 import {
-  CHANGELOG_URL,
   dismissUpdate,
   downloadAvailableUpdate,
   installAndRelaunch,
 } from "../../utils/updater";
+import {
+  prefetchIncomingNotes,
+  showIncomingNotes,
+} from "../../utils/incomingReleaseNotes";
 import { IS_MAC } from "../../utils/platform";
 
 export function UpdateReadyToast() {
@@ -25,6 +27,10 @@ export function UpdateReadyToast() {
   useEffect(() => {
     void getVersion().then(setCurrentVersion);
   }, []);
+
+  useEffect(() => {
+    if (version) prefetchIncomingNotes(version);
+  }, [version]);
 
   if (!version) return null;
   const available = status === "available";
@@ -77,7 +83,7 @@ export function UpdateReadyToast() {
               {currentVersion ? `v${currentVersion} → v${version}` : `v${version}`} ·{" "}
               <button
                 onClick={() => {
-                  void openUrl(CHANGELOG_URL);
+                  void showIncomingNotes(version);
                 }}
                 className="cursor-pointer underline decoration-border-hover underline-offset-2 transition-colors hover:text-accent hover:decoration-accent"
               >
