@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { enterModal } from "./modalStack";
+import { describe, it, expect, vi } from "vitest";
+import { enterModal, focusTopModal } from "./modalStack";
 
 describe("modal stack", () => {
   it("lets only the last dialog opened react", () => {
@@ -22,5 +22,17 @@ describe("modal stack", () => {
     const next = enterModal();
     expect(next.isTop()).toBe(true);
     next.leave();
+  });
+
+  it("hands the focus to the dialog left underneath", () => {
+    const focusSettings = vi.fn();
+    const settings = enterModal(focusSettings);
+    const notes = enterModal(vi.fn());
+    notes.leave();
+    focusTopModal();
+    expect(focusSettings).toHaveBeenCalledTimes(1);
+    settings.leave();
+    focusTopModal();
+    expect(focusSettings).toHaveBeenCalledTimes(1);
   });
 });

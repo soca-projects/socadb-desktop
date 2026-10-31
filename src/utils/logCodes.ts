@@ -682,6 +682,12 @@ export const LOG_CODES = {
     check:
       "The message; the app may be on a read-only volume (see app.start ctx.install).",
   },
+  "updater.release_notes.fetch_failed": {
+    level: "warn",
+    meaning:
+      "The incoming update's notes couldn't be downloaded from GitHub; its release notes link opens socadb.com instead.",
+    check: "The message: offline, a timeout, or no changelog at the tag of ctx.version.",
+  },
   "mcp.server.start": {
     level: "info",
     meaning:

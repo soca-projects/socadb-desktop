@@ -329,7 +329,9 @@ interface ToastState {
   afterDownload: AfterDownload | null;
 }
 
-export function updateToastShown(state: ToastState): boolean {
+// Toasts sit above modals: at the minimum window size an offer would cover the
+// release notes. Progress stays, being the only sign of a download or install.
+export function updateToastShown(state: ToastState, notesOpen = false): boolean {
   switch (state.status) {
     case "installing":
       return true;
@@ -337,7 +339,9 @@ export function updateToastShown(state: ToastState): boolean {
       return state.afterDownload === "restart";
     case "available":
     case "ready":
-      return state.version !== null && state.dismissedVersion !== state.version;
+      return (
+        !notesOpen && state.version !== null && state.dismissedVersion !== state.version
+      );
     default:
       return false;
   }

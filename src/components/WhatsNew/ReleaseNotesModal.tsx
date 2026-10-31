@@ -13,6 +13,7 @@ import {
   type SectionKind,
 } from "../../utils/releaseNotes";
 import { CHANGELOG_URL } from "../../utils/updater";
+import type { NotesModal } from "../../stores/releaseNotesStore";
 import { isLanguage, type Language } from "../../i18n";
 
 const KIND_TINT: Record<SectionKind, string> = {
@@ -103,15 +104,19 @@ function ReleaseEntry({
 }
 
 interface ReleaseNotesModalProps {
-  since: string | null;
+  notes: NotesModal;
   onClose: () => void;
 }
 
-export function ReleaseNotesModal({ since, onClose }: ReleaseNotesModalProps) {
+export function ReleaseNotesModal({ notes, onClose }: ReleaseNotesModalProps) {
   const { t, i18n } = useTranslation();
   const titleId = useId();
   const language = isLanguage(i18n.resolvedLanguage) ? i18n.resolvedLanguage : "en";
-  const releases = releasesAfter(releasesFor(language), since);
+  const history = "since" in notes && notes.since === null;
+  const releases =
+    "incoming" in notes
+      ? notes.incoming
+      : releasesAfter(releasesFor(language), notes.since);
 
   return (
     <Modal
@@ -122,7 +127,7 @@ export function ReleaseNotesModal({ since, onClose }: ReleaseNotesModalProps) {
     >
       <div className="flex items-center justify-between px-6 pb-1 pt-4">
         <h2 id={titleId} className="text-[13px] font-semibold text-tertiary">
-          {t(since === null ? "whatsNew.historyTitle" : "whatsNew.title")}
+          {t(history ? "whatsNew.historyTitle" : "whatsNew.title")}
         </h2>
         <button
           type="button"
