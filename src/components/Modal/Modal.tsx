@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { enterModal } from "../../utils/modalStack";
 
 interface ModalProps {
   children: ReactNode;
@@ -27,18 +28,29 @@ export function Modal({
   });
 
   useEffect(() => {
+    const modal = enterModal();
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && dismissibleRef.current) onCloseRef.current();
+      if (e.key === "Escape" && dismissibleRef.current && modal.isTop()) {
+        onCloseRef.current();
+      }
     };
     document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    return () => {
+      document.removeEventListener("keydown", handler);
+      modal.leave();
+    };
   }, []);
 
   // With the focus left behind on the page, the canvas's Delete/Backspace
   // shortcut would remove the selected relation under the dialog (nokey).
+  // Closing hands the focus back, so a dialog left underneath keeps it.
   useEffect(() => {
     const overlay = overlayRef.current;
-    if (overlay && !overlay.contains(document.activeElement)) overlay.focus();
+    const previous = document.activeElement;
+    if (overlay && !overlay.contains(previous)) overlay.focus();
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
   }, []);
 
   return (
