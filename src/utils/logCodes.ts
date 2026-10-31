@@ -417,6 +417,12 @@ export const LOG_CODES = {
     check:
       "The write itself failed (permissions, full disk). The choice holds until the next launch, when config.json's older value comes back.",
   },
+  "settings.updates.persist_failed": {
+    level: "error",
+    meaning: "The update settings could not be written to config.json.",
+    check:
+      "The write itself failed (permissions, full disk). The choice holds until the next launch, when config.json's older value comes back.",
+  },
   "settings.startup.persist_failed": {
     level: "error",
     meaning: "The launch setting could not be written to config.json.",
@@ -645,6 +651,19 @@ export const LOG_CODES = {
     level: "error",
     meaning: "Sparkle failed to download or install an update.",
     check: "The message; signature or disk space.",
+  },
+  "updater.bundle_type.failed": {
+    level: "warn",
+    meaning:
+      "The Linux package type could not be read; updates may install when SocaDB closes.",
+    check:
+      "A .deb or .rpm install then asks for the administrator password as SocaDB closes.",
+  },
+  "updater.download.failed": {
+    level: "error",
+    meaning: "Downloading an update the user accepted failed.",
+    check:
+      "The message: network or signature. On macOS, Sparkle refuses when SUAllowsAutomaticUpdates is missing from Info.plist.",
   },
   "updater.install.failed": {
     level: "error",

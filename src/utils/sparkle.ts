@@ -42,8 +42,12 @@ export function sparkleSessionInProgress(): Promise<boolean> {
   return invoke<boolean>("plugin:sparkle-updater|session_in_progress");
 }
 
-export async function sparkleCheckInBackground(): Promise<void> {
-  await invoke("plugin:sparkle-updater|check_for_updates_in_background");
+export async function sparkleCheckInformation(): Promise<void> {
+  await invoke("plugin:sparkle-updater|check_for_update_information");
+}
+
+export function sparkleDownloadInBackground(): Promise<boolean> {
+  return invoke<boolean>("plugin:sparkle-updater|download_update_in_background");
 }
 
 export function sparkleInstallPendingUpdate(): Promise<boolean> {

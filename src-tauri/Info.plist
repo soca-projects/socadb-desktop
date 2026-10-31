@@ -11,9 +11,14 @@
     <string>https://github.com/soca-projects/socadb-desktop/releases/latest/download/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>JFF5bCjXSk4cwk7i3tHOHwaCp1yMercU7osKZ9x8LEc=</string>
+    <!-- The app schedules checks and downloads only when its settings allow or
+         the user agrees. Sparkle disallows automatic downloads while its own
+         checks are off, unless SUAllowsAutomaticUpdates is set. -->
     <key>SUEnableAutomaticChecks</key>
-    <true/>
+    <false/>
     <key>SUAutomaticallyUpdate</key>
+    <false/>
+    <key>SUAllowsAutomaticUpdates</key>
     <true/>
     <!-- Declared here rather than in fileAssociations: Tauri has no field for the
          type's icon, and this key replaces the declaration Tauri would generate. -->

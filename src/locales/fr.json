@@ -514,7 +514,12 @@
     "upToDate": "SocaDB est à jour (v{{version}})",
     "checkFailed": "Impossible de rechercher les mises à jour : {{error}}",
     "releaseNotes": "notes de version",
-    "failed": "Échec de l'installation : {{error}}"
+    "failed": "Échec de l'installation : {{error}}",
+    "availableTitle": "SocaDB {{version}} est disponible",
+    "downloadingTitle": "Téléchargement de SocaDB {{version}}",
+    "downloadingHint": "SocaDB redémarrera une fois la mise à jour prête.",
+    "downloading": "Téléchargement...",
+    "notNow": "Pas maintenant"
   },
   "recent": {
     "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé.",

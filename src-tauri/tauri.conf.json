@@ -34,13 +34,7 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": [
-      "app",
-      "dmg",
-      "deb",
-      "appimage",
-      "nsis"
-    ],
+    "targets": ["app", "dmg", "deb", "appimage", "nsis"],
     "resources": {
       "../mcp-server/dist/socadb-mcp-*": "",
       "../mcp-server/dist/runtime/": "runtime/"
@@ -71,9 +65,7 @@
       }
     },
     "macOS": {
-      "frameworks": [
-        "./Sparkle.framework"
-      ],
+      "frameworks": ["./Sparkle.framework"],
       "files": {
         "Resources/Credits.rtf": "./macos/Credits.rtf"
       },
@@ -84,6 +76,9 @@
   "plugins": {
     "updater": {
       "requireSignedVersion": true,
+      "windows": {
+        "installMode": "quiet"
+      },
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzMjJBRkY3RjkyREFEQTAKUldTZ3JTMzU5NjhpNDlMYzloeFcvbWxCajl5cVdsMjFURGF3dm1vNEVyK2RWUXNKb3Z1YllnSlMK",
       "endpoints": [
         "https://github.com/soca-projects/socadb-desktop/releases/latest/download/latest.json"

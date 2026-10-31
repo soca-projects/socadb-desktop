@@ -514,7 +514,12 @@
     "upToDate": "SocaDB is up to date (v{{version}})",
     "checkFailed": "Couldn't check for updates: {{error}}",
     "releaseNotes": "release notes",
-    "failed": "Update install failed: {{error}}"
+    "failed": "Update install failed: {{error}}",
+    "availableTitle": "SocaDB {{version}} is available",
+    "downloadingTitle": "Downloading SocaDB {{version}}",
+    "downloadingHint": "SocaDB will restart once the update is ready.",
+    "downloading": "Downloading...",
+    "notNow": "Not now"
   },
   "recent": {
     "fileNotFound": "File not found. It may have been moved or deleted.",

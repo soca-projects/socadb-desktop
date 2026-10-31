@@ -5,7 +5,8 @@
   "platforms": ["macOS"],
   "windows": ["main"],
   "permissions": [
-    "sparkle-updater:allow-check-for-updates-in-background",
+    "sparkle-updater:allow-check-for-update-information",
+    "sparkle-updater:allow-download-update-in-background",
     "sparkle-updater:allow-session-in-progress",
     "sparkle-updater:allow-pending-update",
     "sparkle-updater:allow-install-pending-update"
