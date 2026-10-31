@@ -654,5 +654,16 @@
   "about": {
     "version": "Version {{version}}",
     "close": "Fermer"
+  },
+  "whatsNew": {
+    "toastTitle": "SocaDB a été mis à jour en <mark>{{version}}</mark>",
+    "show": "Voir les nouveautés",
+    "title": "Nouveautés",
+    "close": "Fermer",
+    "fullHistory": "Tout l'historique sur socadb.com",
+    "showChanges_one": "Voir le changement",
+    "showChanges_other": "Voir les <b>{{count}}</b> changements",
+    "hideChanges": "Masquer les changements",
+    "historyTitle": "Notes de version"
   }
 }
