@@ -5,7 +5,7 @@ import { CheckIcon as Check, InfoIcon as Info } from "@phosphor-icons/react";
 import { ClaudeIcon } from "../../assets/icons/ClaudeIcon";
 import { CodexIcon } from "../../assets/icons/CodexIcon";
 import { CopyableCommand } from "./CopyableCommand";
-import { DisclosureRow, SettingsGroup } from "./SettingsRow";
+import { DisclosureRow, SettingsGroup, Switch } from "./SettingsRow";
 import { toMessage } from "../../utils/errorMessage";
 import { logError } from "../../utils/log";
 import {
@@ -49,41 +49,6 @@ const TONE_CLASS: Record<Tone, string> = {
   note: "text-secondary",
   muted: "text-tertiary",
 };
-
-function Switch({
-  checked,
-  disabled,
-  onClick,
-  labelledBy,
-  describedBy,
-}: {
-  checked: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  labelledBy: string;
-  describedBy: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-labelledby={labelledBy}
-      aria-describedby={describedBy}
-      disabled={disabled}
-      onClick={onClick}
-      className={`relative h-[18px] w-8 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        checked ? "border-accent bg-accent" : "border-border-hover bg-surface-muted"
-      }`}
-    >
-      <span
-        className={`pointer-events-none absolute left-[2px] top-[2px] h-3 w-3 rounded-full bg-white shadow transition-transform dark:bg-stone-200 ${
-          checked ? "translate-x-[14px]" : ""
-        }`}
-      />
-    </button>
-  );
-}
 
 function IntegrationRow({
   status,
