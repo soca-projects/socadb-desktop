@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:mcp": "cd mcp-server && bun run build",
-    "build:all": "bun run build:mcp && bun run build",
+    "build:all": "bun run build:mcp && bun run build && bun run build:acknowledgments",
+    "build:acknowledgments": "bun scripts/acknowledgments.ts",
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "eslint src/",
@@ -19,7 +20,7 @@
     "typecheck": "tsc --noEmit",
     "devctl": "bun scripts/devctl.ts",
     "release:rc": "bun scripts/release-rc.ts",
-    "prepare": "husky"
+    "prepare": "husky && bun scripts/acknowledgments.ts --dev"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

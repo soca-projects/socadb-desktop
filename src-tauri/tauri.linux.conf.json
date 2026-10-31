@@ -8,13 +8,15 @@
         "files": {
           "/usr/share/mime/packages/socadb.xml": "./linux/socadb-mime.xml",
           "/usr/lib/SocaDB/socadb-mcp-linux-x64": "../mcp-server/dist/socadb-mcp-linux-x64",
-          "/usr/lib/SocaDB/runtime": "../mcp-server/dist/runtime"
+          "/usr/lib/SocaDB/runtime": "../mcp-server/dist/runtime",
+          "/usr/lib/SocaDB/Acknowledgments.html": "../build/Acknowledgments.html"
         }
       },
       "appimage": {
         "files": {
           "/usr/libexec/SocaDB/socadb-mcp-linux-x64": "../mcp-server/dist/socadb-mcp-linux-x64",
-          "/usr/libexec/SocaDB/runtime": "../mcp-server/dist/runtime"
+          "/usr/libexec/SocaDB/runtime": "../mcp-server/dist/runtime",
+          "/usr/libexec/SocaDB/Acknowledgments.html": "../build/Acknowledgments.html"
         }
       }
     }

@@ -146,7 +146,8 @@ try {
   writeFileSync(foreign, "");
   const first = await install();
   check(first.code === 0, `the first install exited with ${first.code}`);
-  for (const file of ["socadb-desktop.exe", MCP, "uninstall.exe", "runtime"]) {
+  const installed = ["socadb-desktop.exe", MCP, "uninstall.exe", "runtime", "Acknowledgments.html"];
+  for (const file of installed) {
     check(existsSync(join(dir, file)), `the install has no ${file}`);
   }
   check(existsSync(foreign), "a first install deleted files it didn't put there");

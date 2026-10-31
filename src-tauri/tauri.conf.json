@@ -37,7 +37,8 @@
     "targets": ["app", "dmg", "deb", "appimage", "nsis"],
     "resources": {
       "../mcp-server/dist/socadb-mcp-*": "",
-      "../mcp-server/dist/runtime/": "runtime/"
+      "../mcp-server/dist/runtime/": "runtime/",
+      "../build/Acknowledgments.html": "Acknowledgments.html"
     },
     "copyright": "© 2026 SocaDB",
     "fileAssociations": [
