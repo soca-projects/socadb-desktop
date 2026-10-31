@@ -423,6 +423,12 @@ export const LOG_CODES = {
     check:
       "The write itself failed (permissions, full disk). The choice holds until the next launch, when config.json's older value comes back.",
   },
+  "settings.last_version.persist_failed": {
+    level: "error",
+    meaning: "The version launched could not be written to config.json.",
+    check:
+      "The write itself failed (permissions, full disk). The next launch offers the release notes again.",
+  },
   "settings.startup.persist_failed": {
     level: "error",
     meaning: "The launch setting could not be written to config.json.",
