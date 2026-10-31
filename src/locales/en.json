@@ -459,6 +459,7 @@
     "downloadingUpdate": "Downloading Update...",
     "help": "Help",
     "showLogs": "Show Logs",
+    "thirdPartyLicenses": "Third-Party Licenses",
     "hideSocaDB": "Hide SocaDB",
     "services": "Services",
     "hideOthers": "Hide Others",
@@ -493,6 +494,7 @@
     "importAdapted_other": "{{count}} columns had incompatible types and were set to varchar.",
     "saveFailed": "Failed to save: {{error}}",
     "openFailed": "Failed to open file: {{error}}",
+    "acknowledgmentsFailed": "Couldn't open the third-party licenses: {{error}}",
     "autoLayoutFailed": "Auto layout failed: {{error}}",
     "invalidFile": "This file is not a valid schema.",
     "exportSqlIssues_one": "SQL exported with 1 adjustment to keep it valid",
@@ -653,6 +655,7 @@
   },
   "about": {
     "version": "Version {{version}}",
+    "thirdPartyLicenses": "Third-party licenses",
     "close": "Close"
   },
   "whatsNew": {

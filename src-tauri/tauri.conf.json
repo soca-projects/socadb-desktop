@@ -68,7 +68,8 @@
     "macOS": {
       "frameworks": ["./Sparkle.framework"],
       "files": {
-        "Resources/Credits.rtf": "./macos/Credits.rtf"
+        "Resources/Credits.rtf": "./macos/Credits.rtf",
+        "Resources/fr.lproj/Credits.rtf": "./macos/fr.lproj/Credits.rtf"
       },
       "signingIdentity": "-",
       "hardenedRuntime": false

@@ -7,6 +7,7 @@ import { getRecentFiles, clearRecentFiles, loadRecentFiles } from "../utils/rece
 import {
   handleOpenAbout,
   handleOpenRecent,
+  handleShowAcknowledgments,
   handleShowLogs,
   MENU_SHORTCUTS,
 } from "../utils/menuActions";
@@ -336,6 +337,11 @@ async function setupMenu() {
     text: t("menu.showLogs"),
     action: () => handleShowLogs(),
   });
+  const acknowledgmentsItem = await MenuItem.new({
+    id: "third_party_licenses",
+    text: t("menu.thirdPartyLicenses"),
+    action: () => handleShowAcknowledgments(),
+  });
   const items = appSubmenu
     ? [
         appSubmenu,
@@ -343,7 +349,10 @@ async function setupMenu() {
         editSubmenu,
         viewSubmenu,
         windowSubmenu,
-        await Submenu.new({ text: t("menu.help"), items: [showLogsItem] }),
+        await Submenu.new({
+          text: t("menu.help"),
+          items: [showLogsItem, acknowledgmentsItem],
+        }),
       ]
     : [
         fileSubmenu,
@@ -356,6 +365,7 @@ async function setupMenu() {
             updateItem,
             await PredefinedMenuItem.new({ item: "Separator" }),
             showLogsItem,
+            acknowledgmentsItem,
             await PredefinedMenuItem.new({ item: "Separator" }),
             await buildAboutItem(),
           ],
