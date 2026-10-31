@@ -1,13 +1,9 @@
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { useUpdateStore } from "../../stores/updateStore";
-import {
-  CHANGELOG_URL,
-  handleUpdateMenuAction,
-  updateButtonState,
-} from "../../utils/updater";
+import { useReleaseNotesStore } from "../../stores/releaseNotesStore";
+import { handleUpdateMenuAction, updateButtonState } from "../../utils/updater";
 import {
   asksBeforeDownloading,
   getUpdatePreferences,
@@ -20,6 +16,7 @@ export function UpdatesSection() {
   const { t } = useTranslation();
   const status = useUpdateStore((s) => s.status);
   const canInstallOnQuit = useUpdateStore((s) => s.canInstallOnQuit);
+  const openNotes = useReleaseNotesStore((s) => s.openNotes);
   const [version, setVersion] = useState<string | null>(null);
   const [preferences, setPreferences] = useState(getUpdatePreferences);
   const checkLabelId = useId();
@@ -50,9 +47,7 @@ export function UpdatesSection() {
           description={
             <button
               type="button"
-              onClick={() => {
-                void openUrl(CHANGELOG_URL);
-              }}
+              onClick={() => openNotes(null)}
               className="underline decoration-border-hover underline-offset-2 transition-colors hover:text-accent hover:decoration-accent"
             >
               {t("settings.updatesReleaseNotes")}
