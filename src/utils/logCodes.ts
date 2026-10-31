@@ -36,6 +36,12 @@ export const LOG_CODES = {
     meaning: "Help › Show Logs could not reveal the log file.",
     check: "The message from the opener plugin; the log dir may not exist yet.",
   },
+  "app.acknowledgments.failed": {
+    level: "error",
+    meaning: "Help › Third-Party Licenses could not open Acknowledgments.html.",
+    check:
+      "Not found: the bundle lacks it (tauri.conf.json resources, scripts/acknowledgments.ts). Otherwise the opener's message.",
+  },
   "agent.spawn.failed": {
     level: "error",
     meaning:

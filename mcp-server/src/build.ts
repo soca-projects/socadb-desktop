@@ -68,6 +68,8 @@ execFileSync(
     `--target=${bunBuildTarget}`,
     "--define",
     `process.env.SOCADB_VERSION=${JSON.stringify(serverVersion)}`,
+    // Lists the bundled modules for scripts/acknowledgments.ts.
+    "--metafile=dist/metafile.json",
     "src/index.ts",
     "--outfile",
     mcpOutfile,

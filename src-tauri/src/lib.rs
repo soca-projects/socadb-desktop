@@ -159,6 +159,29 @@ fn show_logs(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn show_acknowledgments(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = if cfg!(debug_assertions) {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .ok_or("Cannot resolve project root")?
+            .join("build")
+    } else {
+        bundled_dir(&app)?
+    };
+    let file = dir.join("Acknowledgments.html");
+    if !file.exists() {
+        return Err(format!("Acknowledgments not found: {}", file.display()));
+    }
+    let path = file
+        .to_str()
+        .ok_or_else(|| format!("Path is not valid UTF-8: {}", file.display()))?;
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn open_terminal() {
     #[cfg(target_os = "macos")]
     {
@@ -281,6 +304,7 @@ pub fn run() {
             atomic_write,
             open_terminal,
             show_logs,
+            show_acknowledgments,
             keyring_get,
             keyring_set,
             keyring_delete,
