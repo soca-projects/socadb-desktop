@@ -1,7 +1,7 @@
 export interface Component {
   name: string;
   version: string;
-  kind: "crate" | "npm" | "other";
+  kind: "crate" | "npm" | "appimage" | "other";
   url?: string;
 }
 
@@ -40,6 +40,24 @@ const LICENSE_NAMES: Record<string, string> = {
 
 export function licenseName(id: string): string {
   return LICENSE_NAMES[id] ?? id;
+}
+
+const COMMON_LICENSE_NAMES: Record<string, string> = {
+  Artistic: "Artistic License 1.0",
+  BSD: "BSD License (University of California)",
+  "GFDL-1.2": "GNU Free Documentation License v1.2",
+  "GFDL-1.3": "GNU Free Documentation License v1.3",
+  "GPL-1": "GNU General Public License v1.0",
+  "GPL-2": "GNU General Public License v2.0",
+  "GPL-3": "GNU General Public License v3.0",
+  "LGPL-2": "GNU Library General Public License v2",
+  "LGPL-2.1": "GNU Lesser General Public License v2.1",
+  "LGPL-3": "GNU Lesser General Public License v3.0",
+  "MPL-1.1": "Mozilla Public License 1.1",
+};
+
+export function commonLicenseName(file: string): string {
+  return COMMON_LICENSE_NAMES[file] ?? licenseName(file);
 }
 
 type Expression = { id: string } | { and: Expression[] } | { or: Expression[] };
@@ -136,6 +154,76 @@ export function pickLicenseFiles(files: string[], chosen: string[]): string[] {
   const key = chosen[0].split("-")[0].toLowerCase();
   const matching = files.filter((file) => file.toLowerCase().includes(key));
   return matching.length > 0 ? matching : files;
+}
+
+export function parsePackageList(text: string): string[] {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+}
+
+export function commonLicensesIn(copyright: string): string[] {
+  const names = [...copyright.matchAll(/\/usr\/share\/common-licenses\/([\w.+-]+)/g)].map(
+    ([, name]) => name.replace(/\.+$/, ""),
+  );
+  return [...new Set(names)];
+}
+
+export function dpkgOwners(dpkgSearch: string): Map<string, string[]> {
+  const owners = new Map<string, string[]>();
+  for (const line of dpkgSearch.split("\n")) {
+    const at = line.indexOf(": /");
+    if (at === -1 || /^(local )?diversion /.test(line)) continue;
+    const packages = line
+      .slice(0, at)
+      .split(", ")
+      .map((pkg) => pkg.replace(/:[\w-]+$/, ""));
+    const path = line.slice(at + 2);
+    owners.set(path, [...new Set([...(owners.get(path) ?? []), ...packages])]);
+  }
+  return owners;
+}
+
+// linuxdeploy flattens libraries into usr/lib, but copies shared data to the
+// same path as on the build machine.
+export function dpkgPattern(file: string): string {
+  const literal = (text: string) => text.replace(/[[\]*?\\]/g, "\\$&");
+  return file.startsWith("usr/share/")
+    ? `/${literal(file)}`
+    : `*/${literal(file.split("/").pop() ?? file)}`;
+}
+
+function ownersOf(file: string, owners: Map<string, string[]>): string[] {
+  if (file.startsWith("usr/share/")) return owners.get(`/${file}`) ?? [];
+  const name = `/${file.split("/").pop()}`;
+  return [...owners].filter(([path]) => path.endsWith(name)).flatMap(([, pkgs]) => pkgs);
+}
+
+export function elfSize(header: Uint8Array): number {
+  const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+  return (
+    Number(view.getBigUint64(0x28, true)) +
+    view.getUint16(0x3a, true) * view.getUint16(0x3c, true)
+  );
+}
+
+export function checkBundledPackages(
+  files: string[],
+  owners: Map<string, string[]>,
+  listed: string[],
+): { unowned: string[]; missing: { pkg: string; file: string }[]; unused: string[] } {
+  const unowned: string[] = [];
+  const missing: { pkg: string; file: string }[] = [];
+  const used = new Set<string>();
+  for (const file of files) {
+    const candidates = ownersOf(file, owners);
+    const covered = candidates.filter((pkg) => listed.includes(pkg));
+    if (candidates.length === 0) unowned.push(file);
+    else if (covered.length === 0) missing.push({ pkg: candidates[0], file });
+    for (const pkg of covered) used.add(pkg);
+  }
+  return { unowned, missing, unused: listed.filter((pkg) => !used.has(pkg)) };
 }
 
 export function sourceUrl(repository: unknown): string | undefined {
@@ -241,6 +329,7 @@ function escapeHtml(text: string): string {
 const KIND_LABELS: Record<Component["kind"], string | null> = {
   crate: "Rust",
   npm: "npm",
+  appimage: "AppImage",
   other: null,
 };
 
