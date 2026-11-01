@@ -1,10 +1,16 @@
 import { describe, it, expect } from "vitest";
 import {
+  checkBundledPackages,
   chooseLicenses,
+  commonLicensesIn,
   groupAttributions,
   isLicenseFileName,
   isNoticeFileName,
+  dpkgOwners,
+  dpkgPattern,
+  elfSize,
   packageOfModule,
+  parsePackageList,
   pickLicenseFiles,
   renderAcknowledgments,
   sourceUrl,
@@ -252,5 +258,97 @@ describe("renderAcknowledgments", () => {
 
   it("forbids scripts and remote loads", () => {
     expect(html).toContain(`content="default-src 'none'; style-src 'unsafe-inline'"`);
+  });
+});
+
+describe("AppImage packages", () => {
+  it("reads the package list, skipping comments and blank lines", () => {
+    expect(parsePackageList("# header\nlibgtk-3-0\n\n  libsoup-3.0-0  \n")).toEqual([
+      "libgtk-3-0",
+      "libsoup-3.0-0",
+    ]);
+  });
+
+  it("finds the common licenses a copyright file points to", () => {
+    const copyright = [
+      "On Debian systems, the full text is in /usr/share/common-licenses/LGPL-2.1.",
+      "See /usr/share/common-licenses/GPL-2 and `/usr/share/common-licenses/LGPL-2.1'",
+      "(/usr/share/common-licenses/Apache-2.0)",
+    ].join("\n");
+    expect(commonLicensesIn(copyright)).toEqual(["LGPL-2.1", "GPL-2", "Apache-2.0"]);
+  });
+
+  it("reads which packages dpkg says own each path", () => {
+    const search = [
+      "libglib2.0-0:amd64: /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0",
+      "libglib2.0-dev:amd64, libglib2.0-dev-bin: /usr/lib/x86_64-linux-gnu/libgio-2.0.so",
+      "diversion by foo from: /usr/lib/x",
+      "local diversion from: /usr/lib/y",
+    ].join("\n");
+    const owners = dpkgOwners(search);
+    expect(owners.get("/usr/lib/x86_64-linux-gnu/libgio-2.0.so.0")).toEqual([
+      "libglib2.0-0",
+    ]);
+    expect(owners.get("/usr/lib/x86_64-linux-gnu/libgio-2.0.so")).toEqual([
+      "libglib2.0-dev",
+      "libglib2.0-dev-bin",
+    ]);
+    expect(owners.size).toBe(2);
+  });
+
+  const owners = new Map([
+    ["/usr/lib/x86_64-linux-gnu/libgtk-3.so.0", ["libgtk-3-0"]],
+    ["/usr/lib/x86_64-linux-gnu/libnew.so.1", ["libnew1"]],
+    ["/usr/share/glib-2.0/schemas/org.gtk.Settings.gschema.xml", ["libgtk-3-common"]],
+    ["/usr/share/other/org.gtk.Settings.gschema.xml", ["someone-else"]],
+    ["/usr/share/elsewhere/only-there.xml", ["libgtk-3-common"]],
+  ]);
+
+  it("matches libraries by name and shared files by their exact path", () => {
+    expect(dpkgPattern("usr/lib/libgtk-3.so.0")).toBe("*/libgtk-3.so.0");
+    expect(dpkgPattern("usr/share/glib-2.0/schemas/a.xml")).toBe(
+      "/usr/share/glib-2.0/schemas/a.xml",
+    );
+    expect(dpkgPattern("usr/lib/lib[x]*?.so")).toBe("*/lib\\[x\\]\\*\\?.so");
+    expect(
+      checkBundledPackages(
+        [
+          "usr/lib/libgtk-3.so.0",
+          "usr/share/glib-2.0/schemas/org.gtk.Settings.gschema.xml",
+        ],
+        owners,
+        ["libgtk-3-0", "libgtk-3-common"],
+      ),
+    ).toEqual({ unowned: [], missing: [], unused: [] });
+    expect(
+      checkBundledPackages(["usr/share/glib-2.0/schemas/only-there.xml"], owners, [
+        "libgtk-3-common",
+      ]).unowned,
+    ).toEqual(["usr/share/glib-2.0/schemas/only-there.xml"]);
+  });
+
+  it("reports files no listed package covers, and listed packages left unused", () => {
+    expect(
+      checkBundledPackages(
+        ["usr/lib/libgtk-3.so.0", "usr/lib/libnew.so.1", "usr/lib/libmystery.so"],
+        owners,
+        ["libgtk-3-0", "libold0"],
+      ),
+    ).toEqual({
+      unowned: ["usr/lib/libmystery.so"],
+      missing: [{ pkg: "libnew1", file: "usr/lib/libnew.so.1" }],
+      unused: ["libold0"],
+    });
+  });
+});
+
+describe("elfSize", () => {
+  it("reads where the section headers end, which is where an AppImage's payload starts", () => {
+    const header = new Uint8Array(64);
+    const view = new DataView(header.buffer);
+    view.setBigUint64(0x28, 943_000n, true);
+    view.setUint16(0x3a, 64, true);
+    view.setUint16(0x3c, 25, true);
+    expect(elfSize(header)).toBe(943_000 + 64 * 25);
   });
 });

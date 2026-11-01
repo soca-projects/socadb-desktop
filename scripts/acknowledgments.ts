@@ -3,8 +3,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
+import { APPIMAGE_TOOLING, ubuntuPackageAttributions } from "./appimage";
 import {
   chooseLicenses,
+  commonLicenseName,
   groupAttributions,
   isLicenseFileName,
   isNoticeFileName,
@@ -128,12 +130,12 @@ async function fetchText(url: string): Promise<string> {
     if (res instanceof Response && res.ok) return res.text();
     const transient =
       !(res instanceof Response) || res.status === 429 || res.status >= 500;
-    if (!transient || attempt === 3) {
+    if (!transient || attempt === 5) {
       const reason =
         res instanceof Response ? `${res.status} ${res.statusText}` : String(res);
       throw new Error(`${url}: ${reason}`);
     }
-    await Bun.sleep(attempt * 2000);
+    await Bun.sleep(2 ** attempt * 1000);
   }
 }
 
@@ -379,6 +381,11 @@ async function otherAttributions(target: string): Promise<Attribution[]> {
             name: licenseName("LGPL-2.0-or-later"),
             url: `https://raw.githubusercontent.com/openai/codex/rust-v${codexVersion}/codex-rs/vendor/bubblewrap/COPYING`,
           },
+          ...APPIMAGE_TOOLING.map(({ name, version, source, license, url }) => ({
+            component: other(name, version, source),
+            name: commonLicenseName(license),
+            url,
+          })),
         ]
       : []),
   ];
@@ -417,6 +424,25 @@ async function otherAttributions(target: string): Promise<Attribution[]> {
   return [...fetched, ...fonts];
 }
 
+// The list matches what linuxdeploy copies on CI's Ubuntu 22.04, where releases
+// are built. Another system bundles other libraries, so a local build skips them.
+function appimageLibraries(): Attribution[] {
+  const found: string[] = [];
+  let attributions: Attribution[] = [];
+  try {
+    attributions = ubuntuPackageAttributions(found);
+  } catch (e) {
+    found.push(e instanceof Error ? e.message : String(e));
+  }
+  if (found.length === 0) return attributions;
+  if (process.env.CI) problems.push(...found);
+  else
+    console.warn(
+      `Warning: the AppImage's Ubuntu libraries are left out here (${found[0]})`,
+    );
+  return [];
+}
+
 const target = detectTarget();
 const { accepted } = AboutTomlZ.parse(
   Bun.TOML.parse(readFileSync(join(ROOT, "src-tauri/about.toml"), "utf-8")),
@@ -431,6 +457,7 @@ const attributions = [
   ...crateAttributions(target),
   ...npm.filter((attribution) => attribution !== null),
   ...(await otherAttributions(target)),
+  ...(target.startsWith("linux-") ? appimageLibraries() : []),
 ];
 if (problems.length > 0) {
   console.error(`Unresolved licenses:\n${problems.map((p) => `  - ${p}`).join("\n")}`);

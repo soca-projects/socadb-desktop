@@ -83,6 +83,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          # linuxdeploy copies a pixbuf loader archive and a typelib from these, which
+          # the runner image only happens to have: the AppImage and its credits
+          # (src-tauri/linux/appimage-packages.txt) shouldn't change with the image.
+          sudo apt-get install -y libwmf-dev gir1.2-secret-1
 
       # The Sparkle plugin's build.rs links against it, so cargo fails without it.
       - name: Download Sparkle.framework
@@ -184,6 +188,11 @@ jobs:
         if: matrix.platform == 'windows-latest'
         timeout-minutes: 15
         run: bun scripts/check-installer.ts
+
+      - name: Check the AppImage's libraries
+        if: matrix.platform == 'ubuntu-22.04'
+        timeout-minutes: 10
+        run: bun scripts/check-appimage.ts
 
       - name: Notarize the disk image
         if: ${{ inputs.publish && matrix.platform == 'macos-latest' }}
