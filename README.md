@@ -31,7 +31,7 @@ SocaDB is a desktop app for designing PostgreSQL and MySQL schemas. Draw tables 
 
 - **A canvas for your schema.** Tables, columns, keys and relations with their cardinality, along with notes, enums, indexes and type parameters such as lengths and precision. Every change can be undone, and the layout can arrange itself.
 - **Your AI draws it.** The built-in chat runs Claude or Codex on the Claude or ChatGPT plan you already have, or with an API key, and edits the schema in front of you.
-- **From your terminal too.** SocaDB ships an MCP server and registers it with Claude Code, Claude Desktop and Codex, so they can read and edit the schema you have open.
+- **From your terminal too.** SocaDB ships an MCP server and registers it with Claude Code, Claude Desktop and Codex, so they can list your schemas, open or create one, and read and edit the one you have open.
 - **PostgreSQL and MySQL.** Column types and defaults follow the database, and switching databases adapts the columns.
 - **Import and export.** Export the schema as SQL. Import SQL dumps, DBML or JSON, several files at once.
 - **A file you keep.** Each schema is a `.soca` JSON file: commit it, diff it, share it. Everything works offline.
