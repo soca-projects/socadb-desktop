@@ -6,95 +6,110 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
-## [0.1.6](https://github.com/soca-projects/socadb-desktop/compare/v0.1.5...v0.1.6) (2026-11-01)
+## [0.1.6] - 2026-11-01
 
+SocaDB now behaves like a desktop app: it remembers its window, opens
+`.soca` files with a double-click, and has new Settings for the appearance,
+the primary key of new tables and updates. AI apps reach SocaDB whenever it
+opens, and can open or create schemas from its home. The AppImage's agents
+work at last, Windows updates no longer stop when an AI app is open, and
+undo can no longer bring another schema into the file you have open.
 
-### Features
+### Added
 
-* about panel, window theme, window menu and window memory ([d1a694c](https://github.com/soca-projects/socadb-desktop/commit/d1a694ce7d84695535e65eb869d07317188e3655))
-* add an Updates section to Settings ([4bd6998](https://github.com/soca-projects/socadb-desktop/commit/4bd6998fe96335631d6b2dd3b50573d00a3a4407))
-* add update settings ([c0bac7d](https://github.com/soca-projects/socadb-desktop/commit/c0bac7d8a3d5dc4f53ea503fd06b55696984050f))
-* appearance setting and native desktop behavior ([2897e54](https://github.com/soca-projects/socadb-desktop/commit/2897e54bc550e531838f9ff9b288ce201f41e70e))
-* ask before downloading updates when automatic install is off ([d16deab](https://github.com/soca-projects/socadb-desktop/commit/d16deab12db837275515119f29748cec115e6bb6))
-* bundle the release notes in English and French ([a4694c1](https://github.com/soca-projects/socadb-desktop/commit/a4694c19e8ca15c02b1300aadfba1ea7cd741bb1))
-* choose the primary key of new tables ([a603c1c](https://github.com/soca-projects/socadb-desktop/commit/a603c1cdc61408924179cdf623b3fc2491e1de71))
-* choose the primary key of new tables ([3939a98](https://github.com/soca-projects/socadb-desktop/commit/3939a989bdbcad37792d66b31514ba0b987d419c))
-* localize system strings and the standard menu items ([59d380a](https://github.com/soca-projects/socadb-desktop/commit/59d380a3b9d5a162e5786334e0dc43eb7037aa77))
-* **mcp:** open or create a schema from the home screen ([0a79987](https://github.com/soca-projects/socadb-desktop/commit/0a79987e25d56b4315a4f9df3adf6c5699bfb702))
-* native desktop finishes ([77191df](https://github.com/soca-projects/socadb-desktop/commit/77191dfdd685d8245afa3dde9f5390650193bf38))
-* open .soca files with a double-click ([818263c](https://github.com/soca-projects/socadb-desktop/commit/818263c9cea2f8116dc47b11a2ded1e34d26d2d1))
-* open .soca files with a double-click ([021cc86](https://github.com/soca-projects/socadb-desktop/commit/021cc86fe02d17631fcebf51d84c59cce0791f05))
-* open the release notes from Settings ([fe31d94](https://github.com/soca-projects/socadb-desktop/commit/fe31d945ca63bc220571718fd727be31db7d0794))
-* settings in rows with a two-tone sidebar ([504289f](https://github.com/soca-projects/socadb-desktop/commit/504289fd6e51950d60910fc736ee8112c46ec580))
-* settings in rows with a two-tone sidebar ([13c9db3](https://github.com/soca-projects/socadb-desktop/commit/13c9db35f0f01a35ac0bf1cfebbd8f85c61ad26c))
-* show the incoming update's notes in the app ([5169d14](https://github.com/soca-projects/socadb-desktop/commit/5169d142124a68237012d305ff959d7bf1d033d0))
-* show the incoming update's notes in the app ([cef9623](https://github.com/soca-projects/socadb-desktop/commit/cef9623301f724944b5c30c497210463179b86a2))
-* show the third-party licenses from the Help menu ([9b3c1ad](https://github.com/soca-projects/socadb-desktop/commit/9b3c1ad183f0122f8fd5890759dd797326e4eda9))
-* show the third-party licenses from the Help menu ([b7594c6](https://github.com/soca-projects/socadb-desktop/commit/b7594c642694b9198ad8e8ee7f55fba15d17042c))
-* show what's new after an update ([3832ae0](https://github.com/soca-projects/socadb-desktop/commit/3832ae0ad77cb42500acfe98ab5cc40e63af4b07))
-* show what's new after an update ([b06c1ce](https://github.com/soca-projects/socadb-desktop/commit/b06c1ce8bdd3995614601d7f57879e0dd884e7e9))
+- **Double-click a `.soca` file** to open it, from the Finder, Explorer or
+  a file manager. Several files at once join the home, and on macOS the
+  files carry SocaDB's icon. On Linux this needs the .deb. (#152)
+- **Appearance**. Settings chooses System, Light or Dark, and System
+  follows the OS as it changes. The View menu keeps Toggle Theme. (#150)
+- **The window remembers its size and position**. On macOS it never reopens
+  in full screen. (#150)
+- **Primary key of new tables**. Settings › General chooses it per
+  database: UUID, integer or big integer. The agents follow it too. (#153)
+- **Update settings**. Settings › Updates has Check automatically and
+  Install automatically, both on by default, the installed version and a
+  Check now button. With automatic install off, SocaDB asks first and
+  downloads nothing before a click. (#154)
+- **What's new**. From the next update on, a toast offers the new version's
+  notes in the app's language. Settings › Updates › Release notes opens the
+  whole history, and the update toast's link opens the notes of the
+  incoming version. (#155, #156)
+- **Third-party licenses**. Help › Third-Party Licenses lists the code
+  SocaDB ships with and its licenses. (#158, #159)
+- **About and Window menu**. About SocaDB opens the standard panel on macOS
+  and a dialog on Windows and Linux. The macOS Window menu has Minimize,
+  Zoom and Bring All to Front, and ⌘, (Ctrl+, on Windows and Linux) opens
+  Settings. (#150)
+- **AI apps can open and create schemas**. From the home, Claude Code,
+  Claude Desktop and Codex can list your schemas, open one by name or
+  create a new one. They no longer read or change the schema hidden behind
+  the home. (#144)
 
+### Changed
 
-### Bug Fixes
+- **Settings** are rebuilt, with one row per setting in a dialog that keeps
+  its size between sections. (#151)
+- **New tables** land on the free spot nearest the middle of the view,
+  never under the chat, instead of piling up in a diagonal. (#141)
+- **Large schemas** are much faster to edit: a change no longer redraws
+  every table and the side panel. (#139)
+- **A smaller app**. It takes about 130 MB less on macOS, around 600 MB
+  installed, and less on Windows and Linux too. (#129, #130)
+- **Updates** behave the same on macOS, Windows and Linux, and SocaDB
+  checks at launch and every four hours. On Windows the installer runs
+  silently. On Linux, .deb installs offer Restart & install only, because
+  they ask for an administrator password. (#154)
+- **The interface feels native**. It no longer selects as text, shows a
+  hand cursor on buttons or lets images and links be dragged out, and the
+  page menu with Reload is gone. Fields, toasts and chat messages stay
+  selectable. (#150)
+- **System texts follow the system language** on macOS: WebKit's menus,
+  file dialogs and the standard menu items. (#150)
+- **A selection box** (Shift+drag) pans the view when it nears the canvas
+  edge. (#135)
 
-* **canvas:** place new tables at the free spot nearest the view centre ([272c3a7](https://github.com/soca-projects/socadb-desktop/commit/272c3a7ac18090e97ca31c574a0066b75f6a8210))
-* **canvas:** place new tables at the free spot nearest the view centre ([0b18cb1](https://github.com/soca-projects/socadb-desktop/commit/0b18cb13c7ebaebff0ba368a85ab69170ce583b3))
-* **canvas:** save every moved table and arrow-key nudges ([4aea682](https://github.com/soca-projects/socadb-desktop/commit/4aea6823ad94546fdad26713a7e8667d2b03e75e))
-* **canvas:** save table moves and stop the first-table zoom ([d2facb4](https://github.com/soca-projects/socadb-desktop/commit/d2facb47175a377cacf0870338fa848dda2c2806))
-* **canvas:** stop zooming to 200% on the first table ([b92bec1](https://github.com/soca-projects/socadb-desktop/commit/b92bec1cd19e384287d0eb69124367a761de6c33))
-* **chat:** show the sign-in step when the Claude token is invalid ([bf2a1be](https://github.com/soca-projects/socadb-desktop/commit/bf2a1be7c84bb114cfea916042ae5248dcfcde22))
-* **deps:** update React Flow, elkjs, zustand and sonner ([a5eb666](https://github.com/soca-projects/socadb-desktop/commit/a5eb66640f4a60822782452712ffb6125668dffe))
-* **deps:** update React Flow, elkjs, zustand and sonner ([947026d](https://github.com/soca-projects/socadb-desktop/commit/947026df0310c5e45e2c487a3a069074ecbbf802))
-* **deps:** update React to 19.3 ([27fc170](https://github.com/soca-projects/socadb-desktop/commit/27fc170d458358674e0ef9571c4310cbd26a5b92))
-* **deps:** update React to 19.3 ([2819ef6](https://github.com/soca-projects/socadb-desktop/commit/2819ef69b47698fd33547fdee850aed9d4b59980))
-* **deps:** update rustls-webpki and webpki-root-certs ([1d1a623](https://github.com/soca-projects/socadb-desktop/commit/1d1a623e36478b99ba9a141bc584f4495082ab89))
-* **deps:** update rustls-webpki and webpki-root-certs ([0764618](https://github.com/soca-projects/socadb-desktop/commit/0764618a4e2d760848453c4aa4994252af7aa0be))
-* **deps:** update serde_with and tar for two security advisories ([723ac20](https://github.com/soca-projects/socadb-desktop/commit/723ac203c48e5fa2c5365127ff0037b45f50750e))
-* **deps:** update serde_with and tar for two security advisories ([4aa83f3](https://github.com/soca-projects/socadb-desktop/commit/4aa83f3742006c8b0e34abfa7516097ab4cb1af8))
-* **deps:** update tauri-plugin-updater to 2.14.1 ([7159e6b](https://github.com/soca-projects/socadb-desktop/commit/7159e6b7cb9ac912efe7d7abe5f32009bc356964))
-* **deps:** update tauri-plugin-updater to 2.14.1 ([3f695dc](https://github.com/soca-projects/socadb-desktop/commit/3f695dc8622fb72f91a94feadcf2e0d60ae2d983))
-* **deps:** update the Tauri family to 2.12 ([fd143c2](https://github.com/soca-projects/socadb-desktop/commit/fd143c2077cc80881ef3e836af7c299c92da813b))
-* **deps:** update the Tauri family to 2.12 ([6c78b53](https://github.com/soca-projects/socadb-desktop/commit/6c78b5356dac2ca6d81e1b2a3f01d325fe57cc77))
-* **deps:** update tokio and the other Rust crates ([08697e5](https://github.com/soca-projects/socadb-desktop/commit/08697e51bee30522c29bec9b6b5c0a59951f6b04))
-* **deps:** update tokio and the other Rust crates ([f489016](https://github.com/soca-projects/socadb-desktop/commit/f489016555de0204a5991ced16c40f0e8fe5e599))
-* **deps:** update tokio-tungstenite to 0.30 ([72db696](https://github.com/soca-projects/socadb-desktop/commit/72db6966cbeb0ba9888fd9d4d7e571da493f7547))
-* **deps:** update tokio-tungstenite to 0.30 ([19140f5](https://github.com/soca-projects/socadb-desktop/commit/19140f5ed4998491102bffc7d63d0a7159459afa))
-* **deps:** update zod, ws and the MCP SDK ([78e6b5c](https://github.com/soca-projects/socadb-desktop/commit/78e6b5cb91a2c7f09c521ed4793beb720e3a4f04))
-* **deps:** update zod, ws and the MCP SDK ([17246e1](https://github.com/soca-projects/socadb-desktop/commit/17246e1b6f33cb4c21d9d20e39b9036b59802e66))
-* keep SocaDB closed after installing an update on quit ([ee89ecc](https://github.com/soca-projects/socadb-desktop/commit/ee89ecccd6a193411e7b359c77d0fda12548fbd0))
-* keep the focus in a dialog opened from a toast ([f003dea](https://github.com/soca-projects/socadb-desktop/commit/f003deac2d171d863def47da516e80ee714efd6a))
-* keep the window buttons in place when the unsaved dot changes ([1c1a263](https://github.com/soca-projects/socadb-desktop/commit/1c1a263ce696216d2771e4b683b9ca9852344637))
-* let only the top dialog react to Escape and give focus back on close ([a72e406](https://github.com/soca-projects/socadb-desktop/commit/a72e4066714dbe3d9ce95ff1585738eb916577aa))
-* **linux:** keep linuxdeploy away from our binaries in the AppImage ([8350c8e](https://github.com/soca-projects/socadb-desktop/commit/8350c8ee0dab2292cfae270197e6d6602a4c6c80))
-* **linux:** working agents and a lasting MCP path in the AppImage ([245c043](https://github.com/soca-projects/socadb-desktop/commit/245c043cfe5cbc785955463b9e530ddb95bfe3fa))
-* **mcp:** connect AI apps to SocaDB whenever it opens ([a3d7977](https://github.com/soca-projects/socadb-desktop/commit/a3d79774ffdf64aaa55f0ab3fdd6b2cb0aaaefe9))
-* **mcp:** find Claude Desktop's config in its Microsoft Store folder ([88eb128](https://github.com/soca-projects/socadb-desktop/commit/88eb128b2827d9781f30f65045db671c0fe6e074))
-* **mcp:** give AI apps a server path that outlives the AppImage ([e22841d](https://github.com/soca-projects/socadb-desktop/commit/e22841d633d81960616d1bca8ecb36a27b2471ff))
-* **mcp:** keep SocaDB in Claude Desktop when it rewrites its config ([af175f8](https://github.com/soca-projects/socadb-desktop/commit/af175f89afa76758c74cc53aa3aaaab2eb485e18))
-* **mcp:** keep SocaDB registered in Claude Desktop ([4e68247](https://github.com/soca-projects/socadb-desktop/commit/4e68247715ab1d90f83bc2c33f1949bf917e2d07))
-* **mcp:** serve AI apps whether SocaDB is open or not ([bbeaf10](https://github.com/soca-projects/socadb-desktop/commit/bbeaf108adc9089679a6522ece0d128a7ecb8a3c))
-* never delete a relation behind an open dialog ([3f32958](https://github.com/soca-projects/socadb-desktop/commit/3f32958cf39e6611194379ddefe685eb44cd1902))
-* stop a stuck MCP client from blocking the bridge ([efd6ba4](https://github.com/soca-projects/socadb-desktop/commit/efd6ba462a2e3229208c7e415d9b2b201213e01d))
-* stop a stuck MCP client from blocking the bridge ([d00126f](https://github.com/soca-projects/socadb-desktop/commit/d00126f47316b04234c2364903338ef8f72fb631))
-* undo the typing in a text field before the schema ([3b1697e](https://github.com/soca-projects/socadb-desktop/commit/3b1697ebb297a8bc9bcfabfa53ebc912ac8b4241))
-* **undo:** never undo into another schema ([3c27861](https://github.com/soca-projects/socadb-desktop/commit/3c2786175ac978c3a5142c1e2b83bad2bd2a65ff))
-* **undo:** never undo into another schema ([2b296c9](https://github.com/soca-projects/socadb-desktop/commit/2b296c9aef137a8ded1366988020a4b712e37583))
-* **windows:** keep updates from failing on files still in use ([d44f090](https://github.com/soca-projects/socadb-desktop/commit/d44f0901873258d9899d1910bca890c026ca9cc6))
-* **windows:** let stopped agents exit before cleaning the runtime ([2c486c7](https://github.com/soca-projects/socadb-desktop/commit/2c486c77b0850cea0c5c531156bee25c5016d9ef))
-* **windows:** open a new Restart Manager session for each check ([d803ad1](https://github.com/soca-projects/socadb-desktop/commit/d803ad1107fe0949c289cd9c9ce1a4b4f5b11776))
-* **windows:** stop the agents and their CLIs before an update ([7134061](https://github.com/soca-projects/socadb-desktop/commit/71340614ec24ed09ff5837ecc43a236f7c016235))
-* **windows:** updates that survive running AI apps and leftover agents ([424dc50](https://github.com/soca-projects/socadb-desktop/commit/424dc50147e3c45e91dfa657d4bf86eb3d0857a7))
+### Fixed
 
+- **Undo after opening another schema** could show that schema's content
+  under the open file, and saving wrote it there. Opening, creating or
+  importing a schema now clears the undo history. (#149)
+- **⌘Z in a text field** undoes the typing, not the schema. (#150)
+- **Delete or Backspace** no longer removes the selected relation behind an
+  open dialog. (#150)
+- **Moving tables**. Dragging several tables saves them all, and moves with
+  the arrow keys are saved, with each burst counting as one undo step.
+  (#136)
+- **The first table of an empty schema** no longer zooms the view to 200%.
+  (#136)
+- **AI apps reach SocaDB whenever it opens**. An app started while SocaDB
+  was closed used to show Connection closed and never retry. (#144)
+- **Claude Desktop** keeps SocaDB when it is added while Claude is open,
+  and SocaDB finds the config of its Microsoft Store build. (#145)
+- **One stuck AI app** no longer blocks the others or the chat. (#134)
+- **The AppImage**. Its agents work, and AI apps keep a server path that
+  survives closing SocaDB. (#146)
+- **Windows updates** no longer stop on a file in use when an AI app or a
+  leftover agent is running, and uninstalling leaves no folder behind.
+  (#147)
+- **An expired Claude login** shows the sign-in step instead of a generic
+  error. (#128)
+- **A macOS crash** when dragging a Mail attachment or a Photos image over
+  the window. (#131)
 
-### Performance Improvements
+### Internal
 
-* **canvas:** reuse unchanged table nodes on schema changes ([a445386](https://github.com/soca-projects/socadb-desktop/commit/a44538617abdee84a04a5e919117a5e24c620e62))
-* **canvas:** stop re-rendering every table in the side panel ([d177854](https://github.com/soca-projects/socadb-desktop/commit/d177854df5fedd4bb12612a656ab5fa112e8b2b0))
-* **canvas:** stop re-rendering every table on each schema change ([e901192](https://github.com/soca-projects/socadb-desktop/commit/e901192d0aaa8391fde63df508ece6c48328c3af))
-* **runtime:** run the agents inside the MCP binary ([b374a46](https://github.com/soca-projects/socadb-desktop/commit/b374a46ea17630a249197ea627b425281b0f0728))
-* **runtime:** run the agents inside the MCP binary ([2da208a](https://github.com/soca-projects/socadb-desktop/commit/2da208a70a9c8b481af5a6b5202bd8da9cc19852))
-* **runtime:** stop shipping files the agents never use ([8f5c39b](https://github.com/soca-projects/socadb-desktop/commit/8f5c39b400d874ebe625a5577fefc095caca5afb))
-* **runtime:** stop shipping files the agents never use ([8b0a48a](https://github.com/soca-projects/socadb-desktop/commit/8b0a48a55143a8e4c6832a0448d2fa93d3ca51ea))
+- Dependencies caught up: Tauri 2.12, React 19.3, Rust 1.99.1, Bun 1.3.14,
+  React Flow 12.12, the Claude Agent SDK and the Rust crates, which clears
+  several advisories. (#67, #119, #127, #128, #131, #132, #133, #135, #137,
+  #138, #140, #142, #143, #148)
+- Renovate opens every update on approval, and security fixes skip it.
+  (#121)
+- The source code is under PolyForm Shield 1.0.0, with a README and a
+  contributing guide. (#157)
+- CI starts both agents for real, tests the Windows installer end to end,
+  and checks what the AppImage and the .deb ship. (#143, #144, #146, #147,
+  #159)
+- Dev builds drop the dependencies' debug info. (#120)
 
 ## [0.1.5] - 2026-10-20
 
