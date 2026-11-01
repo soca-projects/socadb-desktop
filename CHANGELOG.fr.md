@@ -4,6 +4,110 @@ Version française des notes de `CHANGELOG.md`, sans les sections réservées
 aux développeurs. L'app l'affiche aux utilisateurs dont l'interface est en
 français.
 
+## [0.1.6] - 2026-11-01
+
+SocaDB se comporte maintenant comme une app de bureau : elle retient sa
+fenêtre, ouvre les fichiers `.soca` d'un double-clic et propose de nouveaux
+Paramètres pour l'apparence, la clé primaire des nouvelles tables et les
+mises à jour. Les apps d'IA joignent SocaDB dès qu'elle s'ouvre, et peuvent
+ouvrir ou créer des schémas depuis son accueil. Les agents de l'AppImage
+marchent enfin, les mises à jour Windows ne s'arrêtent plus quand une app
+d'IA est ouverte, et l'annulation ne peut plus faire entrer un autre schéma
+dans le fichier ouvert.
+
+### Ajouts
+
+- **Double-cliquer sur un fichier `.soca`** l'ouvre, depuis le Finder,
+  l'Explorateur ou un gestionnaire de fichiers. Plusieurs fichiers à la
+  fois rejoignent l'accueil, et sur macOS les fichiers portent l'icône de
+  SocaDB. Sous Linux, il faut le .deb. (#152)
+- **Apparence**. Les Paramètres proposent Système, Clair ou Sombre, et
+  Système suit l'OS quand il change. Le menu Présentation garde Changer le
+  thème. (#150)
+- **La fenêtre retient sa taille et sa position**. Sur macOS, elle ne se
+  rouvre jamais en plein écran. (#150)
+- **Clé primaire des nouvelles tables**. Paramètres › Général la règle par
+  base : UUID, entier ou grand entier. Les agents la suivent aussi. (#153)
+- **Réglages des mises à jour**. Paramètres › Mises à jour propose
+  Rechercher automatiquement et Installer automatiquement, activés par
+  défaut, la version installée et un bouton Rechercher maintenant. Sans
+  installation automatique, SocaDB demande d'abord et ne télécharge rien
+  avant un clic. (#154)
+- **Nouveautés**. À partir de la prochaine mise à jour, un toast propose
+  les notes de la nouvelle version dans la langue de l'app. Paramètres ›
+  Mises à jour › Notes de version ouvre tout l'historique, et le lien du
+  toast de mise à jour ouvre les notes de la version qui arrive. (#155,
+  #156)
+- **Licences tierces**. Aide › Licences tierces liste le code embarqué par
+  SocaDB et ses licences. (#158, #159)
+- **À propos et menu Fenêtre**. À propos de SocaDB ouvre le panneau
+  standard sur macOS et une fenêtre sous Windows et Linux. Le menu Fenêtre
+  de macOS propose Placer dans le Dock, Réduire/agrandir et Tout ramener au
+  premier plan, et ⌘, (Ctrl+, sous Windows et Linux) ouvre les Paramètres.
+  (#150)
+- **Les apps d'IA peuvent ouvrir et créer des schémas**. Depuis l'accueil,
+  Claude Code, Claude Desktop et Codex peuvent lister vos schémas, en
+  ouvrir un par son nom ou en créer un nouveau. Elles ne lisent et ne
+  modifient plus le schéma caché derrière l'accueil. (#144)
+
+### Changements
+
+- **Les Paramètres** sont refaits, avec une ligne par réglage dans une
+  fenêtre qui garde sa taille d'une section à l'autre. (#151)
+- **Les nouvelles tables** se posent sur la place libre la plus proche du
+  centre de la vue, jamais sous le chat, au lieu de s'empiler en diagonale.
+  (#141)
+- **Les grands schémas** sont bien plus rapides à modifier : un changement
+  ne redessine plus toutes les tables ni le panneau latéral. (#139)
+- **Une app plus légère**. Elle prend environ 130 Mo de moins sur macOS,
+  autour de 600 Mo une fois installée, et moins aussi sous Windows et
+  Linux. (#129, #130)
+- **Les mises à jour** se passent de la même façon sur macOS, Windows et
+  Linux, et SocaDB vérifie au lancement puis toutes les quatre heures. Sous
+  Windows, l'installateur est silencieux. Sous Linux, les installations
+  .deb proposent seulement Redémarrer et installer, car elles demandent un
+  mot de passe administrateur. (#154)
+- **Une interface plus native**. Elle ne se sélectionne plus comme du
+  texte, n'affiche plus de main sur les boutons et ne laisse plus glisser
+  les images et les liens, et le menu de page avec Recharger a disparu. Les
+  champs, les toasts et les messages du chat restent sélectionnables.
+  (#150)
+- **Les textes du système suivent la langue du système** sur macOS : menus
+  de WebKit, sélecteurs de fichiers et entrées standard des menus. (#150)
+- **Un cadre de sélection** (Maj + glisser) déplace la vue quand il
+  approche du bord du canevas. (#135)
+
+### Corrections
+
+- **Annuler après avoir ouvert un autre schéma** pouvait afficher son
+  contenu sous le fichier ouvert, et enregistrer l'y écrivait. Ouvrir,
+  créer ou importer un schéma vide maintenant l'historique d'annulation.
+  (#149)
+- **⌘Z dans un champ de texte** annule la frappe, pas le schéma. (#150)
+- **Suppr ou Retour arrière** n'effacent plus la relation sélectionnée
+  derrière une fenêtre ouverte. (#150)
+- **Déplacer des tables**. Glisser plusieurs tables les enregistre toutes,
+  et les déplacements aux flèches sont enregistrés, chaque rafale comptant
+  pour une étape d'annulation. (#136)
+- **La première table d'un schéma vide** ne zoome plus la vue à 200 %.
+  (#136)
+- **Les apps d'IA joignent SocaDB dès qu'elle s'ouvre**. Une app lancée
+  pendant que SocaDB était fermée affichait Connection closed et ne
+  réessayait jamais. (#144)
+- **Claude Desktop** garde SocaDB quand elle est ajoutée pendant que Claude
+  est ouvert, et SocaDB trouve la config de sa version Microsoft Store.
+  (#145)
+- **Une app d'IA bloquée** ne gêne plus les autres ni le chat. (#134)
+- **L'AppImage**. Ses agents marchent, et les apps d'IA gardent un chemin
+  de serveur qui survit à la fermeture de SocaDB. (#146)
+- **Les mises à jour Windows** ne s'arrêtent plus sur un fichier utilisé
+  quand une app d'IA ou un agent resté ouvert tourne, et la désinstallation
+  ne laisse plus de dossier. (#147)
+- **Une connexion Claude expirée** affiche l'étape de connexion au lieu
+  d'une erreur générique. (#128)
+- **Un plantage sur macOS** en glissant une pièce jointe de Mail ou une
+  image de Photos au-dessus de la fenêtre. (#131)
+
 ## [0.1.5] - 2026-10-20
 
 Les schémas portent maintenant ce dont une vraie base de données a besoin :

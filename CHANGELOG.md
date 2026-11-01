@@ -6,6 +6,111 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Until 1.0.0, minor version bumps may include breaking changes.
 
+## [0.1.6] - 2026-11-01
+
+SocaDB now behaves like a desktop app: it remembers its window, opens
+`.soca` files with a double-click, and has new Settings for the appearance,
+the primary key of new tables and updates. AI apps reach SocaDB whenever it
+opens, and can open or create schemas from its home. The AppImage's agents
+work at last, Windows updates no longer stop when an AI app is open, and
+undo can no longer bring another schema into the file you have open.
+
+### Added
+
+- **Double-click a `.soca` file** to open it, from the Finder, Explorer or
+  a file manager. Several files at once join the home, and on macOS the
+  files carry SocaDB's icon. On Linux this needs the .deb. (#152)
+- **Appearance**. Settings chooses System, Light or Dark, and System
+  follows the OS as it changes. The View menu keeps Toggle Theme. (#150)
+- **The window remembers its size and position**. On macOS it never reopens
+  in full screen. (#150)
+- **Primary key of new tables**. Settings › General chooses it per
+  database: UUID, integer or big integer. The agents follow it too. (#153)
+- **Update settings**. Settings › Updates has Check automatically and
+  Install automatically, both on by default, the installed version and a
+  Check now button. With automatic install off, SocaDB asks first and
+  downloads nothing before a click. (#154)
+- **What's new**. From the next update on, a toast offers the new version's
+  notes in the app's language. Settings › Updates › Release notes opens the
+  whole history, and the update toast's link opens the notes of the
+  incoming version. (#155, #156)
+- **Third-party licenses**. Help › Third-Party Licenses lists the code
+  SocaDB ships with and its licenses. (#158, #159)
+- **About and Window menu**. About SocaDB opens the standard panel on macOS
+  and a dialog on Windows and Linux. The macOS Window menu has Minimize,
+  Zoom and Bring All to Front, and ⌘, (Ctrl+, on Windows and Linux) opens
+  Settings. (#150)
+- **AI apps can open and create schemas**. From the home, Claude Code,
+  Claude Desktop and Codex can list your schemas, open one by name or
+  create a new one. They no longer read or change the schema hidden behind
+  the home. (#144)
+
+### Changed
+
+- **Settings** are rebuilt, with one row per setting in a dialog that keeps
+  its size between sections. (#151)
+- **New tables** land on the free spot nearest the middle of the view,
+  never under the chat, instead of piling up in a diagonal. (#141)
+- **Large schemas** are much faster to edit: a change no longer redraws
+  every table and the side panel. (#139)
+- **A smaller app**. It takes about 130 MB less on macOS, around 600 MB
+  installed, and less on Windows and Linux too. (#129, #130)
+- **Updates** behave the same on macOS, Windows and Linux, and SocaDB
+  checks at launch and every four hours. On Windows the installer runs
+  silently. On Linux, .deb installs offer Restart & install only, because
+  they ask for an administrator password. (#154)
+- **The interface feels native**. It no longer selects as text, shows a
+  hand cursor on buttons or lets images and links be dragged out, and the
+  page menu with Reload is gone. Fields, toasts and chat messages stay
+  selectable. (#150)
+- **System texts follow the system language** on macOS: WebKit's menus,
+  file dialogs and the standard menu items. (#150)
+- **A selection box** (Shift+drag) pans the view when it nears the canvas
+  edge. (#135)
+
+### Fixed
+
+- **Undo after opening another schema** could show that schema's content
+  under the open file, and saving wrote it there. Opening, creating or
+  importing a schema now clears the undo history. (#149)
+- **⌘Z in a text field** undoes the typing, not the schema. (#150)
+- **Delete or Backspace** no longer removes the selected relation behind an
+  open dialog. (#150)
+- **Moving tables**. Dragging several tables saves them all, and moves with
+  the arrow keys are saved, with each burst counting as one undo step.
+  (#136)
+- **The first table of an empty schema** no longer zooms the view to 200%.
+  (#136)
+- **AI apps reach SocaDB whenever it opens**. An app started while SocaDB
+  was closed used to show Connection closed and never retry. (#144)
+- **Claude Desktop** keeps SocaDB when it is added while Claude is open,
+  and SocaDB finds the config of its Microsoft Store build. (#145)
+- **One stuck AI app** no longer blocks the others or the chat. (#134)
+- **The AppImage**. Its agents work, and AI apps keep a server path that
+  survives closing SocaDB. (#146)
+- **Windows updates** no longer stop on a file in use when an AI app or a
+  leftover agent is running, and uninstalling leaves no folder behind.
+  (#147)
+- **An expired Claude login** shows the sign-in step instead of a generic
+  error. (#128)
+- **A macOS crash** when dragging a Mail attachment or a Photos image over
+  the window. (#131)
+
+### Internal
+
+- Dependencies caught up: Tauri 2.12, React 19.3, Rust 1.99.1, Bun 1.3.14,
+  React Flow 12.12, the Claude Agent SDK and the Rust crates, which clears
+  several advisories. (#67, #119, #127, #128, #131, #132, #133, #135, #137,
+  #138, #140, #142, #143, #148)
+- Renovate opens every update on approval, and security fixes skip it.
+  (#121)
+- The source code is under PolyForm Shield 1.0.0, with a README and a
+  contributing guide. (#157)
+- CI starts both agents for real, tests the Windows installer end to end,
+  and checks what the AppImage and the .deb ship. (#143, #144, #146, #147,
+  #159)
+- Dev builds drop the dependencies' debug info. (#120)
+
 ## [0.1.5] - 2026-10-20
 
 Schemas now carry what a real database needs: notes on tables and
