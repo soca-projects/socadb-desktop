@@ -16,9 +16,12 @@ const text = (parts: Inline[]) => parts.map((p) => p.text).join("");
 
 describe("release notes parser", () => {
   const releases = parseChangelog(en);
+  const v015 = releases.find((r) => r.version === "0.1.5");
 
   it("reads every released version, newest first, with its date", () => {
-    expect(releases.map((r) => r.version)).toEqual([
+    const versions = releases.map((r) => r.version);
+    expect(versions).toEqual([...versions].sort((a, b) => compareVersions(b, a)));
+    expect(versions.slice(-6)).toEqual([
       "0.1.5",
       "0.1.4",
       "0.1.3",
@@ -26,22 +29,21 @@ describe("release notes parser", () => {
       "0.1.1",
       "0.1.0",
     ]);
-    expect(releases[0]?.date).toBe("2026-10-20");
+    expect(v015?.date).toBe("2026-10-20");
   });
 
   it("keeps the intro, joins wrapped lines and drops developer sections", () => {
-    const latest = releases[0];
-    expect(text(latest?.intro[0] ?? [])).toMatch(
+    expect(text(v015?.intro[0] ?? [])).toMatch(
       /^Schemas now carry what a real database needs: notes on tables and columns,/,
     );
-    expect(latest?.sections.map((s) => s.title)).toEqual(["Added", "Changed", "Fixed"]);
+    expect(v015?.sections.map((s) => s.title)).toEqual(["Added", "Changed", "Fixed"]);
     expect(releases.flatMap((r) => r.sections.map((s) => s.title))).not.toContain(
       "Internal",
     );
   });
 
   it("keeps a wrapped list item whole", () => {
-    const added = releases[0]?.sections[0]?.items ?? [];
+    const added = v015?.sections[0]?.items ?? [];
     expect(added).toHaveLength(9);
     expect(text(added[0] ?? [])).toBe(
       "Notes, enums, indexes and type parameters. Tables and columns take notes, columns take enums, lengths, precision and scale, MySQL numeric columns take UNSIGNED, and tables take indexes. Older files open unchanged.",
@@ -115,11 +117,32 @@ describe("release notes parser", () => {
   });
 
   it("lists everything after a version, or the whole history", () => {
-    expect(releasesAfter(releases, "0.1.3").map((r) => r.version)).toEqual([
+    const history = parseChangelog(
+      [
+        "## [0.1.5] - 2026-10-20",
+        "",
+        "### Added",
+        "",
+        "- Five.",
+        "",
+        "## [0.1.4] - 2026-10-12",
+        "",
+        "### Added",
+        "",
+        "- Four.",
+        "",
+        "## [0.1.3] - 2026-09-25",
+        "",
+        "### Fixed",
+        "",
+        "- Three.",
+      ].join("\n"),
+    );
+    expect(releasesAfter(history, "0.1.3").map((r) => r.version)).toEqual([
       "0.1.5",
       "0.1.4",
     ]);
-    expect(releasesAfter(releases, null)).toHaveLength(6);
+    expect(releasesAfter(history, null)).toHaveLength(3);
   });
 
   it("writes the date in the app's language without a timezone shift", () => {
