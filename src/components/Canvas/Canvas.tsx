@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, type RefObject } from "react";
 import {
   ReactFlow,
   Background,
@@ -32,9 +32,12 @@ import { listen } from "@tauri-apps/api/event";
 import { Trans } from "react-i18next";
 import { formatShortcut } from "../../utils/platform";
 import { removableByKey } from "../../utils/canvasDeletion";
+import { mergeStoreNodes, newMoveTracker, saveMoves } from "../../utils/canvasMoves";
 import { NARROW_WINDOW_QUERY } from "../../utils/layout";
 import { genId } from "../../utils/id";
 import { createTable, duplicateTable } from "../../utils/schemaActions";
+import { setCanvasView } from "../../utils/canvasView";
+import { centreToReveal, containsRect, type Rect } from "../../utils/tablePlacement";
 import type { DbType, Relation, SchemaEnum, Table } from "../../types/schema";
 
 const nodeTypes = { table: TableNode };
@@ -83,6 +86,75 @@ function ViewportCompensator({
   return null;
 }
 
+const VIEW_MARGIN_PX = 24;
+
+function CanvasViewRegistrar({ frame }: { frame: RefObject<HTMLDivElement | null> }) {
+  const { screenToFlowPosition, getInternalNode, setCenter, getZoom } = useReactFlow();
+
+  useEffect(() => {
+    const toFlow = (r: { left: number; top: number; right: number; bottom: number }) => {
+      const from = screenToFlowPosition({ x: r.left, y: r.top });
+      const to = screenToFlowPosition({ x: r.right, y: r.bottom });
+      return { x: from.x, y: from.y, width: to.x - from.x, height: to.y - from.y };
+    };
+    const chatRect = () =>
+      document.querySelector("[data-chat-panel]")?.getBoundingClientRect();
+    const visibleArea = (): Rect | null => {
+      const box = frame.current?.getBoundingClientRect();
+      if (!box) return null;
+      const chat = chatRect();
+      const right =
+        chat && chat.height > box.height / 2 && chat.left > box.left
+          ? Math.min(box.right, chat.left)
+          : box.right;
+      const from = screenToFlowPosition({
+        x: box.left + VIEW_MARGIN_PX,
+        y: box.top + VIEW_MARGIN_PX,
+      });
+      const to = screenToFlowPosition({
+        x: right - VIEW_MARGIN_PX,
+        y: box.bottom - VIEW_MARGIN_PX,
+      });
+      return {
+        x: from.x,
+        y: from.y,
+        width: Math.max(0, to.x - from.x),
+        height: Math.max(0, to.y - from.y),
+      };
+    };
+    setCanvasView({
+      visibleArea,
+      blockedAreas: () => {
+        const chat = chatRect();
+        return chat ? [toFlow(chat)] : [];
+      },
+      measuredSize: (id) => {
+        const measured = getInternalNode(id)?.measured;
+        return measured?.width && measured.height
+          ? { width: measured.width, height: measured.height }
+          : null;
+      },
+      reveal: (rect) => {
+        const area = visibleArea();
+        const box = frame.current?.getBoundingClientRect();
+        if (!area || !box || containsRect(area, rect)) return;
+        const centre = centreToReveal(
+          rect,
+          area,
+          screenToFlowPosition({
+            x: box.left + box.width / 2,
+            y: box.top + box.height / 2,
+          }),
+        );
+        void setCenter(centre.x, centre.y, { zoom: getZoom(), duration: 300 });
+      },
+    });
+    return () => setCanvasView(null);
+  }, [frame, screenToFlowPosition, getInternalNode, setCenter, getZoom]);
+
+  return null;
+}
+
 const NO_ENUMS: SchemaEnum[] = [];
 
 function tablesToNodes(tables: Table[], enums: SchemaEnum[], dbType: DbType) {
@@ -118,16 +190,11 @@ interface ContextMenuState {
   y: number;
 }
 
-interface CanvasProps {
-  onOpenSettings: () => void;
-}
-
-export function Canvas({ onOpenSettings }: CanvasProps) {
+export function Canvas() {
   const tables = useSchemaStore((s) => s.schema.tables);
   const relations = useSchemaStore((s) => s.schema.relations);
   const enums = useSchemaStore((s) => s.schema.enums ?? NO_ENUMS);
   const dbType = useSchemaStore((s) => s.schema.dbType);
-  const updateTable = useSchemaStore((s) => s.updateTable);
   const deleteTable = useSchemaStore((s) => s.deleteTable);
   const addRelation = useSchemaStore((s) => s.addRelation);
   const deleteRelation = useSchemaStore((s) => s.deleteRelation);
@@ -212,7 +279,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   if (storeNodes !== lastStoreNodes) {
     setLastStoreNodes(storeNodes);
     if (localNodes !== null) {
-      setLocalNodes(null);
+      setLocalNodes(mergeStoreNodes(storeNodes, localNodes));
     }
   }
 
@@ -233,19 +300,15 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
     [baseEdges, hoveredEdgeId],
   );
 
+  const moves = useRef(newMoveTracker());
+  const canvasFrame = useRef<HTMLDivElement>(null);
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setLocalNodes((prev) => applyNodeChanges(changes, prev ?? storeNodes));
+      saveMoves(changes, moves.current, Date.now());
     },
     [storeNodes],
-  );
-
-  const onNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
-      updateTable(node.id, { position: node.position });
-      setLocalNodes(null);
-    },
-    [updateTable],
   );
 
   const onEdgesChange = useCallback(
@@ -317,7 +380,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
   }, []);
 
   const handleAddFirstTable = useCallback(() => {
-    const newId = createTable();
+    const newId = createTable({ reveal: true });
     setOpenTableId(newId);
   }, []);
 
@@ -328,7 +391,6 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
           isSidePanelOpen={sidePanelOpen}
           onToggleSidePanel={toggleSidePanel}
           onToggleFocusMode={toggleFocusMode}
-          onOpenSettings={onOpenSettings}
         />
       )}
 
@@ -341,7 +403,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
           />
         )}
 
-        <div className="relative flex-1">
+        <div ref={canvasFrame} className="relative flex-1">
           {tables.length === 0 && !focusMode && (
             <EmptyCanvas
               onAddTable={handleAddFirstTable}
@@ -354,7 +416,6 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
-            onNodeDragStop={onNodeDragStop}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
@@ -363,7 +424,9 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
             onEdgeMouseLeave={onEdgeMouseLeave}
             onPaneClick={handleCloseContextMenu}
             elevateEdgesOnSelect
-            onInit={(instance) => instance.fitView({ padding: 0.2 })}
+            // On an empty canvas React Flow holds this fit until the first
+            // table appears, then frames that lone table: uncapped, it zooms to 200%.
+            onInit={(instance) => instance.fitView({ padding: 0.2, maxZoom: 1 })}
             minZoom={0.1}
             maxZoom={2}
             deleteKeyCode={DELETE_KEY_CODE}
@@ -372,6 +435,7 @@ export function Canvas({ onOpenSettings }: CanvasProps) {
           >
             <Background gap={12} size={2} color={gridColor} />
             <ViewportCompensator isSidePanelOpen={sidePanelOpen} focusMode={focusMode} />
+            <CanvasViewRegistrar frame={canvasFrame} />
             <CanvasControls />
           </ReactFlow>
           {focusMode && (

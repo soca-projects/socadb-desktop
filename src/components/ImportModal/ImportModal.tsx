@@ -18,6 +18,7 @@ import type { ImportFormat } from "../../utils/importFiles";
 import { logError, logInfo, logWarn } from "../../utils/log";
 import {
   mergeImport,
+  replaceOrAskFirst,
   replaceWithImport,
   showImportSummary,
 } from "../../utils/importApply";
@@ -85,48 +86,54 @@ export function ImportModal({ onClose }: ImportModalProps) {
 
       const store = useSchemaStore.getState();
       const skipped = attempted - tables.length;
+      const finish = () => {
+        logInfo("import.done", "Import done", {
+          format,
+          tables: tables.length,
+          relations: relations.length,
+          skipped,
+          issues: issues.length,
+          fromHome: false,
+        });
+        showImportSummary({
+          tables: tables.length,
+          relations: relations.length,
+          skipped,
+          issues,
+        });
+      };
 
       if (mode === "replace") {
-        replaceWithImport(
-          tables,
-          relations,
-          enums,
-          detectedDbType ?? store.schema.dbType,
-          store.schema.name,
-        );
-      } else {
-        const currentDbType = store.schema.dbType;
-
-        if (detectedDbType && detectedDbType !== currentDbType) {
-          setConflict({
+        const { name } = store.schema;
+        replaceOrAskFirst(() => {
+          void replaceWithImport(
             tables,
             relations,
             enums,
-            fileDbType: detectedDbType,
-            currentDbType,
-            skipped,
-            issues,
-          });
-          return;
-        }
-
-        mergeImport(tables, relations, enums);
+            detectedDbType ?? currentDbType,
+            name,
+          );
+          finish();
+        });
+        onClose();
+        return;
       }
 
-      logInfo("import.done", "Import done", {
-        format,
-        tables: tables.length,
-        relations: relations.length,
-        skipped,
-        issues: issues.length,
-        fromHome: false,
-      });
-      showImportSummary({
-        tables: tables.length,
-        relations: relations.length,
-        skipped,
-        issues,
-      });
+      if (detectedDbType && detectedDbType !== currentDbType) {
+        setConflict({
+          tables,
+          relations,
+          enums,
+          fileDbType: detectedDbType,
+          currentDbType,
+          skipped,
+          issues,
+        });
+        return;
+      }
+
+      mergeImport(tables, relations, enums);
+      finish();
       onClose();
     } catch (e) {
       logError("import.failed", e, { format });
@@ -138,18 +145,20 @@ export function ImportModal({ onClose }: ImportModalProps) {
 
   const handleConflictReplace = () => {
     if (!conflict) return;
-    replaceWithImport(
-      conflict.tables,
-      conflict.relations,
-      conflict.enums,
-      conflict.fileDbType,
-      useSchemaStore.getState().schema.name,
-    );
-    showImportSummary({
-      tables: conflict.tables.length,
-      relations: conflict.relations.length,
-      skipped: conflict.skipped,
-      issues: conflict.issues,
+    replaceOrAskFirst(() => {
+      void replaceWithImport(
+        conflict.tables,
+        conflict.relations,
+        conflict.enums,
+        conflict.fileDbType,
+        useSchemaStore.getState().schema.name,
+      );
+      showImportSummary({
+        tables: conflict.tables.length,
+        relations: conflict.relations.length,
+        skipped: conflict.skipped,
+        issues: conflict.issues,
+      });
     });
     onClose();
   };

@@ -1,5 +1,8 @@
-import { UNDO_LIMIT, useSchemaStore } from "../stores/schemaStore";
+import { getVersion } from "@tauri-apps/api/app";
+import i18next from "../i18n";
+import { UNDO_LIMIT, createEmptySchema, useSchemaStore } from "../stores/schemaStore";
 import { genId } from "./id";
+import { noteSchemaChange } from "./fieldUndo";
 import { computeAutoLayout } from "./autoLayout";
 import { useViewStore } from "../stores/viewStore";
 import { createTable } from "./schemaActions";
@@ -10,9 +13,14 @@ import {
   findEnumById,
   findTableById,
   findTableByName,
+  hasUnsavedChanges,
+  isWorthResuming,
+  serializeColumn,
   serializeRelation,
   serializeTable,
 } from "./schemaQueries";
+import { createDefaultIdColumn } from "./columnDefaults";
+import { getPrimaryKeyPreference } from "./primaryKeyPreference";
 import {
   McpCreateTableZ,
   McpUpdateTableZ,
@@ -24,7 +32,15 @@ import {
   McpRelationEndpointsZ,
   McpAddIndexZ,
   McpDeleteIndexZ,
+  McpNewSchemaZ,
+  McpOpenSchemaZ,
+  type McpClientZ,
 } from "./zodSchemas";
+import { fold } from "./conversationHistory";
+import { openRecentFile } from "./fileOperations";
+import { loadHomeEntries } from "./homeEntries";
+import { splitSchemaPath } from "./homeList";
+import { getRecentFiles } from "./recentFiles";
 import type { z } from "zod";
 import type { Column, Table, Schema } from "../types/schema";
 import { DB_LABEL, buildMcpColumn, mcpColumnUpdates } from "./mcpColumns";
@@ -119,9 +135,176 @@ function enumNameError(
   return `"${name}" is a table's name: PostgreSQL gives each table a type of that name, so an enum can't take it`;
 }
 
-type ActionHandler = (p: Record<string, unknown>) => McpResult | Promise<McpResult>;
+type McpClient = z.infer<typeof McpClientZ>;
+
+type ActionHandler = (
+  p: Record<string, unknown>,
+  client: McpClient,
+) => McpResult | Promise<McpResult>;
+
+const LISTED_SCHEMAS = 50;
+
+// The home screen shows no schema while the store still holds the last one:
+// an AI app would change a schema the user can't see.
+const ALLOWED_ON_HOME = new Set([
+  "hello",
+  "get_editor_state",
+  "list_schemas",
+  "new_schema",
+  "open_schema",
+]);
+
+// A switch clears the undo history: kept as an undo step, ⌘Z would bring the
+// previous schema back under the new one's name.
+const SCHEMA_SWITCHES = new Set(["new_schema", "open_schema"]);
+
+function parentPath(path: string): string {
+  return path.replace(/[/\\]+[^/\\]*$/, "");
+}
+
+function folderKey(path: string): string {
+  return fold(path.trim().replace(/\\/g, "/").replace(/\/+$/, ""));
+}
+
+function schemaKey(name: string): string {
+  return fold(name.trim().replace(/\.soca$/i, ""));
+}
+
+function lastSchema(): { name: string; unsavedDraft: boolean } | null {
+  const { schema, filePath } = useSchemaStore.getState();
+  if (filePath) return { name: splitSchemaPath(filePath).name, unsavedDraft: false };
+  return isWorthResuming(schema, null) ? { name: schema.name, unsavedDraft: true } : null;
+}
+
+function homeScreenError(): string {
+  const last = lastSchema();
+  const hint = last
+    ? ` The last schema they had open is "${last.name}"${last.unsavedDraft ? ", an unsaved draft" : ""}.`
+    : "";
+  return `SocaDB shows its home screen, so no schema is open. If the user asked for a new database, call new_schema; if they named a schema, call open_schema; otherwise ask them which schema they mean.${hint}`;
+}
+
+function unsavedChangesError(): string | null {
+  const { schema, filePath, savedAt } = useSchemaStore.getState();
+  if (!hasUnsavedChanges(schema, filePath, savedAt)) return null;
+  return filePath
+    ? `"${splitSchemaPath(filePath).name}" has unsaved changes in SocaDB. Ask the user to save them, or to close the schema without saving, then try again.`
+    : `The draft "${schema.name}" isn't saved yet. Ask the user to save it in SocaDB, or to close it without saving, then try again.`;
+}
+
+function showSchema() {
+  useSchemaStore.temporal.getState().clear();
+  useViewStore.getState().showEditor();
+}
 
 const handlers: Record<string, ActionHandler> = {
+  hello: async () => success({ app: "socadb", version: await getVersion() }),
+
+  list_schemas: async () => {
+    const { schema, filePath } = useSchemaStore.getState();
+    const shown = useViewStore.getState().view === "editor" ? filePath : null;
+    const entries = await loadHomeEntries(getRecentFiles().slice(0, LISTED_SCHEMAS));
+    const draft =
+      filePath === null && isWorthResuming(schema, null)
+        ? [{ name: schema.name, unsavedDraft: true, tables: schema.tables.length }]
+        : [];
+    return success([
+      ...draft,
+      ...entries
+        .filter((e) => e.state === "present")
+        .map((e) => ({
+          name: e.name,
+          folder: e.folder,
+          lastOpened: new Date(e.openedAt).toISOString(),
+          tables: e.schema?.tables.length ?? null,
+          ...(e.path === shown ? { open: true } : {}),
+        })),
+    ]);
+  },
+
+  new_schema: (p) => {
+    const parsed = McpNewSchemaZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
+    const unsaved = unsavedChangesError();
+    if (unsaved) return fail(unsaved);
+    const name = parsed.data.name?.trim() || i18next.t("newSchema.untitled");
+    const dbType = parsed.data.dbType ?? "postgresql";
+    const store = useSchemaStore.getState();
+    store.setSchema(createEmptySchema(name, dbType));
+    store.setFilePath(null);
+    showSchema();
+    return success({ name, dbType });
+  },
+
+  open_schema: async (p) => {
+    const parsed = McpOpenSchemaZ.safeParse(p);
+    if (!parsed.success) return fail(parsed.error.message);
+    const { name, folder } = parsed.data;
+    const { schema, filePath } = useSchemaStore.getState();
+    if (
+      filePath === null &&
+      folder === undefined &&
+      isWorthResuming(schema, null) &&
+      schemaKey(schema.name) === schemaKey(name)
+    ) {
+      useViewStore.getState().showEditor();
+      return success({
+        name: schema.name,
+        unsavedDraft: true,
+        tables: schema.tables.length,
+      });
+    }
+    const named = getRecentFiles().filter(
+      (r) => schemaKey(splitSchemaPath(r.path).name) === schemaKey(name),
+    );
+    const entries = await loadHomeEntries(named);
+    const current = useSchemaStore.getState().filePath;
+    const found = entries.filter((e) => e.state === "present" || e.path === current);
+    if (found.length === 0) {
+      return fail(`No schema named "${name}" in SocaDB's list; list_schemas shows them.`);
+    }
+    const folderList = (list: typeof found) =>
+      list.map((e) => `"${parentPath(e.path)}"`).join(", ");
+    const matches =
+      folder === undefined
+        ? found
+        : found.filter(
+            (e) =>
+              fold(e.folder) === fold(folder.trim()) ||
+              folderKey(parentPath(e.path)) === folderKey(folder),
+          );
+    if (matches.length === 0) {
+      return fail(
+        `No schema named "${name}" in the folder "${folder}". Schemas with that name are in ${folderList(found)}.`,
+      );
+    }
+    if (matches.length > 1) {
+      return fail(
+        `Several schemas are named "${name}", in ${folderList(matches)}: call open_schema again with one of these folders.`,
+      );
+    }
+    const path = matches[0].path;
+    if (path === current) {
+      useViewStore.getState().showEditor();
+    } else {
+      const unsaved = unsavedChangesError();
+      if (unsaved) return fail(unsaved);
+      await openRecentFile(path);
+      if (useSchemaStore.getState().filePath !== path) {
+        return fail(
+          `SocaDB couldn't open "${name}": the file is missing or can't be read.`,
+        );
+      }
+      showSchema();
+    }
+    const opened = useSchemaStore.getState().schema;
+    return success({
+      ...splitSchemaPath(path),
+      dbType: opened.dbType,
+      tables: opened.tables.length,
+    });
+  },
+
   get_schema: () => {
     const { schema } = useSchemaStore.getState();
     return success({
@@ -132,6 +315,10 @@ const handlers: Record<string, ActionHandler> = {
       ...(schema.dbType === "postgresql" && schema.enums?.length
         ? { enums: schema.enums.map((e) => ({ name: e.name, values: e.values })) }
         : {}),
+      primaryKeyForNewTables: serializeColumn(
+        schema,
+        createDefaultIdColumn(schema.dbType, getPrimaryKeyPreference()[schema.dbType]),
+      ),
     });
   },
 
@@ -143,9 +330,13 @@ const handlers: Record<string, ActionHandler> = {
     return success(table ? serializeTable(schema, table) : null);
   },
 
-  get_editor_state: () => {
+  get_editor_state: (_p, client) => {
     const { schema, filePath } = useSchemaStore.getState();
+    if (client === "external" && useViewStore.getState().view === "home") {
+      return success({ screen: "home", lastSchema: lastSchema() });
+    }
     return success({
+      screen: "editor",
       filePath,
       schemaName: schema.name,
       dbType: schema.dbType,
@@ -381,6 +572,7 @@ const handlers: Record<string, ActionHandler> = {
 export async function dispatchMcpAction(
   action: string,
   payload: Record<string, unknown>,
+  client: McpClient = "external",
 ): Promise<McpResult> {
   // Dynamic import keeps the UI-driving actions out of release bundles.
   if (import.meta.env.DEV && action.startsWith("dev_")) {
@@ -389,7 +581,15 @@ export async function dispatchMcpAction(
   }
   const handler = handlers[action];
   if (!handler) return fail(`Unknown action: ${action}`);
-  return asOneUndoStep(() => handler(payload));
+  if (
+    client === "external" &&
+    useViewStore.getState().view === "home" &&
+    !ALLOWED_ON_HOME.has(action)
+  ) {
+    return fail(homeScreenError());
+  }
+  if (SCHEMA_SWITCHES.has(action)) return handler(payload, client);
+  return asOneUndoStep(() => handler(payload, client));
 }
 
 // An agent call can patch the schema several times (a table, its enums, its
@@ -411,6 +611,8 @@ function asOneUndoStep(
         pastStates: [...pastStates, { schema: before }].slice(-UNDO_LIMIT),
         futureStates: [],
       }));
+      // Pushed by hand, so the store's onSave never sees it.
+      noteSchemaChange();
     }
   }
 }

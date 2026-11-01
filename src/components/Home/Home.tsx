@@ -75,11 +75,7 @@ function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
   cards[next].focus();
 }
 
-interface HomeProps {
-  onOpenSettings: () => void;
-}
-
-export function Home({ onOpenSettings }: HomeProps) {
+export function Home() {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? "en";
   const entries = useHomeEntries();
@@ -212,7 +208,7 @@ export function Home({ onOpenSettings }: HomeProps) {
 
   return (
     <div className="flex h-screen w-screen flex-col bg-surface-paper">
-      <Toolbar variant="home" onOpenSettings={onOpenSettings} />
+      <Toolbar variant="home" />
 
       <div className="flex shrink-0 flex-col gap-3.5 px-8 pb-3.5 pt-[22px]">
         <div className="flex flex-wrap items-center justify-between gap-3">

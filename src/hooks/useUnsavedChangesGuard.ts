@@ -7,12 +7,15 @@ import {
   openRecentFile,
 } from "../utils/fileOperations";
 import { importDraft } from "../utils/homeImport";
+import { dropPendingReplace, runPendingReplace } from "../utils/importApply";
 import { closeSchema } from "../utils/schemaActions";
 
-type PendingAction = "new" | "open" | "open-recent" | "close" | "import-file" | null;
+type PendingAction =
+  "new" | "open" | "open-recent" | "close" | "import-file" | "replace-import" | null;
 
 export function useUnsavedChangesGuard() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [ready, setReady] = useState(false);
   const recentPathRef = useRef<string | null>(null);
   const importPathRef = useRef<string | null>(null);
   const pendingRef = useRef<PendingAction>(null);
@@ -26,17 +29,24 @@ export function useUnsavedChangesGuard() {
       listen("unsaved-guard-new", () => setPendingAction("new")),
       listen("unsaved-guard-open", () => setPendingAction("open")),
       listen("unsaved-guard-close", () => setPendingAction("close")),
+      listen("unsaved-guard-replace-import", () => setPendingAction("replace-import")),
       listen<string>("unsaved-guard-import-file", (event) => {
         if (pendingRef.current) return;
         importPathRef.current = event.payload;
         setPendingAction("import-file");
       }),
       listen<string>("unsaved-guard-open-recent", (event) => {
+        if (pendingRef.current) return;
         recentPathRef.current = event.payload;
         setPendingAction("open-recent");
       }),
     ];
+    let live = true;
+    void Promise.all(unlistens).then(() => {
+      if (live) setReady(true);
+    });
     return () => {
+      live = false;
       for (const u of unlistens) void u.then((fn) => fn());
     };
   }, []);
@@ -58,10 +68,15 @@ export function useUnsavedChangesGuard() {
       const path = importPathRef.current;
       importPathRef.current = null;
       if (path) void importDraft(path);
+    } else if (action === "replace-import") {
+      runPendingReplace();
     }
   }, []);
 
-  const handleCancel = useCallback(() => setPendingAction(null), []);
+  const handleCancel = useCallback(() => {
+    dropPendingReplace();
+    setPendingAction(null);
+  }, []);
 
   const handleDiscard = useCallback(() => {
     const action = pendingAction;
@@ -79,6 +94,7 @@ export function useUnsavedChangesGuard() {
   }, [pendingAction, executePendingAction]);
 
   return {
+    ready,
     isOpen: pendingAction !== null,
     handleCancel,
     handleDiscard,

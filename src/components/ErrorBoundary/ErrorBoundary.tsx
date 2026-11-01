@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-sm font-medium text-secondary">
             {i18next.t("error.heading")}
           </p>
-          <p className="max-w-md text-center font-mono text-xs text-tertiary">
+          <p className="max-w-md select-text text-center font-mono text-xs text-tertiary">
             {this.state.error.message}
           </p>
           <button

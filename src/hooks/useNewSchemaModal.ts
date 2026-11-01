@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
+import { createEmptySchema } from "../stores/schemaStore";
+import { replaceSchema } from "../utils/schemaActions";
 import { useViewStore } from "../stores/viewStore";
 import type { DbType } from "../types/schema";
 
@@ -15,9 +16,7 @@ export function useNewSchemaModal() {
   }, []);
 
   const handleCreate = useCallback((name: string, dbType: DbType) => {
-    const { setSchema, setFilePath } = useSchemaStore.getState();
-    setSchema(createEmptySchema(name, dbType));
-    setFilePath(null);
+    replaceSchema(createEmptySchema(name, dbType), null);
     setIsOpen(false);
     useViewStore.getState().showEditor();
   }, []);

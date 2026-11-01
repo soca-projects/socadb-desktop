@@ -1,6 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { dispatchMcpAction } from "./mcpActions";
+import { noteSchemaChange } from "./fieldUndo";
 import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
+import { useViewStore } from "../stores/viewStore";
+
+vi.mock("./fieldUndo", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./fieldUndo")>()),
+  noteSchemaChange: vi.fn(),
+}));
 
 function resetStore(dbType: "mysql" | "postgresql" = "postgresql") {
   useSchemaStore.setState({
@@ -8,6 +15,7 @@ function resetStore(dbType: "mysql" | "postgresql" = "postgresql") {
     filePath: null,
     savedAt: null,
   });
+  useViewStore.setState({ view: "editor" });
 }
 
 describe("dispatchMcpAction", () => {
@@ -629,6 +637,41 @@ describe("primary keys the agent creates", () => {
   });
 });
 
+describe("the user's primary key for new tables", () => {
+  beforeEach(() => resetStore());
+  afterEach(() => vi.unstubAllGlobals());
+
+  function preferPrimaryKeys(value: { postgresql: string; mysql: string }) {
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) =>
+        key === "socadb_primary_key" ? JSON.stringify(value) : null,
+      setItem: vi.fn(),
+    });
+  }
+
+  it("gives a table created without columns the chosen id column", async () => {
+    preferPrimaryKeys({ postgresql: "bigint", mysql: "int" });
+    await dispatchMcpAction("create_table", { name: "orders" });
+    const [id] = useSchemaStore.getState().schema.tables[0].columns;
+    expect(id).toMatchObject({ name: "id", type: "bigserial", isPrimaryKey: true });
+  });
+
+  it("tells the agent which id column new tables start with", async () => {
+    preferPrimaryKeys({ postgresql: "int", mysql: "uuid" });
+    resetStore("mysql");
+    const result = await dispatchMcpAction("get_schema", {});
+    expect(result.ok && result.data).toMatchObject({
+      primaryKeyForNewTables: {
+        name: "id",
+        type: "char",
+        length: 36,
+        defaultValue: "(UUID())",
+        defaultKind: "expression",
+      },
+    });
+  });
+});
+
 describe("agent review cases", () => {
   beforeEach(() => resetStore());
   const schema = () => useSchemaStore.getState().schema;
@@ -676,6 +719,15 @@ describe("agent review cases", () => {
     useSchemaStore.temporal.getState().undo();
     expect(schema().tables).toHaveLength(0);
     expect(schema().enums ?? []).toHaveLength(0);
+  });
+
+  it("tells the field being typed in about each agent call, once", async () => {
+    vi.mocked(noteSchemaChange).mockClear();
+    await dispatchMcpAction("create_table", {
+      name: "posts",
+      columns: [{ name: "status", enumName: "post_status", enumValues: ["draft"] }],
+    });
+    expect(noteSchemaChange).toHaveBeenCalledTimes(1);
   });
 
   it("applies the editor's rules when the agent changes a type", async () => {

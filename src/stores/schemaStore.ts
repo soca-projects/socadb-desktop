@@ -10,6 +10,7 @@ import type {
   TableIndex,
 } from "../types/schema";
 import { genId } from "../utils/id";
+import { noteSchemaChange } from "../utils/fieldUndo";
 import { findColumnById, findTableById } from "../utils/schemaQueries";
 import {
   normalizeSchema,
@@ -188,17 +189,16 @@ export const useSchemaStore = create<SchemaState>()(
               enums: [...enums, created],
               tables: mapTable(state.schema.tables, tableId, (t) => ({
                 ...t,
-                columns: t.columns.map(
-                  (c): Column =>
-                    c.id === columnId
-                      ? {
-                          ...c,
-                          type: "enum",
-                          enumId: id,
-                          isAutoIncrement: false,
-                          defaultValue: keepDefault ? c.defaultValue : null,
-                        }
-                      : c,
+                columns: t.columns.map((c): Column =>
+                  c.id === columnId
+                    ? {
+                        ...c,
+                        type: "enum",
+                        enumId: id,
+                        isAutoIncrement: false,
+                        defaultValue: keepDefault ? c.defaultValue : null,
+                      }
+                    : c,
                 ),
               })),
             }),
@@ -355,7 +355,11 @@ export const useSchemaStore = create<SchemaState>()(
     }),
     {
       partialize: ({ schema }) => ({ schema }),
+      // Switching files or saving leaves the schema as it was: recorded, it
+      // would be an undo step that changes nothing.
+      equality: (past, current) => past.schema === current.schema,
       limit: UNDO_LIMIT,
+      onSave: () => noteSchemaChange(),
     },
   ),
 );

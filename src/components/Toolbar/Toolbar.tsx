@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   SidebarIcon as Sidebar,
@@ -6,10 +5,10 @@ import {
   GearSixIcon as GearSix,
   SquaresFourIcon as SquaresFour,
 } from "@phosphor-icons/react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { useViewStore } from "../../stores/viewStore";
-import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
+import { useWindowStore } from "../../stores/windowStore";
+import { showsWindowButtons } from "../../utils/windowButtons";
 import { formatShortcut, IS_MAC } from "../../utils/platform";
 import { logInfo } from "../../utils/log";
 
@@ -23,7 +22,6 @@ interface ToolbarProps {
   isSidePanelOpen?: boolean;
   onToggleSidePanel?: () => void;
   onToggleFocusMode?: () => void;
-  onOpenSettings: () => void;
 }
 
 function getFileName(filePath: string | null, fallback: string): string {
@@ -40,24 +38,12 @@ export function Toolbar({
   isSidePanelOpen,
   onToggleSidePanel,
   onToggleFocusMode,
-  onOpenSettings,
 }: ToolbarProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const win = getCurrentWindow();
-    void win.isFullscreen().then(setIsFullscreen);
-    const unlisten = win.onResized(() => {
-      void win.isFullscreen().then(setIsFullscreen);
-    });
-    return () => {
-      void unlisten.then((fn) => fn());
-    };
-  }, []);
-
+  const windowButtonsShown = useWindowStore((s) => showsWindowButtons(s.fullscreen));
   const { t } = useTranslation();
   const isHome = variant === "home";
   const showHome = useViewStore((s) => s.showHome);
+  const openSettings = useViewStore((s) => s.openSettings);
   const filePath = useSchemaStore((s) => s.filePath);
   const schemaName = useSchemaStore((s) => s.schema.name);
   const dbType = useSchemaStore((s) => s.schema.dbType);
@@ -73,7 +59,7 @@ export function Toolbar({
     >
       <div
         className="flex items-center gap-1"
-        style={{ paddingLeft: IS_MAC && !isFullscreen ? TRAFFIC_LIGHTS_WIDTH : 16 }}
+        style={{ paddingLeft: IS_MAC && windowButtonsShown ? TRAFFIC_LIGHTS_WIDTH : 16 }}
       >
         <button
           type="button"
@@ -135,11 +121,10 @@ export function Toolbar({
             <CornersOut size={16} />
           </button>
         )}
-        <ThemeToggle />
         <button
-          onClick={onOpenSettings}
+          onClick={openSettings}
           className="rounded-md p-1.5 text-tertiary transition-colors hover:bg-surface-paper-muted hover:text-secondary"
-          title={t("toolbar.settings")}
+          title={`${t("toolbar.settings")} (${formatShortcut(["Mod", ","])})`}
           aria-label={t("toolbar.settings")}
         >
           <GearSix size={16} />

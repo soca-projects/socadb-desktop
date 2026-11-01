@@ -13,7 +13,7 @@ export function CopyableCommand({ children }: { children: string }) {
   return (
     <button
       onClick={copy}
-      className="flex w-full items-center justify-between gap-2 rounded-md bg-surface px-3 py-2 text-left font-mono text-[11px] text-tertiary transition-colors hover:bg-surface-muted dark:bg-stone-700 dark:text-stone-300 dark:hover:bg-stone-600/70"
+      className="flex w-full items-center justify-between gap-2 rounded-md bg-surface-muted px-3 py-2 text-left font-mono text-[11px] text-tertiary transition-colors hover:bg-surface-paper-muted dark:bg-stone-700 dark:text-stone-300 dark:hover:bg-stone-600/70"
     >
       <span className="min-w-0 break-all">{children}</span>
       {copied ? (

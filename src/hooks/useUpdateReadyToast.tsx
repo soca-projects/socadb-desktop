@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useUpdateStore } from "../stores/updateStore";
+import { useReleaseNotesStore } from "../stores/releaseNotesStore";
+import { updateToastShown } from "../utils/updater";
 import { UpdateReadyToast } from "../components/UpdateReadyToast/UpdateReadyToast";
 
 const TOAST_ID = "update-ready";
@@ -8,15 +10,15 @@ const TOAST_ID = "update-ready";
 export function useUpdateReadyToast() {
   const status = useUpdateStore((s) => s.status);
   const version = useUpdateStore((s) => s.version);
-  const pendingUpdateVersion = useUpdateStore((s) => s.pendingUpdateVersion);
+  const dismissedVersion = useUpdateStore((s) => s.dismissedVersion);
+  const afterDownload = useUpdateStore((s) => s.afterDownload);
+  const notesOpen = useReleaseNotesStore((s) => s.modal !== null);
 
   useEffect(() => {
-    const alreadyConsented = version !== null && pendingUpdateVersion === version;
-    const installInFlight = status === "installing";
-    const promptForConsent = status === "ready" && !alreadyConsented;
-    const shouldShow = installInFlight || promptForConsent;
-    if (shouldShow) {
-      toast.custom((id) => <UpdateReadyToast toastId={id} />, {
+    if (
+      updateToastShown({ status, version, dismissedVersion, afterDownload }, notesOpen)
+    ) {
+      toast.custom(() => <UpdateReadyToast />, {
         id: TOAST_ID,
         duration: Infinity,
         dismissible: false,
@@ -25,5 +27,5 @@ export function useUpdateReadyToast() {
     } else {
       toast.dismiss(TOAST_ID);
     }
-  }, [status, version, pendingUpdateVersion]);
+  }, [notesOpen, status, version, dismissedVersion, afterDownload]);
 }

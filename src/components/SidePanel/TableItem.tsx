@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   CaretDownIcon as CaretDown,
@@ -32,27 +32,27 @@ interface TableItemProps {
   table: Table;
   isOpen: boolean;
   isRenaming: boolean;
-  onToggle: () => void;
-  onOpen: () => void;
-  onRename: () => void;
+  onOpenTable: (id: string | null) => void;
+  onRename: (id: string) => void;
   onRenameEnd: () => void;
   editing: ColumnFocus | null;
   onEdit: (focus: ColumnFocus | null) => void;
   onGoToColumn: (tableId: string, columnId: string) => void;
 }
 
-export function TableItem({
+export const TableItem = memo(function TableItem({
   table,
   isOpen,
   isRenaming,
-  onToggle,
-  onOpen,
+  onOpenTable,
   onRename,
   onRenameEnd,
   editing,
   onEdit,
   onGoToColumn,
 }: TableItemProps) {
+  const onToggle = () => onOpenTable(isOpen ? null : table.id);
+  const onOpen = () => onOpenTable(table.id);
   const { t } = useTranslation();
   const updateTable = useSchemaStore((s) => s.updateTable);
   const deleteTable = useSchemaStore((s) => s.deleteTable);
@@ -124,7 +124,7 @@ export function TableItem({
     <div ref={setItem} className={`relative ${isOpen ? "bg-surface-muted/50" : ""}`}>
       <div
         ref={setHeader}
-        className="flex cursor-pointer items-center gap-2 px-3 py-2.5 transition-colors hover:bg-surface-muted"
+        className="flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-surface-muted"
         onClick={onToggle}
       >
         <div className="flex h-4 w-4 shrink-0 items-center justify-center">
@@ -230,7 +230,7 @@ export function TableItem({
           label={t("sidePanel.tableOptions")}
           onClose={() => setMenu(null)}
           items={[
-            { label: t("sidePanel.rename"), onSelect: onRename },
+            { label: t("sidePanel.rename"), onSelect: () => onRename(table.id) },
             { label: t("sidePanel.addColumn"), onSelect: handleAddColumn },
             {
               label: table.note ? t("sidePanel.editNote") : t("sidePanel.addNote"),
@@ -339,4 +339,4 @@ export function TableItem({
       <div className="mx-3 h-px bg-border-light" />
     </div>
   );
-}
+});

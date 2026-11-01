@@ -197,7 +197,13 @@ async function askOrFinishDraft(path: string) {
 function finishDraft(file: BatchFile, dbType: DbType) {
   if (!file.format) return;
   const parsed = parseSource(file.format, file.content, dbType);
-  replaceWithImport(parsed.tables, parsed.relations, parsed.enums, dbType, file.name);
+  void replaceWithImport(
+    parsed.tables,
+    parsed.relations,
+    parsed.enums,
+    dbType,
+    file.name,
+  );
   const skipped = parsed.attempted - parsed.tables.length;
   logInfo("import.done", "Import done", {
     format: file.format,

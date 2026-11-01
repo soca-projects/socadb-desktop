@@ -35,7 +35,7 @@ export function ColumnRow({ table, column, onEdit, onEditNote }: ColumnRowProps)
           e.preventDefault();
           onEdit();
         }}
-        className="group relative mx-1 flex h-[30px] cursor-pointer items-center gap-1.5 rounded-md pl-2.5 pr-2 transition-colors hover:bg-surface-muted"
+        className="group relative mx-1 flex h-[30px] items-center gap-1.5 rounded-md pl-2.5 pr-2 transition-colors hover:bg-surface-muted"
       >
         <ColumnIcon column={column} />
         <span

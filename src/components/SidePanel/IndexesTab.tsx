@@ -125,7 +125,7 @@ function IndexRow({
         e.preventDefault();
         onEdit();
       }}
-      className="group relative mx-1 flex h-[30px] cursor-pointer items-center gap-2 rounded-md pl-2.5 pr-2 transition-colors hover:bg-surface-muted"
+      className="group relative mx-1 flex h-[30px] items-center gap-2 rounded-md pl-2.5 pr-2 transition-colors hover:bg-surface-muted"
     >
       <span
         title={names}

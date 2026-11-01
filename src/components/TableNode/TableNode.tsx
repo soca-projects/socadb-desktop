@@ -1,6 +1,6 @@
 import { memo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import {
   TableIcon as TableGlyph,
@@ -16,6 +16,7 @@ import { isUniqueColumn, typeLabel } from "../../utils/columnTypes";
 import { indexColumnNames, litColumnIds } from "../../utils/indexHelpers";
 import { useThemeStore } from "../../stores/themeStore";
 import { useViewStore } from "../../stores/viewStore";
+import { frameBatch } from "../../utils/frameBatch";
 
 interface TableNodeData {
   table: Table;
@@ -24,6 +25,8 @@ interface TableNodeData {
 }
 
 type TableNodeProps = NodeProps & { data: TableNodeData };
+
+const remeasureAfterAppear = frameBatch<string>((run) => requestAnimationFrame(run));
 
 // Kept inside the node, not portalled: React Flow draws its panels (the canvas
 // controls) above the whole viewport, so a node never covers them, whatever
@@ -53,12 +56,18 @@ export const TableNode = memo(function TableNode({ id, data, selected }: TableNo
   const indexesOpen = useViewStore((s) => s.indexesOpen.has(id));
   const toggleIndexes = useViewStore((s) => s.toggleIndexes);
   const [litId, setLitId] = useState<string | null>(null);
+  const updateNodeInternals = useUpdateNodeInternals();
   const variants = table.color ? getColorVariants(table.color, isDark) : null;
   const indexes = table.indexes ?? [];
   const lit = indexesOpen ? litColumnIds(indexes, litId) : null;
 
   return (
+    // React Flow measures the handles while the appear animation still scales
+    // the table down, which leaves every edge a few pixels off its row.
     <div
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget) remeasureAfterAppear(id, updateNodeInternals);
+      }}
       className={`min-w-[220px] animate-node-appear select-none rounded-lg border bg-surface shadow-card transition-shadow ${
         selected
           ? "border-accent ring-2 ring-accent/20"

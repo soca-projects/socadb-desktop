@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { send } from "../bridge.js";
+import { err, ok } from "./result.js";
 
 const columnFields = {
   type: z
@@ -35,14 +36,6 @@ const ColumnSchema = z.object({
   note: z.string().optional().describe("What the column holds, written as a COMMENT in the SQL export"),
 });
 
-function ok(message: string) {
-  return { content: [{ type: "text" as const, text: message }] };
-}
-
-function err(message: string) {
-  return { content: [{ type: "text" as const, text: message }], isError: true };
-}
-
 export function registerWriteTools(server: McpServer) {
   server.registerTool(
     "create_table",
@@ -50,7 +43,7 @@ export function registerWriteTools(server: McpServer) {
       description: "Create a new table with columns",
       inputSchema: {
         name: z.string().describe("Table name"),
-        columns: z.array(ColumnSchema).optional().describe("Table columns (if omitted, defaults to id column based on schema dbType: UUID PK for PostgreSQL, INT AUTO_INCREMENT PK for MySQL)"),
+        columns: z.array(ColumnSchema).optional().describe("Table columns. If omitted, the table gets the user's default id column (primaryKeyForNewTables in get_schema). When you list the columns yourself, give the primary key that type, length, default and auto increment unless the user asks for another"),
         note: z.string().optional().describe("What the table holds, written as a COMMENT in the SQL export"),
       },
     },

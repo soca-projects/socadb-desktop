@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { dispatchMcpAction } from "../utils/mcpActions";
 import { logDebug, logError, logInfo, logWarn } from "../utils/log";
 import { maskQuoted } from "../utils/logPrivacy";
+import { McpRequestZ } from "../utils/zodSchemas";
 
 export function useMcpBridge() {
   useEffect(() => {
@@ -15,15 +16,16 @@ export function useMcpBridge() {
       let connectionId: number | undefined;
       let requestId: number | undefined;
       try {
-        const envelope = JSON.parse(event.payload) as {
-          connectionId: number;
-          data: { id: number; action: string; payload?: Record<string, unknown> };
-        };
+        const envelope = McpRequestZ.parse(JSON.parse(event.payload));
         connectionId = envelope.connectionId;
         requestId = envelope.data.id;
-        const { action, payload } = envelope.data;
+        const { action, payload, client } = envelope.data;
         const started = performance.now();
-        const result = await dispatchMcpAction(action, payload ?? {});
+        const result = await dispatchMcpAction(
+          action,
+          payload ?? {},
+          client ?? "external",
+        );
         const ms = Math.round(performance.now() - started);
         if (!result.ok) {
           logWarn("mcp.tool.failed", action, { ms, error: maskQuoted(result.error) });

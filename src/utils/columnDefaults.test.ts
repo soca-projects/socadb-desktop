@@ -1,6 +1,15 @@
 import { describe, it, expect } from "vitest";
 import type { Column } from "../types/schema";
-import { createDefaultIdColumn, defaultKindOf, defaultSql } from "./columnDefaults";
+import {
+  createDefaultIdColumn,
+  defaultKindOf,
+  defaultSql,
+  idColumnSql,
+  type PrimaryKeyKind,
+} from "./columnDefaults";
+import { buildMysqlDdl, buildPostgresqlDdl } from "./exportSql";
+import { createEmptySchema } from "../stores/schemaStore";
+import type { DbType } from "../types/schema";
 
 describe("createDefaultIdColumn", () => {
   it("creates a MySQL id column with auto increment", () => {
@@ -21,6 +30,48 @@ describe("createDefaultIdColumn", () => {
     expect(col.isPrimaryKey).toBe(true);
     expect(col.isAutoIncrement).toBe(false);
     expect(col.defaultValue).toBe("gen_random_uuid()");
+  });
+
+  it.each<[DbType, PrimaryKeyKind, Partial<Column>]>([
+    ["postgresql", "int", { type: "serial", isAutoIncrement: true, defaultValue: null }],
+    ["postgresql", "bigint", { type: "bigserial", defaultValue: null }],
+    ["mysql", "bigint", { type: "bigint", isAutoIncrement: true, defaultValue: null }],
+    [
+      "mysql",
+      "uuid",
+      { type: "char", length: 36, defaultValue: "(UUID())", defaultKind: "expression" },
+    ],
+  ])("creates a %s %s id column", (dbType, kind, expected) => {
+    expect(createDefaultIdColumn(dbType, kind)).toMatchObject({
+      name: "id",
+      isPrimaryKey: true,
+      isNullable: false,
+      ...expected,
+    });
+  });
+
+  it.each<[DbType, PrimaryKeyKind]>([
+    ["postgresql", "uuid"],
+    ["postgresql", "int"],
+    ["postgresql", "bigint"],
+    ["mysql", "uuid"],
+    ["mysql", "int"],
+    ["mysql", "bigint"],
+  ])("shows the %s %s id column as the SQL export writes it", (dbType, kind) => {
+    const schema = {
+      ...createEmptySchema("t", dbType),
+      tables: [
+        {
+          id: "t",
+          name: "t",
+          position: { x: 0, y: 0 },
+          columns: [createDefaultIdColumn(dbType, kind)],
+        },
+      ],
+    };
+    const { sql } =
+      dbType === "mysql" ? buildMysqlDdl(schema) : buildPostgresqlDdl(schema);
+    expect(sql.replace(/[`"]id[`"]/, "id")).toContain(`  ${idColumnSql(dbType, kind)}`);
   });
 
   it("generates a unique id for each call", () => {

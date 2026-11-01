@@ -28,8 +28,7 @@ export interface DbmlColumn {
 }
 
 export type DbmlTableItem =
-  | { kind: "column"; column: DbmlColumn }
-  | { kind: "partial"; name: string };
+  { kind: "column"; column: DbmlColumn } | { kind: "partial"; name: string };
 
 export interface DbmlIndex {
   items: { kind: "column" | "expr"; value: string }[];

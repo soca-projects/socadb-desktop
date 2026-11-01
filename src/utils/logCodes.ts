@@ -36,16 +36,23 @@ export const LOG_CODES = {
     meaning: "Help › Show Logs could not reveal the log file.",
     check: "The message from the opener plugin; the log dir may not exist yet.",
   },
+  "app.acknowledgments.failed": {
+    level: "error",
+    meaning: "Help › Third-Party Licenses could not open Acknowledgments.html.",
+    check:
+      "Not found: the bundle lacks it (tauri.conf.json resources, scripts/acknowledgments.ts). Otherwise the opener's message.",
+  },
   "agent.spawn.failed": {
     level: "error",
-    meaning: "The agent runner process (bun) could not be started.",
+    meaning:
+      "The agent runner process (the MCP binary in agent mode) could not be started.",
     check:
-      "The message names the bun and runner paths: missing runtime in the bundle, or run `bun run build:mcp` in dev.",
+      "The message names the MCP binary path: a broken bundle, or run `bun run build:mcp` in dev.",
   },
   "agent.runtime.missing": {
     level: "error",
     meaning:
-      "The bundled agent runtime (bun or a runner script) wasn't found, so no agent can start.",
+      "The MCP binary or the runtime folder of agent CLIs next to it wasn't found, so no agent can start.",
     check: "A broken bundle; in dev run `bun run build:mcp` after switching branches.",
   },
   "agent.send.failed": {
@@ -149,6 +156,36 @@ export const LOG_CODES = {
     meaning: "A reply could not be sent to an MCP client; the connection was dropped.",
     check: "The client is gone; the agent's tool call will time out.",
   },
+  "window.theme.set_failed": {
+    level: "warn",
+    meaning: "The window could not take the picked appearance.",
+    check:
+      "The page still follows the pick; dialogs, menus and the title bar keep the OS theme. Check core:window:allow-set-theme.",
+  },
+  "window.document_edited.failed": {
+    level: "warn",
+    meaning: "The unsaved-changes dot in the window's close button could not be updated.",
+    check: "Cosmetic: the toolbar still shows the unsaved dot next to the schema name.",
+  },
+  "window.frame.autosave_failed": {
+    level: "warn",
+    meaning: "macOS could not be asked to remember the window's size and position.",
+    check:
+      "The window opens at its default size at each launch; Tauri gave no native window handle at setup.",
+  },
+  "window.focus.failed": {
+    level: "warn",
+    meaning:
+      "The window could not be brought to the front for a file or a second launch.",
+    check:
+      "Cosmetic: the file still opens; the window may stay minimized or behind others.",
+  },
+  "window.fullscreen.observe_failed": {
+    level: "warn",
+    meaning: "The app could not follow the start of a macOS full screen exit.",
+    check:
+      "Cosmetic: when leaving full screen, the toolbar moves clear of the window buttons only once the animation ends.",
+  },
   "updater.sparkle.config_failed": {
     level: "warn",
     meaning: "Sparkle could not be configured at start (channel or install-on-quit).",
@@ -250,6 +287,43 @@ export const LOG_CODES = {
     check:
       "ctx.file.where: ~/Documents, ~/Desktop or iCloud Drive → System Settings › Privacy & Security › Files & Folders.",
   },
+  "file.opened": {
+    level: "info",
+    meaning:
+      "The system handed SocaDB .soca files: a double-click in the Finder or the file manager, or Open With; ctx.count.",
+    check: "Context for the file.open or file.open.* line that follows in the UI.",
+  },
+  "file.opened.emit_failed": {
+    level: "warn",
+    meaning: "Files the system opened could not be passed to the window.",
+    check: "Nothing opens; the user can still open the file from the app.",
+  },
+  "file.opened.relaunch_mark_failed": {
+    level: "warn",
+    meaning:
+      "SocaDB could not write or clear the note for its restart after an update (Windows, Linux).",
+    check:
+      "~/.socadb is not writable. After the update, a .soca the app was first launched with opens again.",
+  },
+  "file.opened.relaunch_marker_failed": {
+    level: "warn",
+    meaning:
+      "The note left for the restart after an update could not be removed (~/.socadb/.relaunch).",
+    check: "Permissions on ~/.socadb; it is ignored after 10 minutes anyway.",
+  },
+  "file.opened.skipped_after_update": {
+    level: "info",
+    meaning:
+      "After an update, the restart skipped the .soca files SocaDB was first launched with; ctx.count.",
+    check:
+      "Expected: they were opened before the update. ~/.socadb/.relaunch listed them.",
+  },
+  "file.opened.invalid": {
+    level: "warn",
+    meaning: "The window got files to open in an unexpected shape and ignored them.",
+    check:
+      "A mismatch between the Rust payload of files-opened / take_opened_files and OpenedFilesZ.",
+  },
   "file.save": {
     level: "info",
     meaning: "A schema was saved; ctx.file has where it is and an id.",
@@ -342,11 +416,30 @@ export const LOG_CODES = {
     check:
       "The message names the bad field; the old list was copied to ~/.socadb/recent.invalid-<time>.json.",
   },
+  "settings.primary_key.persist_failed": {
+    level: "error",
+    meaning:
+      "The primary key setting for new tables could not be written to config.json.",
+    check:
+      "The write itself failed (permissions, full disk). The choice holds until the next launch, when config.json's older value comes back.",
+  },
+  "settings.updates.persist_failed": {
+    level: "error",
+    meaning: "The update settings could not be written to config.json.",
+    check:
+      "The write itself failed (permissions, full disk). The choice holds until the next launch, when config.json's older value comes back.",
+  },
+  "settings.last_version.persist_failed": {
+    level: "error",
+    meaning: "The version launched could not be written to config.json.",
+    check:
+      "The write itself failed (permissions, full disk). The next launch offers the release notes again.",
+  },
   "settings.startup.persist_failed": {
     level: "error",
     meaning: "The launch setting could not be written to config.json.",
     check:
-      "A config.json that doesn't parse blocks the write on purpose; check the file.",
+      "The write itself failed (permissions, full disk). The choice holds until the next launch, when config.json's older value comes back.",
   },
   "settings.language.persist_failed": {
     level: "error",
@@ -357,6 +450,12 @@ export const LOG_CODES = {
     level: "error",
     meaning: "The theme could not be written to config.json.",
     check: "Permissions on ~/.socadb or a config.json that doesn't parse.",
+  },
+  "settings.theme.storage_failed": {
+    level: "warn",
+    meaning: "WebKit storage refused the appearance preference.",
+    check:
+      "The first paint may show the system theme until config.json loads; WebKit storage disabled or full.",
   },
   "session.save.failed": {
     level: "error",
@@ -460,10 +559,36 @@ export const LOG_CODES = {
     meaning: "The reply to an MCP request could not be handed to the bridge.",
     check: "Usually the connection closed; see mcp.ws.* lines.",
   },
+  "mcp.binary.copy_failed": {
+    level: "warn",
+    meaning:
+      "The AppImage couldn't copy the MCP server out of its mount, so the AI apps get a path that disappears when SocaDB quits.",
+    check:
+      "The message; the copy goes to ~/.local/share/com.socadb.desktop/bin and is retried at each launch.",
+  },
   "mcp.registration.binary_missing": {
     level: "error",
     meaning: "The MCP server binary was not found, so no AI app was registered.",
     check: "The bundle lacks socadb-mcp-*; in dev run `bun run build:mcp`.",
+  },
+  "mcp.registration.added": {
+    level: "info",
+    meaning:
+      "SocaDB added its entry to these AI apps at launch and told the user to restart them.",
+    check: "msg lists the clients; the entry only works after each app restarts.",
+  },
+  "mcp.registration.reapplied_off": {
+    level: "info",
+    meaning:
+      "SocaDB removed its entry from Claude Desktop again: it is turned off there, and Claude Desktop had put it back by rewriting its config.",
+    check: "Restart Claude Desktop so it drops SocaDB.",
+  },
+  "mcp.registration.launches_unreadable": {
+    level: "warn",
+    meaning:
+      "~/.socadb/mcp-clients.json couldn't be read, so every AI client counts as not having loaded SocaDB's entry yet.",
+    check:
+      "The message; the file is rewritten at the next launch of the MCP server by an AI app.",
   },
   "mcp.registration.failed": {
     level: "warn",
@@ -539,6 +664,19 @@ export const LOG_CODES = {
     meaning: "Sparkle failed to download or install an update.",
     check: "The message; signature or disk space.",
   },
+  "updater.bundle_type.failed": {
+    level: "warn",
+    meaning:
+      "The Linux package type could not be read; updates may install when SocaDB closes.",
+    check:
+      "A .deb or .rpm install then asks for the administrator password as SocaDB closes.",
+  },
+  "updater.download.failed": {
+    level: "error",
+    meaning: "Downloading an update the user accepted failed.",
+    check:
+      "The message: network or signature. On macOS, Sparkle refuses when SUAllowsAutomaticUpdates is missing from Info.plist.",
+  },
   "updater.install.failed": {
     level: "error",
     meaning: "Installing the downloaded update failed.",
@@ -550,21 +688,43 @@ export const LOG_CODES = {
     check:
       "The message; the app may be on a read-only volume (see app.start ctx.install).",
   },
+  "updater.release_notes.fetch_failed": {
+    level: "warn",
+    meaning:
+      "The incoming update's notes couldn't be downloaded from GitHub; its release notes link opens socadb.com instead.",
+    check: "The message: offline, a timeout, or no changelog at the tag of ctx.version.",
+  },
   "mcp.server.start": {
     level: "info",
-    meaning: "The MCP server binary connected to SocaDB and is serving tools.",
-    check: "One per agent run or AI app session; ctx-free.",
+    meaning:
+      "An AI app finished connecting to the MCP server binary, which connects to SocaDB on the first tool call.",
+    check:
+      "One per AI app session. ctx.client is the registered entry that launched it (claudeDesktop, claudeCode, codex), chat for SocaDB's own chat, unregistered for an entry without --client; ctx.app is the name the app gives itself.",
+  },
+  "mcp.server.launch_record_failed": {
+    level: "warn",
+    meaning:
+      "The MCP server couldn't record its launch in ~/.socadb/mcp-clients.json, so SocaDB may still show the client as waiting for a restart.",
+    check: "The message; permissions on ~/.socadb.",
   },
   "mcp.server.start_failed": {
     level: "error",
     meaning: "The MCP server binary could not start; the AI app sees no SocaDB tools.",
-    check: "The message; usually mcp.server.app_not_running just before.",
+    check: "The message; stdio failed, since SocaDB being closed no longer stops it.",
   },
   "mcp.server.app_not_running": {
-    level: "error",
-    meaning: "The MCP server found no ~/.socadb/.port, so SocaDB wasn't running.",
+    level: "info",
+    meaning:
+      "A tool call found no ~/.socadb/.port: SocaDB wasn't running, and the agent was told to ask for it.",
     check:
-      "Open SocaDB first; if it is open, look for mcp.port_file.write_failed in socadb.log.",
+      "Normal when SocaDB is closed; if it was open, look for mcp.port_file.write_failed in socadb.log.",
+  },
+  "mcp.server.not_socadb": {
+    level: "warn",
+    meaning:
+      "The port in ~/.socadb/.port didn't answer hello like SocaDB, so the server treated the app as closed.",
+    check:
+      "A port file left by a crash, now used by another program, or an app hung at launch.",
   },
   "mcp.server.port_invalid": {
     level: "error",
@@ -574,7 +734,8 @@ export const LOG_CODES = {
   "mcp.server.connected": {
     level: "info",
     meaning: "The MCP server connected to SocaDB's bridge.",
-    check: "ctx.port must match the app's mcp.ws.listening.",
+    check:
+      "ctx.port must match the app's mcp.ws.listening; ctx.client is chat for SocaDB's own chat, external for an AI app.",
   },
   "mcp.server.socket_error": {
     level: "error",

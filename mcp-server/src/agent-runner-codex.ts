@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { CODEX_DISABLED_FEATURES, runCodexExec } from "./codex-exec.ts";
 import {
+  agentRuntimeDir,
   CODEX_EFFORTS,
   codexErrorCode,
   codexErrorText,
@@ -38,7 +39,7 @@ function codexArgs(cmd: ChatSendCommand, threadId: string | undefined): string[]
     "--config",
     `mcp_servers.socadb.command=${JSON.stringify(getMcpBinaryPath(__dirname))}`,
     "--config",
-    "mcp_servers.socadb.args=[]",
+    'mcp_servers.socadb.args=["--chat"]',
     "--config",
     "mcp_servers.socadb.env={}",
     // SocaDB's own tools are the agent's job; under a read-only sandbox codex would
@@ -108,6 +109,7 @@ async function runTurn(
   turn: TurnState,
 ) {
   const events = runCodexExec(
+    agentRuntimeDir(__dirname),
     codexArgs(cmd, turn.threadId),
     cmd.message,
     controller.signal,

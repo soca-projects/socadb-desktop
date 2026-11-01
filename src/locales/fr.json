@@ -99,8 +99,9 @@
     }
   },
   "theme": {
-    "switchToDark": "Passer en mode sombre",
-    "switchToLight": "Passer en mode clair"
+    "system": "Système",
+    "light": "Clair",
+    "dark": "Sombre"
   },
   "emptyCanvas": {
     "heading": "Votre schéma <mark>commence ici</mark>",
@@ -284,7 +285,6 @@
     "agents": "Agents",
     "integrations": "Intégrations",
     "language": "Langue",
-    "languageDescription": "Choisissez la langue de l'application.",
     "close": "Fermer",
     "conversations": "Conversations",
     "deleteAllDescription": "Les conversations sont gardées jusqu'à ce que vous les supprimiez. La suppression efface aussi la mémoire de l'agent pour les conversations Claude.",
@@ -294,18 +294,43 @@
     "deleteAllWhileAnswering": "Disponible une fois la réponse de l'agent terminée.",
     "cancel": "Annuler",
     "general": "Général",
+    "appearance": "Apparence",
+    "appearanceHint": {
+      "mac": "Système suit le réglage de macOS, même quand il change.",
+      "windows": "Système suit le mode de couleur de Windows, même quand il change.",
+      "linux": "Système suit le thème du bureau."
+    },
     "startupTitle": "Au lancement, ouvrir",
-    "startupDescription": "Ce que SocaDB affiche quand vous l'ouvrez.",
+    "newTables": "Nouvelles tables",
+    "primaryKeyPostgresql": "Clé primaire en PostgreSQL",
+    "primaryKeyMysql": "Clé primaire en MySQL",
+    "primaryKey": {
+      "uuid": "UUID",
+      "int": "Entier",
+      "bigint": "Grand entier"
+    },
     "startup": {
       "home": "La liste des schémas",
       "homeHint": "L'accueil avec tous vos schémas. Un brouillon non enregistré apparaît en tête.",
       "lastSchema": "Le dernier schéma",
       "lastSchemaHint": "Reprend là où vous en étiez, brouillon compris."
-    }
+    },
+    "updates": "Mises à jour",
+    "updatesReleaseNotes": "Notes de version",
+    "updatesCheckNow": "Rechercher maintenant",
+    "updatesChecking": "Recherche...",
+    "updatesShow": "Voir la mise à jour",
+    "autoCheck": "Rechercher automatiquement",
+    "autoCheckHint": "Au lancement de SocaDB, puis toutes les 4 heures.",
+    "autoInstall": "Installer automatiquement",
+    "autoInstallOnHint": "Les mises à jour se téléchargent en arrière-plan et s'installent quand vous quittez SocaDB.",
+    "autoInstallPromptHint": "Les mises à jour se téléchargent en arrière-plan. SocaDB vous propose de redémarrer pour les installer.",
+    "autoInstallOffHint": "SocaDB vous demande avant de télécharger une mise à jour."
   },
   "integrations": {
-    "title": "Utiliser SocaDB depuis d'autres apps",
-    "description": "Les apps activées ici peuvent lire et modifier le schéma ouvert dans SocaDB. Elles n'y ont accès que pendant que SocaDB est ouverte, et vous demandent la permission avant d'utiliser ses outils.",
+    "description": "Les apps activées ici peuvent ouvrir, lire, modifier et créer vos schémas pendant que SocaDB est ouverte. Elles vous demandent la permission avant d'utiliser ses outils.",
+    "registered_one": "SocaDB est maintenant disponible dans {{names}}. S'il est ouvert, redémarrez-le pour qu'il voie SocaDB.",
+    "registered_other": "SocaDB est maintenant disponible dans {{names}}. Redémarrez ceux qui sont ouverts pour qu'ils voient SocaDB.",
     "notInstalled": "Pas installé",
     "unreadable": "SocaDB ne modifie pas sa config, qu'il n'arrive pas à lire.",
     "removed": "Retiré à la main de la config de {{name}}. SocaDB ne s'y réinscrit plus, sauf si vous le réactivez ici.",
@@ -329,8 +354,7 @@
     "stepInstall": "1. Installer {{name}} (si nécessaire)",
     "stepSignIn": "2. Démarrer {{name}} et se connecter",
     "stepLogin": "3. Ou se connecter manuellement",
-    "showSetupSteps": "Afficher la configuration {{name}}",
-    "hideSetupSteps": "Masquer la configuration {{name}}",
+    "setUp": "Configurer {{name}}",
     "apiKeyGetFrom": "Récupérez votre clé API sur la",
     "apiKeySave": "Enregistrer",
     "apiKeyUpdate": "Mettre à jour",
@@ -383,7 +407,7 @@
       "signInHint": "Sélectionnez « Claude account with subscription » pour vous connecter."
     },
     "codex": {
-      "consoleName": "Dashboard OpenAI",
+      "consoleName": "plateforme OpenAI",
       "subscriptionLabel": "Abonnement ChatGPT (Plus, Pro...)",
       "signInHint": "Connectez-vous avec votre abonnement ChatGPT."
     }
@@ -406,6 +430,7 @@
     "saveAs": "Enregistrer sous...",
     "import": "Importer...",
     "export": "Exporter...",
+    "settings": "Paramètres...",
     "home": "Accueil",
     "findSchema": "Rechercher un schéma",
     "closeSchema": "Fermer le schéma",
@@ -413,18 +438,32 @@
     "edit": "Édition",
     "undo": "Annuler",
     "redo": "Rétablir",
+    "cut": "Couper",
+    "copy": "Copier",
+    "paste": "Coller",
+    "selectAll": "Tout sélectionner",
     "view": "Présentation",
     "toggleSidebar": "Afficher/Masquer le panneau",
     "focusMode": "Mode focus",
     "toggleTheme": "Changer le thème",
+    "fullscreen": "Plein écran",
     "window": "Fenêtre",
+    "minimizeMac": "Placer dans le Dock",
+    "minimize": "Réduire",
+    "zoom": "Réduire/agrandir",
+    "maximize": "Agrandir",
+    "bringAllToFront": "Tout ramener au premier plan",
     "about": "À propos de SocaDB",
     "checkForUpdates": "Rechercher les mises à jour...",
     "checkingForUpdates": "Recherche des mises à jour...",
     "downloadingUpdate": "Téléchargement de la mise à jour...",
     "help": "Aide",
     "showLogs": "Afficher les journaux",
+    "thirdPartyLicenses": "Licences tierces",
     "hideSocaDB": "Masquer SocaDB",
+    "services": "Services",
+    "hideOthers": "Masquer les autres",
+    "showAll": "Tout afficher",
     "quitSocaDB": "Quitter SocaDB",
     "exit": "Quitter"
   },
@@ -455,6 +494,7 @@
     "importAdapted_other": "{{count}} colonnes avaient des types incompatibles et ont été définies en varchar.",
     "saveFailed": "Échec de l'enregistrement : {{error}}",
     "openFailed": "Impossible d'ouvrir le fichier : {{error}}",
+    "acknowledgmentsFailed": "Impossible d'ouvrir les licences tierces : {{error}}",
     "autoLayoutFailed": "Échec de la disposition auto : {{error}}",
     "invalidFile": "Ce fichier n'est pas un schéma valide.",
     "exportSqlIssues_one": "SQL exporté avec 1 ajustement pour rester valide",
@@ -487,7 +527,12 @@
     "upToDate": "SocaDB est à jour (v{{version}})",
     "checkFailed": "Impossible de rechercher les mises à jour : {{error}}",
     "releaseNotes": "notes de version",
-    "failed": "Échec de l'installation : {{error}}"
+    "failed": "Échec de l'installation : {{error}}",
+    "availableTitle": "SocaDB {{version}} est disponible",
+    "downloadingTitle": "Téléchargement de SocaDB {{version}}",
+    "downloadingHint": "SocaDB redémarrera une fois la mise à jour prête.",
+    "downloading": "Téléchargement...",
+    "notNow": "Pas maintenant"
   },
   "recent": {
     "fileNotFound": "Fichier introuvable. Il a peut-être été déplacé ou supprimé.",
@@ -607,5 +652,21 @@
     "acceptHint": "Un schéma .soca par fichier SQL, DBML ou JSON. Les fichiers .soca s'ajoutent à l'accueil.",
     "reject": "Aucun de ces fichiers ne peut être importé",
     "rejectHint": "SocaDB lit les fichiers .sql, .dbml, .json et .soca."
+  },
+  "about": {
+    "version": "Version {{version}}",
+    "thirdPartyLicenses": "Licences tierces",
+    "close": "Fermer"
+  },
+  "whatsNew": {
+    "toastTitle": "SocaDB a été mis à jour en <mark>{{version}}</mark>",
+    "show": "Voir les nouveautés",
+    "title": "Nouveautés",
+    "close": "Fermer",
+    "fullHistory": "Tout l'historique sur socadb.com",
+    "showChanges_one": "Voir le changement",
+    "showChanges_other": "Voir les <b>{{count}}</b> changements",
+    "hideChanges": "Masquer les changements",
+    "historyTitle": "Notes de version"
   }
 }

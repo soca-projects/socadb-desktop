@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import { useUpdateStore } from "../stores/updateStore";
+import { stopAllAgents } from "../utils/chatCommands";
 import { toMessage } from "../utils/errorMessage";
 import { logError } from "../utils/log";
 import { IS_MAC } from "../utils/platform";
@@ -39,8 +40,10 @@ export function useInstallOnNextLaunch() {
       installing = true;
       setStatus("installing");
       try {
+        await stopAllAgents();
         await Promise.race([
-          update.install(),
+          // The user is leaving: the Windows installer must not reopen SocaDB.
+          update.install({ restartAfterInstall: false }),
           new Promise<never>((_, reject) =>
             setTimeout(
               () =>

@@ -1,47 +1,71 @@
 import { create } from "zustand";
+import type { z } from "zod";
+import { ThemePreferenceZ } from "../utils/zodSchemas";
+import { logWarn } from "../utils/log";
 
 type Theme = "light" | "dark";
+export type ThemePreference = z.infer<typeof ThemePreferenceZ>;
 
-function getInitialTheme(): Theme {
-  const stored = localStorage.getItem("socadb_theme");
-  if (stored === "light" || stored === "dark") return stored;
-  if (window.matchMedia("(prefers-color-scheme: light)").matches) return "light";
-  return "dark";
+// index.html reads this key before the first paint.
+const STORAGE_KEY = "socadb_appearance";
+const LIGHT_QUERY = "(prefers-color-scheme: light)";
+
+function systemTheme(): Theme {
+  return window.matchMedia(LIGHT_QUERY).matches ? "light" : "dark";
 }
 
-function applyTheme(theme: Theme) {
+function resolve(preference: ThemePreference): Theme {
+  return preference === "system" ? systemTheme() : preference;
+}
+
+function storedPreference(): ThemePreference {
+  try {
+    const parsed = ThemePreferenceZ.safeParse(localStorage.getItem(STORAGE_KEY));
+    if (parsed.success) return parsed.data;
+  } catch (e) {
+    logWarn("settings.theme.storage_failed", e);
+  }
+  return "system";
+}
+
+function applyTheme(theme: Theme, animate: boolean) {
   const el = document.documentElement;
+  if (animate) {
+    el.dataset.themeTransition = "";
+    setTimeout(() => delete el.dataset.themeTransition, 350);
+  }
   el.dataset.theme = theme;
   el.style.colorScheme = theme;
-  localStorage.setItem("socadb_theme", theme);
-}
-
-function applyThemeWithTransition(theme: Theme) {
-  const el = document.documentElement;
-  el.dataset.themeTransition = "";
-  applyTheme(theme);
-  setTimeout(() => {
-    delete el.dataset.themeTransition;
-  }, 350);
 }
 
 interface ThemeState {
+  preference: ThemePreference;
   theme: Theme;
-  setTheme: (theme: Theme) => void;
+  setPreference: (preference: ThemePreference, animate?: boolean) => void;
   toggleTheme: () => void;
 }
 
-export const useThemeStore = create<ThemeState>((set) => ({
-  theme: getInitialTheme(),
-  setTheme: (theme) => {
-    applyTheme(theme);
-    set({ theme });
+const initialPreference = storedPreference();
+
+export const useThemeStore = create<ThemeState>((set, get) => ({
+  preference: initialPreference,
+  theme: resolve(initialPreference),
+  setPreference: (preference, animate = true) => {
+    const theme = resolve(preference);
+    applyTheme(theme, animate);
+    try {
+      localStorage.setItem(STORAGE_KEY, preference);
+    } catch (e) {
+      logWarn("settings.theme.storage_failed", e);
+    }
+    set({ preference, theme });
   },
-  toggleTheme: () => {
-    set((state) => {
-      const next = state.theme === "light" ? "dark" : "light";
-      applyThemeWithTransition(next);
-      return { theme: next };
-    });
-  },
+  toggleTheme: () => get().setPreference(get().theme === "light" ? "dark" : "light"),
 }));
+
+export function followSystemTheme() {
+  window.matchMedia(LIGHT_QUERY).addEventListener("change", () => {
+    const { preference, setPreference } = useThemeStore.getState();
+    if (preference === "system") setPreference("system");
+  });
+}

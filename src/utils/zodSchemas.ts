@@ -153,6 +153,28 @@ export const McpTableNameZ = z.object({
   name: z.string(),
 });
 
+export const McpClientZ = z.enum(["external", "chat"]);
+
+export const McpRequestZ = z.object({
+  connectionId: z.number(),
+  data: z.object({
+    id: z.number(),
+    action: z.string(),
+    payload: z.record(z.string(), z.unknown()).optional(),
+    client: McpClientZ.optional(),
+  }),
+});
+
+export const McpNewSchemaZ = z.object({
+  name: z.string().optional(),
+  dbType: DbTypeZ.optional(),
+});
+
+export const McpOpenSchemaZ = z.object({
+  name: z.string(),
+  folder: z.string().optional(),
+});
+
 export const McpAddColumnZ = z.object({
   table: z.string(),
   column: McpColumnInputZ,
@@ -209,6 +231,7 @@ export const McpClientConfigZ = z.looseObject({
 
 export const McpServerEntryZ = z.looseObject({
   command: z.string().optional(),
+  args: z.array(z.string()).optional(),
 });
 
 export const IntegrationChoiceZ = z.enum(["on", "off", "removed"]);
@@ -219,9 +242,18 @@ export const IntegrationChoicesZ = z.looseObject({
   codex: IntegrationChoiceZ.optional(),
 });
 
+export const IntegrationWritesZ = z.looseObject({
+  claudeCode: z.string().optional(),
+  claudeDesktop: z.string().optional(),
+  codex: z.string().optional(),
+});
+
+export const McpLaunchesZ = z.record(z.string(), z.string());
+
 export const CodexMcpEntryZ = z.object({
   installed: z.boolean(),
   command: z.string().nullable(),
+  args: z.array(z.string()).nullable(),
 });
 
 const ToolCallInfoZ = z.object({
@@ -259,6 +291,22 @@ export const LegacyConversationsZ = z.object({ conversations: z.array(z.unknown(
 export const HomeSortZ = z.enum(["opened", "modified", "name"]);
 
 export const StartupPreferenceZ = z.enum(["home", "lastSchema"]);
+
+export const ThemePreferenceZ = z.enum(["system", "light", "dark"]);
+
+export const PrimaryKeyKindZ = z.enum(["uuid", "int", "bigint"]);
+
+export const PrimaryKeyPreferenceZ = z.object({
+  postgresql: PrimaryKeyKindZ,
+  mysql: PrimaryKeyKindZ,
+});
+
+export const UpdatePreferencesZ = z.object({
+  autoCheck: z.boolean(),
+  autoInstall: z.boolean(),
+});
+
+export const OpenedFilesZ = z.array(z.string());
 
 export const LastSessionZ = z.object({
   schema: z.unknown(),

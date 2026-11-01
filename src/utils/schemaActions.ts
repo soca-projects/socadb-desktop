@@ -2,11 +2,14 @@ import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
 import { genId } from "./id";
 import { createDefaultIdColumn } from "./columnDefaults";
+import { getPrimaryKeyPreference } from "./primaryKeyPreference";
 import { computeAutoLayout } from "./autoLayout";
 import { getNextTableColor } from "./tableColors";
 import { findEnumById, findTableById, findTableByName } from "./schemaQueries";
 import { uniqueEnumName } from "./schemaIntegrity";
 import { logError } from "./log";
+import { getCanvasView } from "./canvasView";
+import { estimateTableSize, placeNewTable } from "./tablePlacement";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import type { Column, Schema, SchemaEnum } from "../types/schema";
@@ -45,21 +48,33 @@ export function createTable(options?: {
   name?: string;
   position?: { x: number; y: number };
   columns?: Column[];
+  reveal?: boolean;
 }): string {
   const { schema, addTable } = useSchemaStore.getState();
   const tables = schema.tables;
   const newId = genId();
   const name = uniqueTableName(options?.name ?? `new_table_${tables.length + 1}`, schema);
-  addTable({
-    id: newId,
-    name,
-    color: getNextTableColor(tables),
-    position: options?.position ?? {
-      x: 100 + tables.length * 50,
-      y: 100 + tables.length * 50,
-    },
-    columns: options?.columns ?? [createDefaultIdColumn(schema.dbType)],
-  });
+  const columns = options?.columns ?? [
+    createDefaultIdColumn(schema.dbType, getPrimaryKeyPreference()[schema.dbType]),
+  ];
+  const view = getCanvasView();
+  const area = view?.visibleArea();
+  const size = estimateTableSize({ name, columns });
+  const position =
+    options?.position ??
+    placeNewTable(
+      tables,
+      size,
+      view && area
+        ? {
+            area,
+            blocked: view.blockedAreas(),
+            sizeOf: (t) => view.measuredSize(t.id) ?? estimateTableSize(t),
+          }
+        : null,
+    );
+  addTable({ id: newId, name, color: getNextTableColor(tables), position, columns });
+  if (options?.reveal) view?.reveal({ ...position, ...size });
   return newId;
 }
 
@@ -112,10 +127,16 @@ export function duplicateTable(tableId: string): string | null {
   return newId;
 }
 
-export function closeSchema() {
+// Undoing past this point would show the previous schema under the new file's
+// path, and saving would write it there.
+export function replaceSchema(schema: Schema, filePath: string | null) {
   const store = useSchemaStore.getState();
-  store.setSchema(createEmptySchema());
-  store.setFilePath(null);
+  store.setSchema(schema);
+  store.setFilePath(filePath);
   useSchemaStore.temporal.getState().clear();
+}
+
+export function closeSchema() {
+  replaceSchema(createEmptySchema(), null);
   useViewStore.getState().showHome();
 }

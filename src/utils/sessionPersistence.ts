@@ -1,5 +1,6 @@
 import { useSchemaStore } from "../stores/schemaStore";
 import { parseSchemaData } from "./fileOperations";
+import { replaceSchema } from "./schemaActions";
 import { isWorthResuming } from "./schemaQueries";
 import { LastSessionZ } from "./zodSchemas";
 import { logError, logWarn } from "./log";
@@ -42,9 +43,7 @@ export function restoreLastSession(): boolean {
     const schema = parseSchemaData(session.schema);
     if (!schema) throw new Error("The saved session holds an invalid schema");
     const filePath = session.filePath ?? null;
-    const { setSchema, setFilePath } = useSchemaStore.getState();
-    setSchema(schema);
-    setFilePath(filePath);
+    replaceSchema(schema, filePath);
     if (session.savedAt !== undefined)
       useSchemaStore.setState({ savedAt: session.savedAt });
     return isWorthResuming(schema, filePath);

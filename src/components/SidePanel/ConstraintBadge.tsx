@@ -29,7 +29,7 @@ export function ConstraintBadge({
       }}
       disabled={disabled}
       aria-pressed={active}
-      className={`inline-flex items-center rounded-[4px] border px-[5px] py-[1px] font-mono text-[11px] font-medium leading-tight transition-all ${colorClass} ${disabled ? "cursor-not-allowed opacity-30" : "cursor-pointer"}`}
+      className={`inline-flex items-center rounded-[4px] border px-[5px] py-[1px] font-mono text-[11px] font-medium leading-tight transition-all ${colorClass} ${disabled ? "cursor-not-allowed opacity-30" : ""}`}
     >
       {label}
     </button>

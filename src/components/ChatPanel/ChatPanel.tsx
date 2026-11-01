@@ -26,6 +26,7 @@ import { ChatMessage } from "../ChatMessage/ChatMessage";
 import { ChatInput } from "../ChatInput/ChatInput";
 import { ChatHistory } from "../ChatHistory/ChatHistory";
 import { logError } from "../../utils/log";
+import { getPrimaryKeyPreference } from "../../utils/primaryKeyPreference";
 import {
   CHAT_PANEL_MIN_WIDTH,
   CHAT_PANEL_MIN_HEIGHT,
@@ -153,7 +154,11 @@ export function ChatPanel() {
       addUserMessage(content);
       startAssistantMessage();
 
-      const systemPrompt = buildSystemPrompt(useSchemaStore.getState().schema);
+      const { schema } = useSchemaStore.getState();
+      const systemPrompt = buildSystemPrompt(
+        schema,
+        getPrimaryKeyPreference()[schema.dbType],
+      );
       try {
         await sendChatMessage({
           message: content,
@@ -225,7 +230,8 @@ export function ChatPanel() {
   if (!isPanelOpen) {
     return (
       <div
-        className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float cursor-pointer"
+        data-chat-panel
+        className="fixed bottom-4 right-4 z-50 flex w-[340px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card transition-shadow hover:shadow-float"
         onClick={togglePanel}
       >
         <div className="border-b border-border px-3 py-1.5">
@@ -246,6 +252,7 @@ export function ChatPanel() {
   return (
     <div
       ref={panelRef}
+      data-chat-panel
       className="fixed bottom-4 right-4 z-50 flex max-h-[calc(100vh-4rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-float animate-fade-in"
       style={{ width: size.width, height: size.height }}
     >

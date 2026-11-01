@@ -8,13 +8,11 @@
     "core:menu:default",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
+    "core:window:allow-set-theme",
+    "core:app:allow-default-window-icon",
     "log:default",
-    "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
-    "dialog:allow-ask",
-    "dialog:allow-message",
-    "fs:default",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
     "fs:allow-write-file",
@@ -27,6 +25,7 @@
       "allow": [
         { "path": "$HOME/.claude.json" },
         { "path": "$DATA/Claude/**" },
+        { "path": "$LOCALDATA/Packages/Claude_*/LocalCache/Roaming/Claude/**" },
         { "path": "$HOME/.socadb/**" }
       ]
     }

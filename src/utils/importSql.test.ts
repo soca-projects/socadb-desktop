@@ -160,6 +160,31 @@ describe("adaptColumnsToDbType", () => {
     expect(result.adaptedCount).toBe(1);
   });
 
+  it("keeps a PostgreSQL serial auto-incremented in MySQL", () => {
+    const tables = [
+      {
+        id: "t1",
+        name: "orders",
+        position: { x: 0, y: 0 },
+        columns: [
+          {
+            id: "c1",
+            name: "id",
+            type: "bigserial" as const,
+            isPrimaryKey: true,
+            isForeignKey: false,
+            isNullable: false,
+            isUnique: true,
+            isAutoIncrement: false,
+            defaultValue: null,
+          },
+        ],
+      },
+    ];
+    const [column] = adaptColumnsToDbType(tables, "mysql").tables[0].columns;
+    expect(column).toMatchObject({ type: "bigint", isAutoIncrement: true });
+  });
+
   it("keeps valid types unchanged", () => {
     const tables = [
       {

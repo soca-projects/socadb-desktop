@@ -102,8 +102,7 @@ runs from the disk image.
   folder, opened from Help › Show Logs. It never contains schema
   contents, chat text or API keys, and nothing leaves your computer.
   (#88)
-- **Claude 5 and GPT-6** in the model picker, with updated agent SDKs.
-  (#77)
+- **Claude 5 and GPT-6** in the model picker. (#77)
 
 ### Changed
 
@@ -132,21 +131,25 @@ runs from the disk image.
 - **Stopping an answer** no longer shows an error. (#82)
 - **Claude Code and Claude Desktop** keep SocaDB's entry up to date.
   (#78)
-- **The MCP bridge refuses connections from web pages.** (#79)
+- **Web pages can no longer connect to SocaDB.** The local bridge the AI
+  apps use refuses them. (#79)
 - **Dark mode** styles and notifications follow the theme chosen in the
   app rather than the system's. (#86)
 - **The window** can be dragged from the toolbar and closed from the
   menu. (#87)
 
+### Internal
+
+- The agent SDKs are updated. (#77)
+
 ## [0.1.3] - 2026-09-25
 
 Updates no longer interrupt your work. SocaDB downloads new versions in
 the background and asks once they are ready: restart and install now, or
-install the next time you quit. On macOS, updates now go through Sparkle,
-which installs from a separate helper, so quitting mid-install can no
-longer leave a broken app. This release also restores Codex on macOS,
-adds a reasoning effort picker to the chat, and fixes keyboard shortcuts
-on Windows.
+install the next time you quit. On macOS, updates now install from a
+separate helper, so quitting mid-install can no longer leave a broken
+app. This release also restores Codex on macOS, adds a reasoning effort
+picker to the chat, and fixes keyboard shortcuts on Windows.
 
 ### Added
 
@@ -163,105 +166,101 @@ on Windows.
 
 ### Changed
 
-- **macOS updates go through Sparkle**. The update installs from a
-  separate helper, so the app can quit at any time and the installation
-  still completes. Users on 0.1.2 receive this version through the
-  previous updater; Sparkle handles every update after it. (#66, #70)
+- **Safer updates on macOS**. The update installs from a separate
+  helper, so the app can quit at any time and the installation still
+  completes. (#66, #70)
 
 ### Fixed
 
 - **Codex on macOS, again**. Apple revoked the certificate that signed
-  the Codex CLI bundled in 0.1.2, and macOS blocked it at launch. The
-  Codex SDK moves to 0.155.1, and the tools bundled with the app are now
-  re-signed at build time, so a certificate revoked by a vendor can no
-  longer keep SocaDB from opening. The Codex sign-in and sign-out
-  commands shown in Settings are corrected. (#69, #66)
+  the Codex CLI bundled in 0.1.2, and macOS blocked it at launch. Codex
+  works again, and a certificate revoked by a vendor can no longer keep
+  SocaDB from opening. The Codex sign-in and sign-out commands shown in
+  Settings are corrected. (#69, #66)
 - **Keyboard shortcuts on Windows**. Menu shortcuts such as `Ctrl+S`,
   `Ctrl+O` and `Ctrl+Z` work again. (#64)
 - **Claude Code install command on Windows**. Settings shows the
   PowerShell command instead of a bash one-liner that Windows cannot
   run. (#65)
 
+### Internal
+
+- macOS updates go through Sparkle. Users on 0.1.2 receive this version
+  through the previous updater; Sparkle handles every update after it.
+  (#66, #70)
+- The Codex SDK moves to 0.155.1, and the tools bundled with the app are
+  re-signed at build time. (#69, #66)
+
 ## [0.1.2] - 2026-05-15
 
 Windows actually works now. v0.1.1 published Windows binaries, but several
-runtime bugs made the app unusable in practice — every spawned subprocess
-flashed a console window, the menu shortcuts were dead, and the title bar
-showed a broken file path. This release fixes those, ships a redesigned
-app icon and installer, refreshes the AI model list to the current
-generation, and restores Codex on macOS after Apple rotated their
-developer certificates.
+bugs made the app unusable in practice: a console window kept flashing,
+the menu shortcuts were dead, and the title bar showed a broken file path.
+This release fixes those, ships a redesigned app icon and installer,
+refreshes the AI model list to the current generation, and restores Codex
+on macOS.
 
 ### Fixed
 
-- **Windows runtime blockers**. Three issues that prevented Windows from
-  being usable. Spawning the bundled Bun runtime or running `taskkill`
-  flashed a console window for a frame on every call; the menu bar
-  accelerators (`Ctrl+S`, `Ctrl+O`, undo / redo, etc.) were silently
-  ignored because the native menu wasn't bound as the window's menu; and
-  the toolbar's "current file" indicator only split paths on `/`, so on
-  Windows you saw the full `C:\\Users\\...\\schema.soca` instead of just
-  `schema.soca`.
-- **Cross-platform config persistence**. Earlier builds wrote user config
-  files to a malformed path (`${home}.socadb/` instead of `~/.socadb/`),
-  so theme, language, API keys, and chat conversations didn't survive
-  app restarts on certain setups. Persistence is now reliable on macOS,
-  Windows, and Linux, and config writes are serialized to avoid races
-  when multiple subsystems save at once.
-- **Codex restored on macOS**. OpenAI rotated the developer certificates
-  signing their Codex CLI on May 9, 2026 following a supply-chain
-  incident in the npm ecosystem. v0.1.1's bundled SDK was still signed
-  with the old certificate, which macOS XProtect started quarantining
-  on launch. Bumping `@openai/codex-sdk` to 0.130.0 picks up the
-  re-signed binary and Codex works again.
+- **Windows works**. No more console window flashing, the menu shortcuts
+  (`Ctrl+S`, `Ctrl+O`, undo / redo…) respond, and the toolbar shows the
+  file name instead of its full path.
+- **Settings survive a restart on every system**. Theme, language, API
+  keys and chat conversations were lost after a restart on some setups.
+- **Codex works again on macOS**. macOS had started blocking the Codex
+  CLI after OpenAI changed the certificates that sign it.
 
 ### Changed
 
-- **AI models refreshed**. The chat picker now lists three current-
-  generation models per provider: Claude Opus 4.7, Sonnet 4.6, Haiku
-  4.5 from Anthropic; GPT 5.5, GPT 5.4, GPT 5.4 Mini from OpenAI. The
-  old Claude 3 / GPT 4 family names are gone — they no longer match
-  what the underlying CLI tools default to.
-- **New app icon and Windows installer branding**. Replaced the
-  placeholder icons with the redesigned SocaDB mark (rose + warm black
-  on a soft beige rounded square). The Windows NSIS installer now uses
-  the new icon for the `.exe`, the installer header, and the Start Menu
-  shortcut, instead of the generic Tauri orange rainbow.
+- **AI models refreshed**. The chat picker now lists three
+  current-generation models per provider: Claude Opus 4.7, Sonnet 4.6,
+  Haiku 4.5 from Anthropic; GPT 5.5, GPT 5.4, GPT 5.4 Mini from OpenAI.
+  The old Claude 3 / GPT 4 family names are gone.
+- **New app icon**. The redesigned SocaDB mark replaces the placeholder
+  icons, including on the Windows installer and the Start Menu shortcut.
+
+### Internal
+
+- On Windows, spawning the bundled Bun runtime or `taskkill` no longer
+  opens a console window, the native menu is bound to the window so its
+  accelerators fire, and the toolbar splits paths on both separators.
+- Config files were written to a malformed path (`${home}.socadb/`
+  instead of `~/.socadb/`); config writes are now serialized.
+- `@openai/codex-sdk` moves to 0.130.0, whose CLI is signed with OpenAI's
+  new certificate after the May 9, 2026 rotation.
 
 ## [0.1.1] - 2026-05-04
 
 The first release that actually works on every advertised platform. v0.1.0
-only ran on macOS Apple Silicon — Linux, Windows, and Intel Mac downloads
-were unusable. This release rebuilds the cross-platform pipeline, restores
-the auto-update channel that was silently broken in v0.1.0, and aligns
-every internal version field with the release tag.
+only ran on macOS Apple Silicon: Linux, Windows, and Intel Mac downloads
+were unusable. This release makes every download work and restores
+automatic updates, which were silently broken in v0.1.0.
 
 ### Fixed
 
-- **Cross-platform installers**. Linux `.AppImage` was crashing during
-  bundling because `linuxdeploy` ran `ldd` against the bundled Bun-compiled
-  Claude Code runtime and aborted; Windows agent detection failed in
-  production because the runner couldn't locate Bun on `PATH`; Intel Mac
-  wasn't built at all. All four platforms now produce working installers.
-- **Auto-update channel**. v0.1.0 silently shipped without `latest.json` or
-  signature files because Tauri's `createUpdaterArtifacts` defaults to
-  `false`. The configured updater endpoint returned 404 and no future
-  release would have been picked up. From v0.1.1 onward, every release
-  publishes a signed updater manifest for every platform, so installs will
-  receive future updates automatically.
+- **Installers for every platform**. The Linux, Windows and Intel Mac
+  downloads now work.
+- **Automatic updates**. v0.1.0 could not find any update. From 0.1.1 on,
+  every install receives new versions automatically.
 
 ### Changed
 
-- **Linux distribution simplified** to `.deb` (Ubuntu / Debian / Mint /
-  Pop!_OS native install) and `.AppImage` (universal Linux). `.rpm` was
-  costing ~33 minutes per release for marginal coverage and is dropped —
-  Fedora and openSUSE users are covered by the AppImage.
-- **Windows distribution simplified** to NSIS `.exe` only. `.msi` served
-  only enterprise MDM deployments and added build complexity without
-  addressing a real audience for now.
+- **Linux downloads** are a `.deb` (Ubuntu, Debian, Mint, Pop!_OS) and an
+  `.AppImage` for every other distribution, including Fedora and
+  openSUSE. The `.rpm` is dropped.
+- **Windows downloads** are a single `.exe` installer. The `.msi` is
+  dropped.
 
 ### Internal
 
+- The AppImage bundling no longer aborts on the bundled Bun-compiled
+  Claude Code runtime, agent detection on Windows finds Bun without
+  `PATH`, and Intel Macs are built.
+- v0.1.0 shipped without `latest.json` or signatures because Tauri's
+  `createUpdaterArtifacts` defaults to `false`; every release now
+  publishes a signed updater manifest for every platform.
+- The `.rpm` cost about 33 minutes per release, and the `.msi` only
+  served enterprise deployments.
 - Vendored a patched `linuxdeploy-plugin-gtk.sh` under `scripts/linux/` to
   work around `linuxdeploy` crashing on Bun-compiled single-file binaries.
   The release workflow installs it into `~/.cache/tauri/` before running
@@ -286,13 +285,12 @@ replaced by 0.1.1.
 
 ### Added
 
-- **Visual schema canvas**. Custom table nodes with inline column editing,
+- **Visual schema canvas**. Tables with inline column editing,
   drag-to-create relations with `ON DELETE` / `ON UPDATE` referential
-  actions, and one-click auto-layout via Elkjs.
-- **In-app AI chat**. A resizable chat panel (bottom-right) spawns your
-  installed Claude Code CLI as a subprocess and pipes streamed responses
-  back to the UI. Tool calls are visible on the canvas in real time as the
-  agent edits the schema.
+  actions, and one-click auto-layout.
+- **In-app AI chat**. A resizable chat panel (bottom-right) talks to the
+  Claude Code you have installed, and its changes show on the canvas as
+  the agent edits the schema.
 - **Bundled MCP server**. Auto-registered with Claude Code and Claude
   Desktop on first launch so your CLI knows about the open schema without
   any manual setup. Read tools (`get_schema`, `get_table`,
@@ -305,8 +303,8 @@ replaced by 0.1.1.
   working schema (with foreign-key resolution), and export back to SQL
   DDL, JSON, PNG, or SVG.
 - **`.soca` file format**. Save and open schemas as JSON via native
-  dialogs (`Cmd+S` / `Cmd+O` / `Cmd+N` / `Cmd+Shift+S`). Auto-saves the
-  current schema to `localStorage` between launches.
+  dialogs (`Cmd+S` / `Cmd+O` / `Cmd+N` / `Cmd+Shift+S`). The current
+  schema is kept between launches.
 - **Polished native shell**. Native menu (File / Edit / View / Window)
   with shortcuts, undo / redo with 50-step history, light / dark theme,
   and English / French interface.

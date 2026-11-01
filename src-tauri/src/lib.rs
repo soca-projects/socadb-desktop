@@ -1,9 +1,14 @@
+mod appimage;
 mod chat;
+mod claude_desktop;
 mod codex_config;
 mod conversations;
 #[cfg(target_os = "macos")]
 mod install_location;
 mod logging;
+#[cfg(target_os = "macos")]
+mod macos_window;
+mod opened_files;
 mod schema_files;
 mod ws;
 
@@ -38,8 +43,7 @@ fn keyring_delete(account: String) -> Result<(), String> {
     }
 }
 
-#[tauri::command]
-fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
+pub(crate) fn mcp_binary_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let os = match std::env::consts::OS {
         "macos" => "darwin",
         "linux" => "linux",
@@ -65,16 +69,36 @@ fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
             .join(&binary_name)
     } else {
         // Prod: binary is bundled in the app resources
-        app.path()
-            .resource_dir()
-            .map_err(|e| e.to_string())?
-            .join(&binary_name)
+        bundled_dir(app)?.join(&binary_name)
     };
 
     if !path.exists() {
         return Err(format!("MCP binary not found: {}", path.display()));
     }
+    Ok(path)
+}
 
+// linuxdeploy rewrites every ELF file under usr/bin and usr/lib of the AppImage,
+// which crashes Codex, so tauri.linux.conf.json puts ours in usr/libexec there.
+fn bundled_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    if cfg!(target_os = "linux") {
+        let libexec = std::env::current_exe().ok().and_then(|exe| {
+            exe.parent()?
+                .join("../libexec")
+                .join(&app.package_info().name)
+                .canonicalize()
+                .ok()
+        });
+        if let Some(dir) = libexec {
+            return Ok(dir);
+        }
+    }
+    app.path().resource_dir().map_err(|e| e.to_string())
+}
+
+#[tauri::command(async)]
+fn get_mcp_binary_path(app: tauri::AppHandle) -> Result<String, String> {
+    let path = appimage::stable_mcp_binary(&app, mcp_binary_path(&app)?);
     path.to_str()
         .ok_or_else(|| format!("Path is not valid UTF-8: {}", path.display()))
         .map(|s| s.to_owned())
@@ -135,6 +159,29 @@ fn show_logs(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn show_acknowledgments(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = if cfg!(debug_assertions) {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .ok_or("Cannot resolve project root")?
+            .join("build")
+    } else {
+        bundled_dir(&app)?
+    };
+    let file = dir.join("Acknowledgments.html");
+    if !file.exists() {
+        return Err(format!("Acknowledgments not found: {}", file.display()));
+    }
+    let path = file
+        .to_str()
+        .ok_or_else(|| format!("Path is not valid UTF-8: {}", file.display()))?;
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn open_terminal() {
     #[cfg(target_os = "macos")]
     {
@@ -169,6 +216,15 @@ fn open_terminal() {
     }
 }
 
+fn stop_agents_and_bridge() {
+    static DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if DONE.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
+    chat::cleanup_agents();
+    ws::cleanup_port_file();
+}
+
 // Must run in setup, before Sparkle's first check. Every appcast item is tagged
 // with a channel, and Sparkle only reads allowed channels from its delegate (no
 // Info.plist key). Handling the install on quit replaces Sparkle's reminders
@@ -197,12 +253,35 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     install_location::ensure_installed();
 
-    let builder = tauri::Builder::default()
+    let builder = tauri::Builder::default().manage(opened_files::OpenedFiles::default());
+
+    // First: a second instance hands its files over and exits from this plugin's
+    // setup, before any other plugin or our own setup runs. Off in dev, which
+    // shares the installed app's identifier and would hand its launch over to it.
+    #[cfg(not(target_os = "macos"))]
+    let builder = if tauri::is_dev() {
+        builder
+    } else {
+        builder.plugin(tauri_plugin_single_instance::init(
+            opened_files::from_second_instance,
+        ))
+    };
+
+    let builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init());
+
+    // Off in dev: the dev app shares the installed app's config dir, and the
+    // window size passed with `tauri dev --config` must win.
+    #[cfg(not(target_os = "macos"))]
+    let builder = if tauri::is_dev() {
+        builder
+    } else {
+        builder.plugin(tauri_plugin_window_state::Builder::default().build())
+    };
 
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_plugin_sparkle_updater::init());
@@ -211,6 +290,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_mcp_binary_path,
             read_schema_file,
+            opened_files::take_opened_files,
+            opened_files::mark_relaunch,
+            opened_files::clear_relaunch,
             schema_files::schema_files_info,
             schema_files::rename_schema_file,
             schema_files::duplicate_schema_file,
@@ -222,6 +304,7 @@ pub fn run() {
             atomic_write,
             open_terminal,
             show_logs,
+            show_acknowledgments,
             keyring_get,
             keyring_set,
             keyring_delete,
@@ -229,6 +312,7 @@ pub fn run() {
             chat::chat_send,
             chat::chat_stop,
             chat::chat_reset,
+            claude_desktop::claude_desktop_config_path,
             codex_config::codex_mcp_entry,
             codex_config::codex_mcp_set,
             conversations::conversation_list,
@@ -236,14 +320,25 @@ pub fn run() {
             conversations::conversation_delete,
             conversations::conversation_retire_legacy,
             conversations::claude_sessions_prune,
+            #[cfg(target_os = "macos")]
+            macos_window::set_document_edited,
         ])
         .setup(|app| {
             logging::init(app.handle());
             logging::install_panic_hook();
             logging::log_start(app.handle());
 
+            #[cfg(not(target_os = "macos"))]
+            opened_files::deliver(app.handle(), opened_files::files_to_open_at_launch());
+
             #[cfg(target_os = "macos")]
             configure_sparkle(app);
+            #[cfg(target_os = "macos")]
+            macos_window::relay_exit_start(app);
+            #[cfg(target_os = "macos")]
+            if !tauri::is_dev() {
+                macos_window::remember_frame(app);
+            }
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -255,8 +350,7 @@ pub fn run() {
         })
         .on_window_event(|_window, event| {
             if let tauri::WindowEvent::Destroyed = event {
-                chat::cleanup_agents();
-                ws::cleanup_port_file();
+                stop_agents_and_bridge();
             }
         })
         .build(tauri::generate_context!());
@@ -266,7 +360,17 @@ pub fn run() {
     )]
     let app = app.expect("error while building tauri application");
     app.run(|_app, event| {
+        #[cfg(target_os = "macos")]
+        if let tauri::RunEvent::Opened { urls } = &event {
+            let paths = urls.iter().filter_map(|url| url.to_file_path().ok());
+            opened_files::deliver(
+                _app,
+                opened_files::soca_paths(paths, std::path::Path::new("/")),
+            );
+        }
+        // Windows logoff and the Restart Manager close the app without destroying its window.
         if let tauri::RunEvent::Exit = event {
+            stop_agents_and_bridge();
             logging::log_stop();
         }
     });

@@ -34,17 +34,24 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": [
-      "app",
-      "dmg",
-      "deb",
-      "appimage",
-      "nsis"
-    ],
+    "targets": ["app", "dmg", "deb", "appimage", "nsis"],
     "resources": {
       "../mcp-server/dist/socadb-mcp-*": "",
-      "../mcp-server/dist/runtime/": "runtime/"
+      "../mcp-server/dist/runtime/": "runtime/",
+      "../build/Acknowledgments.html": "Acknowledgments.html"
     },
+    "copyright": "© 2026 SocaDB",
+    "fileAssociations": [
+      {
+        "ext": ["soca"],
+        "name": "SocaDB Schema",
+        "description": "SocaDB schema",
+        "role": "Editor",
+        "rank": "Owner",
+        "mimeType": "application/x-socadb",
+        "contentTypes": ["com.socadb.schema"]
+      }
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -54,19 +61,26 @@
     ],
     "windows": {
       "nsis": {
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.ico",
+        "installerHooks": "./windows/hooks.nsh"
       }
     },
     "macOS": {
-      "frameworks": [
-        "./Sparkle.framework"
-      ],
+      "frameworks": ["./Sparkle.framework"],
+      "files": {
+        "Resources/Credits.rtf": "./macos/Credits.rtf",
+        "Resources/fr.lproj/Credits.rtf": "./macos/fr.lproj/Credits.rtf"
+      },
       "signingIdentity": "-",
       "hardenedRuntime": false
     }
   },
   "plugins": {
     "updater": {
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "quiet"
+      },
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzMjJBRkY3RjkyREFEQTAKUldTZ3JTMzU5NjhpNDlMYzloeFcvbWxCajl5cVdsMjFURGF3dm1vNEVyK2RWUXNKb3Z1YllnSlMK",
       "endpoints": [
         "https://github.com/soca-projects/socadb-desktop/releases/latest/download/latest.json"

@@ -15,8 +15,10 @@ import {
 import { importFromHome } from "./homeImport";
 import { addRecentFile } from "./recentFiles";
 import { closeSchema, handleRedo, handleUndo } from "./schemaActions";
-import { isWorthResuming } from "./schemaQueries";
+import { hasUnsavedChanges, isWorthResuming } from "./schemaQueries";
 import { logError, logInfo } from "./log";
+import { flushSync } from "react-dom";
+import { settleSchemaStep, stepInField } from "./fieldUndo";
 
 // Inline editors (e.g. column rename inputs in SidePanel) commit their value
 // on blur, not on every keystroke. Force a blur before any destructive or
@@ -52,7 +54,7 @@ export async function handleSaveAs() {
 
 function isDirty() {
   const { schema, filePath, savedAt } = useSchemaStore.getState();
-  return savedAt !== schema.updatedAt && isWorthResuming(schema, filePath);
+  return hasUnsavedChanges(schema, filePath, savedAt);
 }
 
 export function handleOpen() {
@@ -85,6 +87,19 @@ function isEditor() {
   return useViewStore.getState().view === "editor";
 }
 
+function schemaCan(command: "undo" | "redo") {
+  if (!isEditor() || document.querySelector('[role="dialog"]')) return false;
+  const { pastStates, futureStates } = useSchemaStore.temporal.getState();
+  return (command === "undo" ? pastStates : futureStates).length > 0;
+}
+
+function undoOrRedo(command: "undo" | "redo") {
+  if (stepInField(command, schemaCan(command)) !== "schema") return;
+  // The focused field must show what the schema step brought before it is read.
+  flushSync(command === "undo" ? handleUndo : handleRedo);
+  settleSchemaStep();
+}
+
 export function handleShowHome() {
   commitActiveEdit();
   useViewStore.getState().showHome();
@@ -111,6 +126,10 @@ export function handleCloseSchema() {
 
 export function handleOpenRecent(filePath: string) {
   commitActiveEdit();
+  if (useSchemaStore.getState().filePath === filePath) {
+    useViewStore.getState().showEditor();
+    return;
+  }
   if (isDirty()) {
     void emit("unsaved-guard-open-recent", filePath);
     return;
@@ -118,14 +137,37 @@ export function handleOpenRecent(filePath: string) {
   void openRecentFile(filePath);
 }
 
+function openDialog(open: () => void) {
+  if (document.querySelector('[role="dialog"]')) return;
+  commitActiveEdit();
+  open();
+}
+
+export function handleOpenSettings() {
+  openDialog(useViewStore.getState().openSettings);
+}
+
+export function handleOpenAbout() {
+  logInfo("menu.action", "about");
+  openDialog(useViewStore.getState().openAbout);
+}
+
 export function handleShowLogs() {
   logInfo("menu.action", "showLogs");
   invoke("show_logs").catch((e: unknown) => logError("app.show_logs.failed", e));
 }
 
+export function handleShowAcknowledgments() {
+  logInfo("menu.action", "showAcknowledgments");
+  invoke("show_acknowledgments").catch((e: unknown) => {
+    logError("app.acknowledgments.failed", e);
+    toast.error(i18next.t("toast.acknowledgmentsFailed", { error: String(e) }));
+  });
+}
+
 // Closing the window triggers WindowEvent::Destroyed which runs the agent +
 // port-file cleanup on the Rust side. exit() from plugin-process would skip
-// that cleanup and orphan bun.exe subprocesses on Windows. In-memory schema
+// that cleanup and orphan agent runner subprocesses on Windows. In-memory schema
 // edits are preserved by sessionPersistence (localStorage), so there is no
 // need to gate this behind an unsaved-changes prompt — same behavior as
 // clicking the window's close button.
@@ -184,13 +226,10 @@ export const MENU_SHORTCUTS = {
     commitActiveEdit();
     void emit("open-export");
   }),
+  settings: shortcut("settings", "CmdOrCtrl+,", () => handleOpenSettings()),
   quit: shortcut("quit", "CmdOrCtrl+Q", () => handleQuit()),
-  undo: shortcut("undo", "CmdOrCtrl+Z", () => {
-    if (isEditor()) handleUndo();
-  }),
-  redo: shortcut("redo", "CmdOrCtrl+Shift+Z", () => {
-    if (isEditor()) handleRedo();
-  }),
+  undo: shortcut("undo", "CmdOrCtrl+Z", () => undoOrRedo("undo")),
+  redo: shortcut("redo", "CmdOrCtrl+Shift+Z", () => undoOrRedo("redo")),
   toggleSidebar: shortcut(
     "toggleSidebar",
     "CmdOrCtrl+B",

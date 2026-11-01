@@ -2,13 +2,7 @@ import { create } from "zustand";
 import type { BatchFile, DbTypeChoice, FileOutcome } from "../utils/importFiles";
 
 export type ImportPhase =
-  | "idle"
-  | "asking"
-  | "preparing"
-  | "running"
-  | "done"
-  | "stopped"
-  | "folder_refused";
+  "idle" | "asking" | "preparing" | "running" | "done" | "stopped" | "folder_refused";
 
 export interface ImportFlowState {
   mode: "draft" | "batch";

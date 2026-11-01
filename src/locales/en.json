@@ -99,8 +99,9 @@
     }
   },
   "theme": {
-    "switchToDark": "Switch to dark mode",
-    "switchToLight": "Switch to light mode"
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
   },
   "emptyCanvas": {
     "heading": "Your schema <mark>starts here</mark>",
@@ -284,7 +285,6 @@
     "agents": "Agents",
     "integrations": "Integrations",
     "language": "Language",
-    "languageDescription": "Choose the application language.",
     "close": "Close",
     "conversations": "Conversations",
     "deleteAllDescription": "Conversations are kept until you delete them. Deleting also erases the agent's memory of Claude conversations.",
@@ -294,18 +294,43 @@
     "deleteAllWhileAnswering": "Available once the agent has answered.",
     "cancel": "Cancel",
     "general": "General",
+    "appearance": "Appearance",
+    "appearanceHint": {
+      "mac": "System follows the macOS setting, even when it changes.",
+      "windows": "System follows the Windows color mode, even when it changes.",
+      "linux": "System follows the desktop theme."
+    },
     "startupTitle": "On launch, open",
-    "startupDescription": "What SocaDB shows when you open it.",
+    "newTables": "New tables",
+    "primaryKeyPostgresql": "Primary key in PostgreSQL",
+    "primaryKeyMysql": "Primary key in MySQL",
+    "primaryKey": {
+      "uuid": "UUID",
+      "int": "Integer",
+      "bigint": "Big integer"
+    },
     "startup": {
       "home": "The schema list",
       "homeHint": "The home with all your schemas. An unsaved draft shows at the top.",
       "lastSchema": "The last schema",
       "lastSchemaHint": "Picks up where you left off, draft included."
-    }
+    },
+    "updates": "Updates",
+    "updatesReleaseNotes": "Release notes",
+    "updatesCheckNow": "Check now",
+    "updatesChecking": "Checking...",
+    "updatesShow": "Show update",
+    "autoCheck": "Check automatically",
+    "autoCheckHint": "When SocaDB starts, then every 4 hours.",
+    "autoInstall": "Install automatically",
+    "autoInstallOnHint": "Updates download in the background and install when you quit SocaDB.",
+    "autoInstallPromptHint": "Updates download in the background. SocaDB offers to restart to install them.",
+    "autoInstallOffHint": "SocaDB asks before downloading an update."
   },
   "integrations": {
-    "title": "Use SocaDB from other apps",
-    "description": "The apps turned on here can read and edit the schema open in SocaDB. They only reach it while SocaDB is open, and ask for your permission before using its tools.",
+    "description": "The apps turned on here can open, read, edit and create your schemas while SocaDB is open. They ask for your permission before using its tools.",
+    "registered_one": "SocaDB is now available in {{names}}. If it's open, restart it so it picks up SocaDB.",
+    "registered_other": "SocaDB is now available in {{names}}. Restart the ones that are open so they pick up SocaDB.",
     "notInstalled": "Not installed",
     "unreadable": "SocaDB leaves its config alone because it can't read it.",
     "removed": "Removed from {{name}}'s config by hand. SocaDB won't add itself back unless you turn it on here.",
@@ -329,8 +354,7 @@
     "stepInstall": "1. Install {{name}} (if needed)",
     "stepSignIn": "2. Start {{name}} and sign in",
     "stepLogin": "3. Or login manually",
-    "showSetupSteps": "Show {{name}} setup steps",
-    "hideSetupSteps": "Hide {{name}} setup steps",
+    "setUp": "Set up {{name}}",
     "apiKeyGetFrom": "Get your API key from the",
     "apiKeySave": "Save",
     "apiKeyUpdate": "Update",
@@ -406,6 +430,7 @@
     "saveAs": "Save As...",
     "import": "Import...",
     "export": "Export...",
+    "settings": "Settings...",
     "home": "Home",
     "findSchema": "Find a Schema",
     "closeSchema": "Close Schema",
@@ -413,18 +438,32 @@
     "edit": "Edit",
     "undo": "Undo",
     "redo": "Redo",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select All",
     "view": "View",
     "toggleSidebar": "Toggle Sidebar",
     "focusMode": "Focus Mode",
     "toggleTheme": "Toggle Theme",
+    "fullscreen": "Full Screen",
     "window": "Window",
+    "minimizeMac": "Minimize",
+    "minimize": "Minimize",
+    "zoom": "Zoom",
+    "maximize": "Maximize",
+    "bringAllToFront": "Bring All to Front",
     "about": "About SocaDB",
     "checkForUpdates": "Check for Updates...",
     "checkingForUpdates": "Checking for Updates...",
     "downloadingUpdate": "Downloading Update...",
     "help": "Help",
     "showLogs": "Show Logs",
+    "thirdPartyLicenses": "Third-Party Licenses",
     "hideSocaDB": "Hide SocaDB",
+    "services": "Services",
+    "hideOthers": "Hide Others",
+    "showAll": "Show All",
     "quitSocaDB": "Quit SocaDB",
     "exit": "Exit"
   },
@@ -455,6 +494,7 @@
     "importAdapted_other": "{{count}} columns had incompatible types and were set to varchar.",
     "saveFailed": "Failed to save: {{error}}",
     "openFailed": "Failed to open file: {{error}}",
+    "acknowledgmentsFailed": "Couldn't open the third-party licenses: {{error}}",
     "autoLayoutFailed": "Auto layout failed: {{error}}",
     "invalidFile": "This file is not a valid schema.",
     "exportSqlIssues_one": "SQL exported with 1 adjustment to keep it valid",
@@ -487,7 +527,12 @@
     "upToDate": "SocaDB is up to date (v{{version}})",
     "checkFailed": "Couldn't check for updates: {{error}}",
     "releaseNotes": "release notes",
-    "failed": "Update install failed: {{error}}"
+    "failed": "Update install failed: {{error}}",
+    "availableTitle": "SocaDB {{version}} is available",
+    "downloadingTitle": "Downloading SocaDB {{version}}",
+    "downloadingHint": "SocaDB will restart once the update is ready.",
+    "downloading": "Downloading...",
+    "notNow": "Not now"
   },
   "recent": {
     "fileNotFound": "File not found. It may have been moved or deleted.",
@@ -607,5 +652,21 @@
     "acceptHint": "One .soca schema per SQL, DBML or JSON file. .soca files are added to the home.",
     "reject": "None of these files can be imported",
     "rejectHint": "SocaDB reads .sql, .dbml, .json and .soca files."
+  },
+  "about": {
+    "version": "Version {{version}}",
+    "thirdPartyLicenses": "Third-party licenses",
+    "close": "Close"
+  },
+  "whatsNew": {
+    "toastTitle": "SocaDB was updated to <mark>{{version}}</mark>",
+    "show": "See what's new",
+    "title": "What's new",
+    "close": "Close",
+    "fullHistory": "Full history on socadb.com",
+    "showChanges_one": "Show the change",
+    "showChanges_other": "Show the <b>{{count}}</b> changes",
+    "hideChanges": "Hide the changes",
+    "historyTitle": "Release notes"
   }
 }
