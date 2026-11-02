@@ -25,7 +25,7 @@ import { settleSchemaStep, stepInField } from "./fieldUndo";
 // state-reading action so what the user sees on screen is what reaches the
 // store — otherwise Ctrl+S saves the pre-edit value and Ctrl+N/O could replace
 // the schema without the in-progress rename being visible to the dirty-check.
-function commitActiveEdit() {
+export function commitActiveEdit() {
   if (document.activeElement instanceof HTMLElement) {
     document.activeElement.blur();
   }
