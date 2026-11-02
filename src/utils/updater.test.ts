@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 const env = vi.hoisted(() => {
   // updateStore exposes itself on window in dev builds.
@@ -55,12 +55,16 @@ vi.mock("./chatCommands", () => ({
 interface FakeUpdate {
   version: string;
   download: () => Promise<void>;
-  install?: () => Promise<void>;
+  install?: (options?: { restartAfterInstall?: boolean }) => Promise<void>;
 }
 
 const check = vi.hoisted(() => vi.fn<() => Promise<FakeUpdate | null>>());
+const destroyWindow = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
 vi.mock("@tauri-apps/plugin-updater", () => ({ check }));
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: () => ({ destroy: destroyWindow }),
+}));
 
 vi.mock("./sparkle", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./sparkle")>()),
@@ -92,6 +96,7 @@ import {
   handleSparkleUpdateStaged,
   handleUpdateMenuAction,
   installAndRelaunch,
+  installOnClose,
   runScheduledCheck,
   startUpdates,
   updateButtonState,
@@ -543,6 +548,254 @@ describe("updater on Windows and Linux", () => {
     await installAndRelaunch();
     expect(clearRelaunchMark).toHaveBeenCalled();
     env.isWindows = false;
+  });
+});
+
+describe("closing the window on Windows and Linux", () => {
+  const closeEvent = () => ({ preventDefault: vi.fn() });
+
+  async function findUpdate(install: NonNullable<FakeUpdate["install"]>) {
+    check.mockResolvedValueOnce({
+      version: "0.1.4",
+      download: vi.fn(() => Promise.resolve()),
+      install,
+    });
+    await checkForUpdates({ userInitiated: true });
+  }
+
+  beforeEach(() => {
+    env.isMac = false;
+    env.preferences = { autoCheck: true, autoInstall: true };
+    resetStore();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("lets the window close when no update is involved", async () => {
+    const event = closeEvent();
+    await installOnClose(event);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(destroyWindow).not.toHaveBeenCalled();
+  });
+
+  it("installs a pending update without reopening the app, then closes", async () => {
+    const install = vi.fn(() => Promise.resolve());
+    await findUpdate(install);
+    const event = closeEvent();
+    await installOnClose(event);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(install).toHaveBeenCalledWith({ restartAfterInstall: false });
+    expect(useUpdateStore.getState().pendingUpdateVersion).toBeNull();
+    expect(destroyWindow).toHaveBeenCalledOnce();
+  });
+
+  it("stays open during a restart's install, without starting a second one", async () => {
+    let finish: (() => void) | undefined;
+    const install = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    await findUpdate(install);
+    const installing = installAndRelaunch();
+    await vi.waitFor(() => expect(install).toHaveBeenCalledOnce());
+
+    const event = closeEvent();
+    await installOnClose(event);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(install).toHaveBeenCalledOnce();
+
+    finish?.();
+    await installing;
+  });
+
+  it("stays open from the moment a restart starts, before the install itself", async () => {
+    let agentsStopped: (() => void) | undefined;
+    vi.mocked(stopAllAgents).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (agentsStopped = resolve)),
+    );
+    await findUpdate(vi.fn(() => Promise.resolve()));
+    const installing = installAndRelaunch();
+
+    const event = closeEvent();
+    await installOnClose(event);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+
+    agentsStopped?.();
+    await installing;
+  });
+
+  it("closes again once a restart's install has failed", async () => {
+    await findUpdate(vi.fn(() => Promise.reject(new Error("blocked"))));
+    await installAndRelaunch();
+
+    const event = closeEvent();
+    await installOnClose(event);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("does not trap the close button when a restart's install hangs", async () => {
+    let finish: (() => void) | undefined;
+    const install = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    await findUpdate(install);
+    vi.useFakeTimers();
+    const installing = installAndRelaunch();
+    await vi.advanceTimersByTimeAsync(29_000);
+
+    const during = closeEvent();
+    await installOnClose(during);
+    expect(during.preventDefault).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    const after = closeEvent();
+    await installOnClose(after);
+    expect(after.preventDefault).not.toHaveBeenCalled();
+    expect(install).toHaveBeenCalledOnce();
+
+    finish?.();
+    await installing;
+  });
+
+  it("closes without a second install when a restart hangs on stopping the agents", async () => {
+    let agentsStopped: (() => void) | undefined;
+    vi.mocked(stopAllAgents).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (agentsStopped = resolve)),
+    );
+    const install = vi.fn(() => Promise.resolve());
+    await findUpdate(install);
+    vi.useFakeTimers();
+    const installing = installAndRelaunch();
+    await vi.advanceTimersByTimeAsync(31_000);
+
+    const event = closeEvent();
+    await installOnClose(event);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(install).not.toHaveBeenCalled();
+
+    agentsStopped?.();
+    await installing;
+  });
+
+  it("gives a restart's install its full time, however long the agents took", async () => {
+    let agentsStopped: (() => void) | undefined;
+    vi.mocked(stopAllAgents).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (agentsStopped = resolve)),
+    );
+    let finish: (() => void) | undefined;
+    await findUpdate(vi.fn(() => new Promise<void>((resolve) => (finish = resolve))));
+    vi.useFakeTimers();
+    const installing = installAndRelaunch();
+    await vi.advanceTimersByTimeAsync(31_000);
+    agentsStopped?.();
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    const event = closeEvent();
+    await installOnClose(event);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+
+    finish?.();
+    await installing;
+  });
+
+  it("refuses a second close while the first one installs", async () => {
+    let finish: (() => void) | undefined;
+    const install = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    await findUpdate(install);
+    const closing = installOnClose(closeEvent());
+    await vi.waitFor(() => expect(install).toHaveBeenCalledOnce());
+
+    const second = closeEvent();
+    await installOnClose(second);
+    expect(second.preventDefault).toHaveBeenCalledOnce();
+    expect(install).toHaveBeenCalledOnce();
+
+    finish?.();
+    await closing;
+  });
+
+  it("refuses a second close while the first one stops the agents", async () => {
+    let agentsStopped: (() => void) | undefined;
+    vi.mocked(stopAllAgents).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (agentsStopped = resolve)),
+    );
+    await findUpdate(vi.fn(() => Promise.resolve()));
+    const closing = installOnClose(closeEvent());
+
+    const second = closeEvent();
+    await installOnClose(second);
+    expect(second.preventDefault).toHaveBeenCalledOnce();
+    expect(stopAllAgents).toHaveBeenCalledOnce();
+
+    agentsStopped?.();
+    await closing;
+  });
+
+  it("closes on the next try when an install on close fails", async () => {
+    const install = vi.fn(() => Promise.reject(new Error("blocked")));
+    await findUpdate(install);
+    await installOnClose(closeEvent());
+    expect(toast.error).toHaveBeenCalledOnce();
+    expect(destroyWindow).not.toHaveBeenCalled();
+
+    const next = closeEvent();
+    await installOnClose(next);
+    expect(next.preventDefault).not.toHaveBeenCalled();
+    expect(install).toHaveBeenCalledOnce();
+  });
+
+  it("gives up on a hung install on close, and the next close goes through", async () => {
+    await findUpdate(vi.fn(() => neverSettles));
+    vi.useFakeTimers();
+    const closing = installOnClose(closeEvent());
+    await vi.advanceTimersByTimeAsync(30_000);
+    await closing;
+    expect(toast.error).toHaveBeenCalledOnce();
+
+    const next = closeEvent();
+    await installOnClose(next);
+    expect(next.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("never installs once it gave up on stopping the agents", async () => {
+    let agentsStopped: (() => void) | undefined;
+    vi.mocked(stopAllAgents).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (agentsStopped = resolve)),
+    );
+    const install = vi.fn(() => Promise.resolve());
+    await findUpdate(install);
+    vi.useFakeTimers();
+    const closing = installOnClose(closeEvent());
+    await vi.advanceTimersByTimeAsync(30_000);
+    await closing;
+    expect(toast.error).toHaveBeenCalledOnce();
+
+    agentsStopped?.();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(install).not.toHaveBeenCalled();
+  });
+
+  it("gives an install on close its full time, however long the agents took", async () => {
+    let agentsStopped: (() => void) | undefined;
+    vi.mocked(stopAllAgents).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (agentsStopped = resolve)),
+    );
+    let finish: (() => void) | undefined;
+    const install = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    await findUpdate(install);
+    vi.useFakeTimers();
+    const closing = installOnClose(closeEvent());
+    await vi.advanceTimersByTimeAsync(28_000);
+    agentsStopped?.();
+    await vi.advanceTimersByTimeAsync(29_000);
+    expect(toast.error).not.toHaveBeenCalled();
+
+    const second = closeEvent();
+    await installOnClose(second);
+    expect(second.preventDefault).toHaveBeenCalledOnce();
+    expect(install).toHaveBeenCalledOnce();
+
+    finish?.();
+    await closing;
+    expect(destroyWindow).toHaveBeenCalledOnce();
   });
 });
 

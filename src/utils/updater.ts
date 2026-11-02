@@ -1,6 +1,7 @@
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { BundleType, getBundleType, getVersion } from "@tauri-apps/api/app";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import {
@@ -33,6 +34,29 @@ export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 // Sparkle quits the app before installing: still running after this means the
 // quit never happened.
 const MAC_QUIT_TIMEOUT_MS = 30_000;
+
+// install() rewrites the AppImage in-process: quitting meanwhile leaves an app
+// that can't start. The deadline keeps a hung install from trapping the close
+// button.
+const INSTALL_TIMEOUT_MS = 30_000;
+let installDeadline = 0;
+
+function armInstallDeadline() {
+  installDeadline = Date.now() + INSTALL_TIMEOUT_MS;
+}
+
+function withinInstallTimeout<T>(work: Promise<T>): Promise<T> {
+  armInstallDeadline();
+  return Promise.race([
+    work,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Install timed out after ${INSTALL_TIMEOUT_MS / 1000}s`)),
+        INSTALL_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
 
 // An accepted download dies with the app: the next launch resumes it without
 // asking again.
@@ -293,7 +317,9 @@ export function handleSparkleCycleFinished(error: SparkleCycleError | null) {
 }
 
 export async function installAndRelaunch() {
-  const { update, setStatus, setError } = useUpdateStore.getState();
+  const { update, setStatus, setPendingUpdateVersion, setError } =
+    useUpdateStore.getState();
+  armInstallDeadline();
   setStatus("installing");
   try {
     if (IS_MAC) {
@@ -304,12 +330,15 @@ export async function installAndRelaunch() {
       throw new Error(`SocaDB did not quit within ${MAC_QUIT_TIMEOUT_MS / 1000}s`);
     }
     if (!update) throw new Error("No update is downloaded");
+    // A close during this install must not start a second one.
+    setPendingUpdateVersion(null);
     // The updater quits the app without its exit cleanup: an agent still
     // answering would leave its CLI running, holding files the installer replaces.
     await stopAllAgents();
     // Windows quits inside install() and its installer relaunches SocaDB; Linux
     // comes back here once installed.
     if (IS_WINDOWS) await markRelaunch();
+    armInstallDeadline();
     await update.install();
     if (!IS_WINDOWS) await markRelaunch();
     await relaunch();
@@ -319,6 +348,38 @@ export async function installAndRelaunch() {
     logError("updater.install.failed", error);
     setError(message);
     notifyInstallFailed(message);
+  } finally {
+    installDeadline = 0;
+  }
+}
+
+export async function installOnClose(event: { preventDefault(): void }) {
+  if (Date.now() < installDeadline) {
+    event.preventDefault();
+    return;
+  }
+
+  const { update, pendingUpdateVersion, setStatus, setPendingUpdateVersion, setError } =
+    useUpdateStore.getState();
+  if (!update || pendingUpdateVersion !== update.version) return;
+
+  event.preventDefault();
+  setStatus("installing");
+  try {
+    await withinInstallTimeout(stopAllAgents());
+    // The user is leaving: the Windows installer must not reopen SocaDB.
+    await withinInstallTimeout(update.install({ restartAfterInstall: false }));
+    // Windows exits inside install(); Linux gets here and closes itself.
+    setPendingUpdateVersion(null);
+    await getCurrentWindow().destroy();
+  } catch (error) {
+    const message = toMessage(error);
+    logError("updater.install_on_launch.failed", message);
+    setError(message);
+    setPendingUpdateVersion(null);
+    notifyInstallFailed(message);
+  } finally {
+    installDeadline = 0;
   }
 }
 
