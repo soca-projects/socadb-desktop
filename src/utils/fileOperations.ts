@@ -77,9 +77,17 @@ export async function openSchemaFile(): Promise<{
   return { schema, path: selected };
 }
 
+const lastSaves = new Map<string, Promise<unknown>>();
+
+// On a slow disk, a second save can finish first: the older content would then
+// land last, while both report success. Per file, so that a hung network folder
+// doesn't block a Save As elsewhere.
 export async function saveSchemaFile(schema: Schema, filePath: string): Promise<void> {
   const content = JSON.stringify(schema, null, 2);
-  await invoke("write_schema_file", { path: filePath, content });
+  const write = () => invoke("write_schema_file", { path: filePath, content });
+  const saved = (lastSaves.get(filePath) ?? Promise.resolve()).then(write, write);
+  lastSaves.set(filePath, saved);
+  await saved;
 }
 
 export async function saveSchemaFileAs(schema: Schema): Promise<string | null> {

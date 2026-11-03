@@ -588,7 +588,7 @@ mod tests {
         write_file(&schema, "{\"v\":1}").unwrap();
         write_file(&schema, "{\"v\":2}").unwrap();
         assert_eq!(std::fs::read_to_string(&schema).unwrap(), "{\"v\":2}");
-        assert!(!dir.join("shop.tmp").exists());
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
         let other = dir.join("notes.txt");
         assert!(write_file(&other, "x").is_err());
         assert!(!other.exists());

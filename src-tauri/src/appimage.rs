@@ -52,7 +52,7 @@ fn copy_if_changed(source: &Path, dir: &Path) -> std::io::Result<PathBuf> {
         }
     }
     fs::create_dir_all(dir)?;
-    remove_stale_temp_files(dir, &name.to_string_lossy());
+    remove_stale_temp_files(dir, &format!(".{}.", name.to_string_lossy()));
     let tmp = dir.join(format!(
         ".{}.{}-{}.tmp",
         name.to_string_lossy(),
@@ -69,11 +69,10 @@ fn copy_if_changed(source: &Path, dir: &Path) -> std::io::Result<PathBuf> {
     copied.map(|()| target)
 }
 
-fn remove_stale_temp_files(dir: &Path, name: &str) {
+pub(crate) fn remove_stale_temp_files(dir: &Path, prefix: &str) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
-    let prefix = format!(".{name}.");
     for entry in entries.flatten() {
         let file_name = entry.file_name().to_string_lossy().into_owned();
         let stale = entry
@@ -82,7 +81,7 @@ fn remove_stale_temp_files(dir: &Path, name: &str) {
             .ok()
             .and_then(|modified| modified.elapsed().ok())
             .is_some_and(|age| age > STALE_TEMP_FILE);
-        if stale && file_name.starts_with(&prefix) && file_name.ends_with(".tmp") {
+        if stale && file_name.starts_with(prefix) && file_name.ends_with(".tmp") {
             let _ = fs::remove_file(entry.path());
         }
     }
