@@ -27,6 +27,7 @@
         { "path": "$HOME/.claude.json" },
         { "path": "$DATA/Claude/**" },
         { "path": "$LOCALDATA/Packages/Claude_*/LocalCache/Roaming/Claude/**" },
+        { "path": "$LOCALDATA/Claude-Data/claude_*/claude_desktop_config.json" },
         { "path": "$HOME/.socadb/**" }
       ]
     }

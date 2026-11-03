@@ -2,22 +2,34 @@ use std::path::{Path, PathBuf};
 
 const CONFIG_FILE: &str = "claude_desktop_config.json";
 
-// The Microsoft Store (MSIX) build of Claude keeps the config it creates in its
-// package's own folder, and an entry written to %APPDATA%\Claude is then ignored
-// without any error. A config already in %APPDATA% before the install stays
-// there, so only an existing file decides.
+// The Microsoft Store (MSIX) build of Claude keeps the config it creates in a
+// folder of its own, and an entry written to %APPDATA%\Claude is then ignored
+// without any error. Recent versions use Claude-Data and older ones the package's
+// folder, so a file left in the older place must not win. Claude-Data sits outside
+// the package and may outlive an uninstall, so it only counts while the package
+// is there. A config already in %APPDATA% before the install stays there, so only
+// an existing file decides.
 fn msix_config_file(local_data: &Path) -> Option<PathBuf> {
+    let claude_data = local_data.join("Claude-Data");
     std::fs::read_dir(local_data.join("Packages"))
         .ok()?
         .flatten()
-        .filter(|entry| entry.file_name().to_string_lossy().starts_with("Claude_"))
-        .map(|entry| {
-            entry
-                .path()
-                .join("LocalCache")
-                .join("Roaming")
-                .join("Claude")
-                .join(CONFIG_FILE)
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            let publisher = name.to_str()?.strip_prefix("Claude_")?.to_owned();
+            Some((entry.path(), publisher))
+        })
+        .flat_map(|(package, publisher)| {
+            [
+                claude_data
+                    .join(format!("claude_{publisher}"))
+                    .join(CONFIG_FILE),
+                package
+                    .join("LocalCache")
+                    .join("Roaming")
+                    .join("Claude")
+                    .join(CONFIG_FILE),
+            ]
         })
         .find(|file| file.is_file())
 }
@@ -65,6 +77,54 @@ mod tests {
         let local = local_data("msix", &["Microsoft.Something_8wekyb"]);
         let file = config_in(&local, "Claude_pzs8sxrjxfjjc");
         assert_eq!(msix_config_file(&local), Some(file));
+        std::fs::remove_dir_all(local).unwrap();
+    }
+
+    fn config_in_claude_data(local: &Path, folder: &str) -> PathBuf {
+        let dir = local.join("Claude-Data").join(folder);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(CONFIG_FILE), "{}").unwrap();
+        dir.join(CONFIG_FILE)
+    }
+
+    #[test]
+    fn finds_the_config_in_the_claude_data_folder() {
+        let local = local_data("claude-data", &["Claude_pzs8sxrjxfjjc"]);
+        let file = config_in_claude_data(&local, "claude_pzs8sxrjxfjjc");
+        assert_eq!(msix_config_file(&local), Some(file));
+        std::fs::remove_dir_all(local).unwrap();
+    }
+
+    #[test]
+    fn prefers_the_claude_data_folder_over_the_package_folder() {
+        let local = local_data("both", &[]);
+        config_in(&local, "Claude_pzs8sxrjxfjjc");
+        let file = config_in_claude_data(&local, "claude_pzs8sxrjxfjjc");
+        assert_eq!(msix_config_file(&local), Some(file));
+        std::fs::remove_dir_all(local).unwrap();
+    }
+
+    #[test]
+    fn ignores_other_folders_in_claude_data() {
+        let local = local_data("other", &["Claude_pzs8sxrjxfjjc"]);
+        config_in_claude_data(&local, "cache");
+        assert_eq!(msix_config_file(&local), None);
+        std::fs::remove_dir_all(local).unwrap();
+    }
+
+    #[test]
+    fn ignores_claude_data_once_its_package_is_gone() {
+        let local = local_data("uninstalled", &["Microsoft.Something_8wekyb"]);
+        config_in_claude_data(&local, "claude_pzs8sxrjxfjjc");
+        assert_eq!(msix_config_file(&local), None);
+        std::fs::remove_dir_all(local).unwrap();
+    }
+
+    #[test]
+    fn ignores_the_claude_data_folder_of_another_publisher() {
+        let local = local_data("publisher", &["Claude_pzs8sxrjxfjjc"]);
+        config_in_claude_data(&local, "claude_someoneelse");
+        assert_eq!(msix_config_file(&local), None);
         std::fs::remove_dir_all(local).unwrap();
     }
 
