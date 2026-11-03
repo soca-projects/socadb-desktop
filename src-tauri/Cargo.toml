@@ -47,6 +47,10 @@ tauri-plugin-sparkle-updater = { git = "https://github.com/Cassidy321/tauri-plug
 tauri-plugin-single-instance = "2.5.4"
 tauri-plugin-window-state = "2.5.0"
 
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39"
+windows = "0.62"
+
 [lints.clippy]
 unwrap_used = "deny"
 expect_used = "deny"

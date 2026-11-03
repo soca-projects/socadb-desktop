@@ -10,6 +10,8 @@ mod logging;
 mod macos_window;
 mod opened_files;
 mod schema_files;
+#[cfg(windows)]
+mod windows_webview;
 mod ws;
 
 use std::process::Command;
@@ -349,6 +351,11 @@ pub fn run() {
 
             #[cfg(not(target_os = "macos"))]
             opened_files::deliver(app.handle(), opened_files::files_to_open_at_launch());
+
+            #[cfg(windows)]
+            if !tauri::is_dev() {
+                windows_webview::disable_browser_shortcuts(app);
+            }
 
             #[cfg(target_os = "macos")]
             configure_sparkle(app);
