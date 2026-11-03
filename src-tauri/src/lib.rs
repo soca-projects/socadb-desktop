@@ -123,23 +123,42 @@ async fn mcp_respond(connection_id: u64, response: String) {
     ws::send_to_client(connection_id, response).await;
 }
 
+// create_new, not a fixed name beside the target: `shop.tmp` may be a file of the user's.
 pub(crate) fn write_atomic(target: &std::path::Path, content: &str) -> Result<(), String> {
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    let tmp = target.with_extension("tmp");
-    let _ = std::fs::remove_file(&tmp);
-    let mut options = std::fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    if let Ok(meta) = std::fs::metadata(target) {
-        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-        options.mode(meta.permissions().mode());
+    let mut looked_for_stale_files = false;
+    for n in 0..1000 {
+        let tmp = target.with_file_name(format!(".socadb-write-{n}.tmp"));
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        if let Ok(meta) = std::fs::metadata(target) {
+            use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+            options.mode(meta.permissions().mode());
+        }
+        let mut file = match options.open(&tmp) {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                // A crash leaves a copy of what it was writing, which may hold tokens.
+                if let (false, Some(dir)) = (looked_for_stale_files, target.parent()) {
+                    appimage::remove_stale_temp_files(dir, ".socadb-write-");
+                    looked_for_stale_files = true;
+                }
+                continue;
+            }
+            Err(e) => return Err(e.to_string()),
+        };
+        let written = std::io::Write::write_all(&mut file, content.as_bytes());
+        drop(file);
+        let result = written.and_then(|()| std::fs::rename(&tmp, target));
+        if result.is_err() {
+            let _ = std::fs::remove_file(&tmp);
+        }
+        return result.map_err(|e| e.to_string());
     }
-    let mut file = options.open(&tmp).map_err(|e| e.to_string())?;
-    std::io::Write::write_all(&mut file, content.as_bytes()).map_err(|e| e.to_string())?;
-    drop(file);
-    std::fs::rename(&tmp, target).map_err(|e| e.to_string())
+    Err("Too many leftover temporary files in the folder".into())
 }
 
 #[tauri::command]
@@ -374,4 +393,106 @@ pub fn run() {
             logging::log_stop();
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir(name: &str) -> std::path::PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("socadb-write-atomic-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn names_in(dir: &std::path::Path) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn write_atomic_replaces_the_file_and_leaves_no_temp_file() {
+        let dir = temp_dir("replace");
+        let target = dir.join("shop.soca");
+        write_atomic(&target, "A").unwrap();
+        write_atomic(&target, "B").unwrap();
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "B");
+        assert_eq!(names_in(&dir), ["shop.soca"]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn write_atomic_keeps_a_neighbouring_tmp_file() {
+        let dir = temp_dir("neighbour");
+        std::fs::write(dir.join("shop.tmp"), "MINE").unwrap();
+        write_atomic(&dir.join("shop.soca"), "A").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.join("shop.tmp")).unwrap(),
+            "MINE"
+        );
+        assert_eq!(names_in(&dir), ["shop.soca", "shop.tmp"]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn write_atomic_cleans_up_when_the_rename_fails() {
+        let dir = temp_dir("rename");
+        let target = dir.join("shop.soca");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(target.join("inside"), "x").unwrap();
+        assert!(write_atomic(&target, "A").is_err());
+        assert_eq!(names_in(&dir), ["shop.soca"]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn write_atomic_skips_a_temp_name_already_taken() {
+        let dir = temp_dir("taken");
+        let taken = dir.join(".socadb-write-0.tmp");
+        std::fs::write(&taken, "OTHER").unwrap();
+        write_atomic(&dir.join("shop.soca"), "A").unwrap();
+        assert_eq!(std::fs::read_to_string(&taken).unwrap(), "OTHER");
+        assert_eq!(std::fs::read_to_string(dir.join("shop.soca")).unwrap(), "A");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn write_atomic_removes_temp_files_a_crash_left_behind() {
+        let dir = temp_dir("stale");
+        for n in 0..2 {
+            let stale = dir.join(format!(".socadb-write-{n}.tmp"));
+            std::fs::write(&stale, "OLD").unwrap();
+            std::fs::File::options()
+                .write(true)
+                .open(&stale)
+                .unwrap()
+                .set_modified(
+                    std::time::SystemTime::now() - std::time::Duration::from_secs(2 * 3600),
+                )
+                .unwrap();
+        }
+        write_atomic(&dir.join("shop.soca"), "A").unwrap();
+        assert_eq!(names_in(&dir), ["shop.soca"]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_atomic_keeps_the_file_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp_dir("mode");
+        let target = dir.join("config.json");
+        std::fs::write(&target, "{}").unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o600)).unwrap();
+        write_atomic(&target, "{\"a\":1}").unwrap();
+        let mode = std::fs::metadata(&target).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }
