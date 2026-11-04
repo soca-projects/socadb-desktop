@@ -132,7 +132,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
         return;
       }
 
-      mergeImport(tables, relations, enums);
+      void mergeImport(tables, relations, enums);
       finish();
       onClose();
     } catch (e) {
@@ -169,7 +169,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
       conflict.tables,
       conflict.currentDbType,
     );
-    mergeImport(adapted, conflict.relations, conflict.enums);
+    void mergeImport(adapted, conflict.relations, conflict.enums);
     showImportSummary({
       tables: conflict.tables.length,
       relations: conflict.relations.length,
