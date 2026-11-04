@@ -4,6 +4,7 @@ import {
   PaperPlaneRightIcon as PaperPlaneRight,
   StopIcon as Stop,
 } from "@phosphor-icons/react";
+import { messageToSend } from "../../utils/chatInput";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -27,14 +28,14 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = useCallback(() => {
-    const trimmed = value.trim();
-    if (!trimmed || disabled) return;
-    onSend(trimmed);
+    const message = messageToSend(value, { disabled, isStreaming });
+    if (!message) return;
+    onSend(message);
     setValue("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [value, disabled, onSend]);
+  }, [value, disabled, isStreaming, onSend]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
