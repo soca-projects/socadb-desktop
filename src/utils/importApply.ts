@@ -93,7 +93,11 @@ export function dropPendingReplace() {
   pendingReplace = null;
 }
 
-export function mergeImport(tables: Table[], relations: Relation[], enums: SchemaEnum[]) {
+export function mergeImport(
+  tables: Table[],
+  relations: Relation[],
+  enums: SchemaEnum[],
+): Promise<void> {
   const store = useSchemaStore.getState();
   const existingNames = new Set(store.schema.tables.map((t) => t.name.toLowerCase()));
   const renamed = tables.map((table) => {
@@ -109,5 +113,14 @@ export function mergeImport(tables: Table[], relations: Relation[], enums: Schem
     return { ...table, name };
   });
   store.importTables(colorTables(renamed, store.schema.tables), relations, enums);
-  void handleAutoLayout();
+  const imported = useSchemaStore.getState().schema;
+  // Not an async function: the modal must still catch a failed import above.
+  return handleAutoLayout().then(() => {
+    // Undoing the layout alone would pile the imported tables at the origin. If
+    // anything else changed while it ran, the history stays whole.
+    const { pastStates } = useSchemaStore.temporal.getState();
+    if (pastStates.at(-1)?.schema === imported) {
+      useSchemaStore.temporal.setState({ pastStates: pastStates.slice(0, -1) });
+    }
+  });
 }
