@@ -162,6 +162,13 @@ export const LOG_CODES = {
     check:
       "The page still follows the pick; dialogs, menus and the title bar keep the OS theme. Check core:window:allow-set-theme.",
   },
+  "window.browser_shortcuts.failed": {
+    level: "warn",
+    meaning:
+      "WebView2 kept its browser shortcuts, so F5, Ctrl+R, Ctrl+P and F3 act on the page.",
+    check:
+      "The message. A very old WebView2 runtime lacks this setting: updating it should help.",
+  },
   "window.document_edited.failed": {
     level: "warn",
     meaning: "The unsaved-changes dot in the window's close button could not be updated.",
