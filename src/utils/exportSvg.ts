@@ -16,7 +16,7 @@ export async function exportCanvasSvg() {
 
     const schemaName = useSchemaStore.getState().schema.name || "schema";
 
-    const [svg, path] = await Promise.all([
+    const [dataUrl, path] = await Promise.all([
       toSvg(viewport, {
         backgroundColor:
           useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FFFCF6",
@@ -26,8 +26,9 @@ export async function exportCanvasSvg() {
         filters: [{ name: i18next.t("fileFilter.svg"), extensions: ["svg"] }],
       }),
     ]);
-    if (!svg || !path) return;
+    if (!dataUrl || !path) return;
 
+    const svg = decodeURIComponent(dataUrl.slice(dataUrl.indexOf(",") + 1));
     await writeTextFile(path, svg);
   } catch (e) {
     logError("export.svg.failed", e);
