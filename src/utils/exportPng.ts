@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
 import { useThemeStore } from "../stores/themeStore";
 import i18next from "../i18n";
+import { canvasImageOptions } from "./canvasImage";
 import { logError, logWarn } from "./log";
 
 export async function exportCanvasPng() {
@@ -18,6 +19,7 @@ export async function exportCanvasPng() {
 
     const [blob, path] = await Promise.all([
       toBlob(viewport, {
+        ...canvasImageOptions(),
         backgroundColor:
           useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FFFCF6",
         pixelRatio: 2,

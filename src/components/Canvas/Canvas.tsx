@@ -89,7 +89,14 @@ function ViewportCompensator({
 const VIEW_MARGIN_PX = 24;
 
 function CanvasViewRegistrar({ frame }: { frame: RefObject<HTMLDivElement | null> }) {
-  const { screenToFlowPosition, getInternalNode, setCenter, getZoom } = useReactFlow();
+  const {
+    screenToFlowPosition,
+    getInternalNode,
+    setCenter,
+    getZoom,
+    getNodes,
+    getNodesBounds,
+  } = useReactFlow();
 
   useEffect(() => {
     const toFlow = (r: { left: number; top: number; right: number; bottom: number }) => {
@@ -124,6 +131,10 @@ function CanvasViewRegistrar({ frame }: { frame: RefObject<HTMLDivElement | null
     };
     setCanvasView({
       visibleArea,
+      contentBounds: () => {
+        const nodes = getNodes();
+        return nodes.length > 0 ? getNodesBounds(nodes) : null;
+      },
       blockedAreas: () => {
         const chat = chatRect();
         return chat ? [toFlow(chat)] : [];
@@ -150,7 +161,15 @@ function CanvasViewRegistrar({ frame }: { frame: RefObject<HTMLDivElement | null
       },
     });
     return () => setCanvasView(null);
-  }, [frame, screenToFlowPosition, getInternalNode, setCenter, getZoom]);
+  }, [
+    frame,
+    screenToFlowPosition,
+    getInternalNode,
+    setCenter,
+    getZoom,
+    getNodes,
+    getNodesBounds,
+  ]);
 
   return null;
 }
