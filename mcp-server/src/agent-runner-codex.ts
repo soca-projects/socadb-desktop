@@ -35,8 +35,6 @@ function codexArgs(cmd: ChatSendCommand, threadId: string | undefined): string[]
       : "medium";
   return [
     "--config",
-    `developer_instructions=${JSON.stringify(cmd.systemPrompt)}`,
-    "--config",
     `mcp_servers.socadb.command=${JSON.stringify(getMcpBinaryPath(__dirname))}`,
     "--config",
     'mcp_servers.socadb.args=["--chat"]',
@@ -60,6 +58,13 @@ function codexArgs(cmd: ChatSendCommand, threadId: string | undefined): string[]
     ...CODEX_DISABLED_FEATURES.flatMap((feature) => ["--disable", feature]),
     ...(threadId ? ["resume", threadId] : []),
   ];
+}
+
+// Not developer_instructions: codex keeps a thread's first ones, so a resumed turn
+// would see the schema as it was at the first message. They also go on the command
+// line, which Windows caps at 32767 characters.
+function codexInput(cmd: ChatSendCommand): string {
+  return `${cmd.systemPrompt}\n\n## User message\n${cmd.message}`;
 }
 
 function reportError(raw: string, model: string | undefined) {
@@ -111,7 +116,7 @@ async function runTurn(
   const events = runCodexExec(
     agentRuntimeDir(__dirname),
     codexArgs(cmd, turn.threadId),
-    cmd.message,
+    codexInput(cmd),
     controller.signal,
   );
 
