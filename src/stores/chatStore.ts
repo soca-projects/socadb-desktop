@@ -93,6 +93,15 @@ interface ChatState {
   setSessionId: (sessionId: string | null) => void;
 }
 
+function withSettledToolCalls(message: ChatMessage): ChatMessage {
+  return {
+    ...message,
+    toolCalls: message.toolCalls.map((toolCall) =>
+      toolCall.result === null ? { ...toolCall, result: "", isSuccess: false } : toolCall,
+    ),
+  };
+}
+
 function syncToConversation(state: ChatState): Partial<ChatState> {
   if (!state.activeConversationId) return {};
   return {
@@ -378,9 +387,11 @@ export const useChatStore = create<ChatState>()((set) => ({
     set((state) => {
       const last = state.messages.at(-1);
       const messages =
-        last?.role === "assistant" && isEmptyMessage(last)
-          ? state.messages.slice(0, -1)
-          : state.messages;
+        last?.role !== "assistant"
+          ? state.messages
+          : isEmptyMessage(last)
+            ? state.messages.slice(0, -1)
+            : [...state.messages.slice(0, -1), withSettledToolCalls(last)];
       return {
         isStreaming: false,
         streamingConversationId: null,

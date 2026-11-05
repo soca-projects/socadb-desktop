@@ -4,9 +4,9 @@ import {
   listSessions,
   query,
   type Options,
-  type Query,
 } from "@anthropic-ai/claude-agent-sdk";
 import { FileSessionStore } from "./claude-session-store.ts";
+import { stopTurn, type StoppableTurn } from "./claude-stop.ts";
 import {
   agentRuntimeDir,
   CLAUDE_EFFORTS,
@@ -28,20 +28,24 @@ const __dirname = getModuleDir(import.meta.url);
 const claudeCodePath = getClaudeCodeBinaryPath(agentRuntimeDir(__dirname));
 const sessionStore = new FileSessionStore(getClaudeSessionsDir());
 
-let currentQuery: Query | undefined;
-let abortController: AbortController | undefined;
+let currentTurn: TurnState | undefined;
 
-interface TurnState {
+interface TurnState extends StoppableTurn {
   started: boolean;
   sessionId?: string;
 }
 
 async function handleSend(cmd: ChatSendCommand) {
   const controller = new AbortController();
-  abortController = controller;
   // One runner serves every conversation: a turn only reports its own session,
   // even when it is stopped before the CLI announces one.
-  const turn: TurnState = { started: false, sessionId: cmd.sessionId };
+  const turn: TurnState = {
+    controller,
+    stopped: false,
+    started: false,
+    sessionId: cmd.sessionId,
+  };
+  currentTurn = turn;
 
   try {
     const effort =
@@ -92,18 +96,20 @@ async function handleSend(cmd: ChatSendCommand) {
     }
 
     try {
-      await runTurn(cmd.message, options, controller, turn);
+      await runTurn(cmd.message, options, turn);
     } catch (error) {
       // A session the CLI can't load fails before it starts. Keeping it would fail
       // every later message of the conversation, so start over without it.
-      if (!options.resume || turn.started || controller.signal.aborted) throw error;
+      if (!options.resume || turn.started || turn.stopped || controller.signal.aborted) {
+        throw error;
+      }
       console.error("[agent] resume failed:", errorText(error));
       emit({ type: "chat_event", event: "memory_lost" });
       delete options.resume;
-      await runTurn(cmd.message, options, controller, turn);
+      await runTurn(cmd.message, options, turn);
     }
   } catch (error) {
-    if (controller.signal.aborted) {
+    if (turn.stopped || controller.signal.aborted) {
       emitDone("", turn.sessionId);
       return;
     }
@@ -111,8 +117,8 @@ async function handleSend(cmd: ChatSendCommand) {
     console.error("[agent] error:", errorMessage);
     emitError("claude", errorMessage);
   } finally {
-    currentQuery = undefined;
-    abortController = undefined;
+    clearTimeout(turn.stopDeadline);
+    if (currentTurn === turn) currentTurn = undefined;
   }
 }
 
@@ -129,24 +135,27 @@ async function canResume(sessionId: string): Promise<boolean> {
   }
 }
 
-async function runTurn(
-  prompt: string,
-  options: Options,
-  controller: AbortController,
-  turn: TurnState,
-) {
-  currentQuery = query({ prompt, options });
+async function runTurn(prompt: string, options: Options, turn: TurnState) {
+  if (turn.stopped) {
+    emitDone("", turn.sessionId);
+    return;
+  }
+  const currentQuery = query({ prompt, options });
+  turn.query = currentQuery;
 
   let finalResponse = "";
 
   for await (const message of currentQuery) {
+    // A tool already on screen still needs its result.
+    if (turn.stopped && message.type !== "system" && message.type !== "user") continue;
+
     // The CLI retries a rejected key 10 times (~3 min); the first retry says why.
     if (
       message.type === "system" &&
       message.subtype === "api_retry" &&
       message.error === "authentication_failed"
     ) {
-      controller.abort();
+      turn.controller.abort();
       emitError(
         "claude",
         `API Error: ${message.error_status ?? 401} authentication failed`,
@@ -210,13 +219,11 @@ async function runTurn(
     }
   }
 
-  emitDone(finalResponse, turn.sessionId);
+  emitDone(turn.stopped ? "" : finalResponse, turn.sessionId);
 }
 
 function handleStop() {
-  if (abortController) {
-    abortController.abort();
-  }
+  if (currentTurn) stopTurn(currentTurn);
 }
 
 startRunner({
