@@ -35,4 +35,11 @@ describe("modal stack", () => {
     focusTopModal();
     expect(focusSettings).toHaveBeenCalledTimes(1);
   });
+
+  it("says whether a modal was on top when it left", () => {
+    const under = enterModal();
+    const over = enterModal();
+    expect(under.leave()).toBe(false);
+    expect(over.leave()).toBe(true);
+  });
 });

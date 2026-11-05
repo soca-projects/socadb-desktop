@@ -250,6 +250,7 @@
     "description": "Choose a format to export your schema.",
     "close": "Close",
     "exportButton": "Export",
+    "exporting": "Exporting…",
     "sqlDescription": "Export as SQL DDL statements",
     "imageLabel": "Image",
     "imageDescription": "Export diagram as an image",
@@ -478,6 +479,7 @@
   },
   "toast": {
     "exportSqlFailed": "Failed to export SQL: {{error}}",
+    "exportCanvasChanged": "The canvas changed during the export, so nothing was saved. Export it again.",
     "exportPngFailed": "Failed to export PNG: {{error}}",
     "exportPngGenFailed": "Failed to generate image from canvas.",
     "exportSvgFailed": "Failed to export SVG: {{error}}",

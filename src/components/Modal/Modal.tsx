@@ -22,6 +22,7 @@ export function Modal({
   const onCloseRef = useRef(onClose);
   const dismissibleRef = useRef(dismissible);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const leftFromTop = useRef(true);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -38,7 +39,7 @@ export function Modal({
     document.addEventListener("keydown", handler);
     return () => {
       document.removeEventListener("keydown", handler);
-      modal.leave();
+      leftFromTop.current = modal.leave();
     };
   }, []);
 
@@ -53,6 +54,7 @@ export function Modal({
       takeFocus(overlay, () => document.activeElement);
     }
     return () => {
+      if (!leftFromTop.current) return;
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
       else focusTopModal();
     };

@@ -1,11 +1,11 @@
-import { toBlob } from "html-to-image";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
 import { useThemeStore } from "../stores/themeStore";
 import i18next from "../i18n";
-import { canvasImageOptions } from "./canvasImage";
+import { CanvasChangedError } from "./canvasImage";
+import { renderCanvasPng } from "./canvasPng";
 import { logError, logWarn } from "./log";
 
 export async function exportCanvasPng() {
@@ -15,21 +15,19 @@ export async function exportCanvasPng() {
     ) as HTMLElement | null;
     if (!viewport) return;
 
-    const schemaName = useSchemaStore.getState().schema.name || "schema";
+    const { schema } = useSchemaStore.getState();
 
-    const [blob, path] = await Promise.all([
-      toBlob(viewport, {
-        ...canvasImageOptions(),
-        backgroundColor:
-          useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FFFCF6",
-        pixelRatio: 2,
-      }),
-      save({
-        defaultPath: `${schemaName}.png`,
-        filters: [{ name: i18next.t("fileFilter.png"), extensions: ["png"] }],
-      }),
-    ]);
+    const path = await save({
+      defaultPath: `${schema.name || "schema"}.png`,
+      filters: [{ name: i18next.t("fileFilter.png"), extensions: ["png"] }],
+    });
     if (!path) return;
+    if (useSchemaStore.getState().schema !== schema) throw new CanvasChangedError();
+
+    const blob = await renderCanvasPng(
+      viewport,
+      useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FFFCF6",
+    );
     if (!blob) {
       logWarn("export.png.render_failed", "PNG generation returned nothing");
       toast.error(i18next.t("toast.exportPngGenFailed"));
@@ -39,6 +37,11 @@ export async function exportCanvasPng() {
     const bytes = new Uint8Array(await blob.arrayBuffer());
     await writeFile(path, bytes);
   } catch (e) {
+    if (e instanceof CanvasChangedError) {
+      logWarn("export.canvas_changed", e.message);
+      toast.error(i18next.t("toast.exportCanvasChanged"));
+      return;
+    }
     logError("export.png.failed", e);
     toast.error(i18next.t("toast.exportPngFailed", { error: String(e) }));
   }

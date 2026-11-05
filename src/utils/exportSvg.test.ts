@@ -7,29 +7,35 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
-vi.mock("./log", () => ({ logError: vi.fn() }));
+vi.mock("./log", () => ({ logError: vi.fn(), logWarn: vi.fn() }));
 vi.mock("../stores/themeStore", () => ({
   useThemeStore: { getState: () => ({ theme: "light" }) },
 }));
 vi.mock("../stores/schemaStore", () => ({
-  useSchemaStore: { getState: () => ({ schema: { name: "shop" } }) },
+  useSchemaStore: { getState: vi.fn() },
 }));
 
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { toSvg } from "html-to-image";
 import { toast } from "sonner";
+import { useSchemaStore } from "../stores/schemaStore";
 import { setCanvasView } from "./canvasView";
 import { exportCanvasSvg } from "./exportSvg";
-import { logError } from "./log";
+import { logError, logWarn } from "./log";
 
 const dataUrl = (svg: string) =>
   `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
+const stateWith = (name: string) =>
+  ({ schema: { name } }) as ReturnType<typeof useSchemaStore.getState>;
+const shop = stateWith("shop");
+
 describe("exportCanvasSvg", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("document", { querySelector: () => ({}) });
+    vi.stubGlobal("document", { querySelector: () => ({ isConnected: true }) });
+    vi.mocked(useSchemaStore.getState).mockReturnValue(shop);
     vi.mocked(save).mockResolvedValue("/tmp/shop.svg");
     setCanvasView(null);
   });
@@ -78,7 +84,28 @@ describe("exportCanvasSvg", () => {
     vi.mocked(toSvg).mockResolvedValue(dataUrl("<svg/>"));
     vi.mocked(save).mockResolvedValue(null);
     await exportCanvasSvg();
+    expect(toSvg).not.toHaveBeenCalled();
     expect(writeTextFile).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing and says so when the schema changes behind the dialog", async () => {
+    vi.mocked(save).mockImplementation(() => {
+      vi.mocked(useSchemaStore.getState).mockReturnValue(stateWith("other"));
+      return Promise.resolve("/tmp/shop.svg");
+    });
+    await exportCanvasSvg();
+    expect(toSvg).not.toHaveBeenCalled();
+    expect(writeTextFile).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("toast.exportCanvasChanged");
+  });
+
+  it("writes nothing and says so when the canvas closes behind the dialog", async () => {
+    vi.stubGlobal("document", { querySelector: () => ({ isConnected: false }) });
+    await exportCanvasSvg();
+    expect(toSvg).not.toHaveBeenCalled();
+    expect(writeTextFile).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("toast.exportCanvasChanged");
+    expect(logWarn).toHaveBeenCalledWith("export.canvas_changed", expect.any(String));
   });
 
   it("reports a data URL it can't decode, and writes nothing", async () => {
