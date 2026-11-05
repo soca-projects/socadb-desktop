@@ -2,13 +2,11 @@ use std::path::{Path, PathBuf};
 
 const CONFIG_FILE: &str = "claude_desktop_config.json";
 
-// The Microsoft Store (MSIX) build of Claude keeps the config it creates in a
-// folder of its own, and an entry written to %APPDATA%\Claude is then ignored
-// without any error. Recent versions use Claude-Data and older ones the package's
-// folder, so a file left in the older place must not win. Claude-Data sits outside
-// the package and may outlive an uninstall, so it only counts while the package
-// is there. A config already in %APPDATA% before the install stays there, so only
-// an existing file decides.
+// The Microsoft Store (MSIX) build ignores an entry written to %APPDATA%\Claude,
+// without any error, unless its config was already there before the install: only
+// an existing file decides. Claude-Data wins over the package's older folder. It
+// sits outside the package and may outlive an uninstall, so it only counts while
+// the package is there.
 fn msix_config_file(local_data: &Path) -> Option<PathBuf> {
     let claude_data = local_data.join("Claude-Data");
     std::fs::read_dir(local_data.join("Packages"))

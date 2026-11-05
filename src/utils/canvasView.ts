@@ -5,6 +5,7 @@ export interface CanvasView {
   blockedAreas: () => Rect[];
   measuredSize: (tableId: string) => Size | null;
   reveal: (rect: Rect) => void;
+  contentBounds: () => Rect | null;
 }
 
 let current: CanvasView | null = null;

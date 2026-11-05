@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
 import { useThemeStore } from "../stores/themeStore";
 import i18next from "../i18n";
+import { canvasImageOptions, withSvgBackground } from "./canvasImage";
 import { logError } from "./log";
 
 export async function exportCanvasSvg() {
@@ -17,10 +18,7 @@ export async function exportCanvasSvg() {
     const schemaName = useSchemaStore.getState().schema.name || "schema";
 
     const [dataUrl, path] = await Promise.all([
-      toSvg(viewport, {
-        backgroundColor:
-          useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FFFCF6",
-      }),
+      toSvg(viewport, canvasImageOptions()),
       save({
         defaultPath: `${schemaName}.svg`,
         filters: [{ name: i18next.t("fileFilter.svg"), extensions: ["svg"] }],
@@ -29,7 +27,8 @@ export async function exportCanvasSvg() {
     if (!dataUrl || !path) return;
 
     const svg = decodeURIComponent(dataUrl.slice(dataUrl.indexOf(",") + 1));
-    await writeTextFile(path, svg);
+    const background = useThemeStore.getState().theme === "dark" ? "#1c1b1a" : "#FFFCF6";
+    await writeTextFile(path, withSvgBackground(svg, background));
   } catch (e) {
     logError("export.svg.failed", e);
     toast.error(i18next.t("toast.exportSvgFailed", { error: String(e) }));

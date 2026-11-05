@@ -18,9 +18,6 @@ fn turn_off_browser_shortcuts(
     }
 }
 
-// WebView2 keeps a browser's shortcuts: F5 and Ctrl+R reload the whole app and
-// lose the undo history, Ctrl+P prints the page, F3 opens a find bar. The page
-// still receives these keys, so the app's own shortcuts keep working.
 pub fn disable_browser_shortcuts(app: &tauri::App) {
     let Some(window) = app.get_webview_window("main") else {
         return;
