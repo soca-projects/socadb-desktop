@@ -131,3 +131,34 @@ describe("chatStore conversations", () => {
     expect(s.activeConversationId).toBe(s.conversations[0].id);
   });
 });
+
+describe("finishResponse", () => {
+  const toolCall = (id: string, result: string | null) => ({
+    id,
+    name: "get_table",
+    input: {},
+    result,
+    isSuccess: result !== null,
+  });
+
+  it("settles a tool that never got its result", () => {
+    useChatStore.setState({
+      messages: [
+        {
+          id: "a",
+          role: "assistant",
+          content: "",
+          toolCalls: [toolCall("done", "ok"), toolCall("cut", null)],
+          timestamp: "2026-11-05T10:00:00.000Z",
+        },
+      ],
+    });
+
+    useChatStore.getState().finishResponse("session");
+
+    expect(useChatStore.getState().messages.at(-1)?.toolCalls).toEqual([
+      toolCall("done", "ok"),
+      { ...toolCall("cut", ""), isSuccess: false },
+    ]);
+  });
+});
