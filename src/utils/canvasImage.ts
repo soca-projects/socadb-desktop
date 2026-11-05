@@ -18,8 +18,6 @@ export function imageFrame(bounds: Rect) {
   };
 }
 
-// The viewport element is only as large as the canvas, with the current pan and
-// zoom: captured as it is, the image would stop at what's on screen.
 export function canvasImageOptions() {
   const bounds = getCanvasView()?.contentBounds();
   if (!bounds) return {};

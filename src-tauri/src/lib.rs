@@ -143,7 +143,6 @@ pub(crate) fn write_atomic(target: &std::path::Path, content: &str) -> Result<()
         let mut file = match options.open(&tmp) {
             Ok(file) => file,
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-                // A crash leaves a copy of what it was writing, which may hold tokens.
                 if let (false, Some(dir)) = (looked_for_stale_files, target.parent()) {
                     appimage::remove_stale_temp_files(dir, ".socadb-write-");
                     looked_for_stale_files = true;
