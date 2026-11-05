@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("html-to-image", () => ({ toBlob: vi.fn() }));
+vi.mock("./canvasPng", () => ({ renderCanvasPng: vi.fn() }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn() }));
 vi.mock("@tauri-apps/plugin-fs", () => ({ writeFile: vi.fn(() => Promise.resolve()) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
@@ -15,10 +15,10 @@ vi.mock("../stores/schemaStore", () => ({
 
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
-import { toBlob } from "html-to-image";
 import { toast } from "sonner";
 import { useSchemaStore } from "../stores/schemaStore";
-import { setCanvasView } from "./canvasView";
+import { CanvasChangedError } from "./canvasImage";
+import { renderCanvasPng } from "./canvasPng";
 import { logError, logWarn } from "./log";
 import { exportCanvasPng } from "./exportPng";
 
@@ -29,37 +29,22 @@ const shop = stateWith("shop");
 describe("exportCanvasPng", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("document", { querySelector: () => ({ isConnected: true }) });
+    vi.stubGlobal("document", { querySelector: () => ({}) });
     vi.mocked(useSchemaStore.getState).mockReturnValue(shop);
     vi.mocked(save).mockResolvedValue("/tmp/shop.png");
-    vi.mocked(toBlob).mockResolvedValue(new Blob(["png"]));
-    setCanvasView({
-      visibleArea: () => null,
-      blockedAreas: () => [],
-      measuredSize: () => null,
-      reveal: vi.fn(),
-      contentBounds: () => ({ x: 0, y: 0, width: 920, height: 420 }),
-    });
+    vi.mocked(renderCanvasPng).mockResolvedValue(new Blob(["png"]));
   });
 
-  it("captures the whole schema on the paper background, not the current view", async () => {
+  it("renders on the paper background and writes the file", async () => {
     await exportCanvasPng();
-    expect(toBlob).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        width: 1000,
-        height: 500,
-        backgroundColor: "#FFFCF6",
-        pixelRatio: 2,
-      }),
-    );
+    expect(renderCanvasPng).toHaveBeenCalledWith(expect.anything(), "#FFFCF6");
     expect(writeFile).toHaveBeenCalledWith("/tmp/shop.png", expect.any(Uint8Array));
   });
 
   it("doesn't render anything when the dialog is cancelled", async () => {
     vi.mocked(save).mockResolvedValue(null);
     await exportCanvasPng();
-    expect(toBlob).not.toHaveBeenCalled();
+    expect(renderCanvasPng).not.toHaveBeenCalled();
     expect(writeFile).not.toHaveBeenCalled();
   });
 
@@ -69,15 +54,14 @@ describe("exportCanvasPng", () => {
       return Promise.resolve("/tmp/shop.png");
     });
     await exportCanvasPng();
-    expect(toBlob).not.toHaveBeenCalled();
+    expect(renderCanvasPng).not.toHaveBeenCalled();
     expect(writeFile).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith("toast.exportCanvasChanged");
   });
 
-  it("writes nothing and says so when the canvas closes behind the dialog", async () => {
-    vi.stubGlobal("document", { querySelector: () => ({ isConnected: false }) });
+  it("writes nothing and says so when the canvas changes during the render", async () => {
+    vi.mocked(renderCanvasPng).mockRejectedValue(new CanvasChangedError());
     await exportCanvasPng();
-    expect(toBlob).not.toHaveBeenCalled();
     expect(writeFile).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith("toast.exportCanvasChanged");
     expect(logWarn).toHaveBeenCalledWith("export.canvas_changed", expect.any(String));
