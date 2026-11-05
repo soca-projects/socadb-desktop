@@ -250,6 +250,7 @@
     "description": "Choisissez un format d'export.",
     "close": "Fermer",
     "exportButton": "Exporter",
+    "exporting": "Export en cours…",
     "sqlDescription": "Exporter en SQL DDL",
     "imageLabel": "Image",
     "imageDescription": "Exporter le schéma en image",
@@ -478,6 +479,7 @@
   },
   "toast": {
     "exportSqlFailed": "Échec de l'export SQL : {{error}}",
+    "exportCanvasChanged": "Le canvas a changé pendant l'export, rien n'a été enregistré. Relancez l'export.",
     "exportPngFailed": "Échec de l'export PNG : {{error}}",
     "exportPngGenFailed": "Impossible de générer l'image depuis le canvas.",
     "exportSvgFailed": "Échec de l'export SVG : {{error}}",

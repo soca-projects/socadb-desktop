@@ -7,7 +7,7 @@ const stack: Entry[] = [];
 
 export function enterModal(focus?: () => void): {
   isTop: () => boolean;
-  leave: () => void;
+  leave: () => boolean;
 } {
   const id = Symbol("modal");
   stack.push({ id, focus });
@@ -15,7 +15,9 @@ export function enterModal(focus?: () => void): {
     isTop: () => stack[stack.length - 1]?.id === id,
     leave: () => {
       const index = stack.findIndex((entry) => entry.id === id);
+      const wasTop = index !== -1 && index === stack.length - 1;
       if (index !== -1) stack.splice(index, 1);
+      return wasTop;
     },
   };
 }

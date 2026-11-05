@@ -9,13 +9,11 @@ import { Modal } from "../Modal/Modal";
 import { PostgresqlIcon } from "../../assets/icons/PostgresqlIcon";
 import { MysqlIcon } from "../../assets/icons/MysqlIcon";
 import { useSchemaStore } from "../../stores/schemaStore";
-import { exportCanvasPng } from "../../utils/exportPng";
-import { exportCanvasSvg } from "../../utils/exportSvg";
+import { exportImageUnderModal, type ImageFormat } from "../../utils/exportImage";
 import { exportSql } from "../../utils/exportSql";
 import { exportJson } from "../../utils/exportJson";
 
 type ExportType = "sql" | "image" | "json";
-type ImageFormat = "png" | "svg";
 
 interface ExportModalProps {
   onClose: () => void;
@@ -25,16 +23,16 @@ export function ExportModal({ onClose }: ExportModalProps) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<ExportType>("sql");
   const [imageFormat, setImageFormat] = useState<ImageFormat>("png");
+  const [exporting, setExporting] = useState(false);
   const dbType = useSchemaStore((s) => s.schema.dbType);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     switch (selected) {
       case "sql":
         void exportSql();
         break;
       case "image":
-        if (imageFormat === "png") void exportCanvasPng();
-        else void exportCanvasSvg();
+        await exportImageUnderModal(imageFormat, () => setExporting(true));
         break;
       case "json":
         void exportJson();
@@ -72,11 +70,12 @@ export function ExportModal({ onClose }: ExportModalProps) {
   return (
     <Modal
       onClose={onClose}
+      dismissible={!exporting}
       maxWidth="max-w-[480px]"
       zIndex={60}
       ariaLabelledBy="export-title"
     >
-      <div className="p-6">
+      <div className="p-6" inert={exporting}>
         <div className="flex items-center justify-between">
           <div>
             <h2 id="export-title" className="text-base font-semibold text-primary">
@@ -133,10 +132,11 @@ export function ExportModal({ onClose }: ExportModalProps) {
 
         <div className="mt-5 flex justify-end">
           <button
-            onClick={handleExport}
-            className="rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98]"
+            onClick={() => void handleExport()}
+            className="rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98] disabled:opacity-60"
+            disabled={exporting}
           >
-            {t("export.exportButton")}
+            {exporting ? t("export.exporting") : t("export.exportButton")}
           </button>
         </div>
       </div>

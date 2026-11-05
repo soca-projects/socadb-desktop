@@ -346,6 +346,12 @@ export const LOG_CODES = {
     meaning: "Save As failed after choosing the path.",
     check: "The message: permissions or disk; the dialog itself succeeded.",
   },
+  "export.canvas_changed": {
+    level: "warn",
+    meaning: "An image export stopped without writing, because the canvas changed.",
+    check:
+      "The agent or a shortcut changed the schema or the theme, or the editor closed, during the export. Exporting again should work.",
+  },
   "export.sql.failed": {
     level: "error",
     meaning: "Writing the SQL export failed.",

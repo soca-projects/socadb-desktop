@@ -1,6 +1,12 @@
 import { getCanvasView } from "./canvasView";
 import type { Rect } from "./tablePlacement";
 
+export class CanvasChangedError extends Error {
+  constructor() {
+    super("The canvas changed during an image export");
+  }
+}
+
 const MARGIN_PX = 40;
 // PNGs render at twice this size, and html-to-image shrinks a canvas past 16384 px a side.
 const MAX_SIDE_PX = 8000;
