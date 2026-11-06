@@ -218,7 +218,7 @@ fn mask_after(text: &str, prefix: &str, min: usize) -> String {
         let after = &rest[i + prefix.len()..];
         let len = after
             .char_indices()
-            .find(|(_, c)| !(c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.')))
+            .find(|(_, c)| !(c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '*')))
             .map_or(after.len(), |(j, _)| j);
         out.push_str(&rest[..i]);
         if len >= min {
@@ -487,6 +487,18 @@ mod tests {
         assert_eq!(
             scrub_with_homes("task-list sk-short", &[] as &[&str]),
             "task-list sk-short"
+        );
+    }
+
+    #[test]
+    fn keys_already_masked_by_the_service_are_masked() {
+        let s = scrub_with_homes(
+            "Incorrect API key provided: sk-proj-*************test. You can find your API key at https://platform.openai.com/account/api-keys.",
+            &[] as &[&str],
+        );
+        assert_eq!(
+            s,
+            "Incorrect API key provided: sk-[redacted] You can find your API key at https://platform.openai.com/account/api-keys."
         );
     }
 
