@@ -9,17 +9,40 @@ import { findEnumById, findTableById, findTableByName } from "./schemaQueries";
 import { uniqueEnumName } from "./schemaIntegrity";
 import { logError } from "./log";
 import { getCanvasView } from "./canvasView";
-import { estimateTableSize, placeNewTable } from "./tablePlacement";
+import { estimateTableSize, intersectsRect, placeNewTable } from "./tablePlacement";
 import { toast } from "sonner";
 import i18next from "../i18n";
 import type { Column, Schema, SchemaEnum } from "../types/schema";
 
 export function handleUndo() {
+  const before = useSchemaStore.getState().schema;
   useSchemaStore.temporal.getState().undo();
+  frameIfMovedTablesLeftView(before);
 }
 
 export function handleRedo() {
+  const before = useSchemaStore.getState().schema;
   useSchemaStore.temporal.getState().redo();
+  frameIfMovedTablesLeftView(before);
+}
+
+function frameIfMovedTablesLeftView(before: Schema) {
+  const view = getCanvasView();
+  const area = view?.visibleArea();
+  const { tables } = useSchemaStore.getState().schema;
+  if (!view || !area) return;
+  const moved = tables.some((table) => {
+    const old = findTableById(before, table.id);
+    return (
+      old && (old.position.x !== table.position.x || old.position.y !== table.position.y)
+    );
+  });
+  if (!moved) return;
+  const shows = tables.some((table) => {
+    const size = view.measuredSize(table.id) ?? estimateTableSize(table);
+    return intersectsRect(area, { ...table.position, ...size });
+  });
+  if (!shows) view.fitView();
 }
 
 export async function handleAutoLayout() {
@@ -31,6 +54,7 @@ export async function handleAutoLayout() {
       useViewStore.getState().indexesOpen,
     );
     updateTablePositions(positions);
+    getCanvasView()?.fitView();
   } catch (e) {
     logError("layout.auto.failed", e);
     toast.error(i18next.t("toast.autoLayoutFailed", { error: String(e) }));
@@ -134,6 +158,7 @@ export function replaceSchema(schema: Schema, filePath: string | null) {
   store.setSchema(schema);
   store.setFilePath(filePath);
   useSchemaStore.temporal.getState().clear();
+  getCanvasView()?.fitView();
 }
 
 export function closeSchema() {

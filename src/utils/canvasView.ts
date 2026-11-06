@@ -6,6 +6,7 @@ export interface CanvasView {
   measuredSize: (tableId: string) => Size | null;
   reveal: (rect: Rect) => void;
   contentBounds: () => Rect | null;
+  fitView: () => void;
 }
 
 let current: CanvasView | null = null;

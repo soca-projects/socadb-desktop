@@ -9,6 +9,7 @@ function viewWith(contentBounds: CanvasView["contentBounds"]): CanvasView {
     measuredSize: () => null,
     reveal: vi.fn(),
     contentBounds,
+    fitView: vi.fn(),
   };
 }
 

@@ -25,6 +25,7 @@ import { dispatchMcpAction } from "./mcpActions";
 import { createEmptySchema, useSchemaStore } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
 import type { Schema } from "../types/schema";
+import { setCanvasView } from "./canvasView";
 
 let recents: { path: string; openedAt: string }[] = [];
 const files = new Map<string, string>();
@@ -155,6 +156,24 @@ describe("new_schema", () => {
     useSchemaStore.temporal.getState().undo();
     useSchemaStore.temporal.getState().undo();
     expect(useSchemaStore.getState().schema.name).toBe("Blog");
+  });
+
+  it("frames the new schema when the editor shows the previous one", async () => {
+    schemaWithTables("boutique", ["orders"]);
+    useSchemaStore.setState({ savedAt: useSchemaStore.getState().schema.updatedAt });
+    const fitView = vi.fn();
+    setCanvasView({
+      visibleArea: () => null,
+      blockedAreas: () => [],
+      measuredSize: () => null,
+      reveal: vi.fn(),
+      contentBounds: () => null,
+      fitView,
+    });
+    const result = await dispatchMcpAction("new_schema", { name: "Blog" });
+    setCanvasView(null);
+    expect(result.ok).toBe(true);
+    expect(fitView).toHaveBeenCalledTimes(1);
   });
 
   it("defaults to an untitled PostgreSQL schema", async () => {

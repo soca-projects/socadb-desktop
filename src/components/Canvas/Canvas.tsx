@@ -87,6 +87,9 @@ function ViewportCompensator({
 }
 
 const VIEW_MARGIN_PX = 24;
+// On an empty canvas React Flow holds this fit until the first table appears,
+// then frames that lone table: uncapped, it zooms to 200%.
+const OPENING_FIT = { padding: 0.2, maxZoom: 1 };
 
 function CanvasViewRegistrar({ frame }: { frame: RefObject<HTMLDivElement | null> }) {
   const {
@@ -96,6 +99,7 @@ function CanvasViewRegistrar({ frame }: { frame: RefObject<HTMLDivElement | null
     getZoom,
     getNodes,
     getNodesBounds,
+    fitView,
   } = useReactFlow();
 
   useEffect(() => {
@@ -159,6 +163,7 @@ function CanvasViewRegistrar({ frame }: { frame: RefObject<HTMLDivElement | null
         );
         void setCenter(centre.x, centre.y, { zoom: getZoom(), duration: 300 });
       },
+      fitView: () => void fitView(OPENING_FIT),
     });
     return () => setCanvasView(null);
   }, [
@@ -169,6 +174,7 @@ function CanvasViewRegistrar({ frame }: { frame: RefObject<HTMLDivElement | null
     getZoom,
     getNodes,
     getNodesBounds,
+    fitView,
   ]);
 
   return null;
@@ -443,9 +449,7 @@ export function Canvas() {
             onEdgeMouseLeave={onEdgeMouseLeave}
             onPaneClick={handleCloseContextMenu}
             elevateEdgesOnSelect
-            // On an empty canvas React Flow holds this fit until the first
-            // table appears, then frames that lone table: uncapped, it zooms to 200%.
-            onInit={(instance) => instance.fitView({ padding: 0.2, maxZoom: 1 })}
+            onInit={(instance) => instance.fitView(OPENING_FIT)}
             minZoom={0.1}
             maxZoom={2}
             deleteKeyCode={DELETE_KEY_CODE}
