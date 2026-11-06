@@ -15,6 +15,10 @@ describe("default capability", () => {
     expect(permissions()).toContain("core:window:allow-destroy");
   });
 
+  it("allows minimize, which Ctrl+M calls on Windows", () => {
+    expect(permissions()).toContain("core:window:allow-minimize");
+  });
+
   it("can read only the config file in Claude Desktop's Claude-Data folder", () => {
     expect(permissions()).toContainEqual(
       expect.objectContaining({

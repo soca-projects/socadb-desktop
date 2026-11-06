@@ -213,6 +213,7 @@ export const MENU_SHORTCUTS = {
   findSchema: shortcut("findSchema", "CmdOrCtrl+F", () => handleFindSchema()),
   closeSchema: shortcut("closeSchema", "CmdOrCtrl+W", () => handleCloseSchema()),
   closeWindow: shortcut("closeWindow", "CmdOrCtrl+Shift+W", () => handleQuit()),
+  minimize: shortcut("minimize", "CmdOrCtrl+M", () => getCurrentWindow().minimize()),
   import: shortcut("import", "CmdOrCtrl+I", () => {
     if (!isEditor()) {
       handleHomeImport();

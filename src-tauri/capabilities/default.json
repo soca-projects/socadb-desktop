@@ -9,6 +9,7 @@
     "core:window:allow-start-dragging",
     "core:window:allow-close",
     "core:window:allow-destroy",
+    "core:window:allow-minimize",
     "core:window:allow-set-theme",
     "core:app:allow-default-window-icon",
     "log:default",
