@@ -20,3 +20,12 @@ export function initWindowTheme() {
     if (state.preference !== prev.preference) applyWindowTheme(state.preference);
   });
 }
+
+// On Windows the menu bar keeps the theme it was attached in, so in System it
+// stops following the OS until the theme is set again.
+export async function attachWindowMenu(menu: {
+  setAsWindowMenu: () => Promise<unknown>;
+}) {
+  await menu.setAsWindowMenu();
+  if (!IS_LINUX) applyWindowTheme(useThemeStore.getState().preference);
+}
