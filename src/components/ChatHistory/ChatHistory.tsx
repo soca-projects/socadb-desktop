@@ -199,10 +199,12 @@ export function ChatHistory({ onOpen }: ChatHistoryProps) {
                 }
 
                 if (renamingId === c.id) {
+                  // Uneven padding keeps the row at the height of the others, so the
+                  // list doesn't jump: it pays for the field's border and the gap below it.
                   return (
                     <li
                       key={c.id}
-                      className="grid gap-px rounded-md bg-surface-muted px-2 py-1.5"
+                      className="grid gap-1 rounded-md bg-surface-muted px-2 pb-0.5 pt-[5px]"
                     >
                       <input
                         autoFocus
@@ -221,7 +223,7 @@ export function ChatHistory({ onOpen }: ChatHistoryProps) {
                             setRenamingId(null);
                           }
                         }}
-                        className="w-full rounded-[5px] border border-accent bg-surface px-1.5 py-0.5 text-[12.5px] text-primary outline-none"
+                        className="w-full rounded-[5px] border border-accent bg-surface px-1.5 text-[12.5px] text-primary outline-none"
                       />
                       <span className="truncate text-[11px] text-tertiary">{meta}</span>
                     </li>
