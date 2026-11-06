@@ -17,6 +17,7 @@ import { useUpdateStore } from "../stores/updateStore";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "../utils/platform";
 import i18next from "../i18n";
 import { logInfo } from "../utils/log";
+import { attachWindowMenu } from "../utils/windowTheme";
 
 const MENU_RECENT_LIMIT = 10;
 
@@ -379,7 +380,7 @@ async function setupMenu() {
     await menu.setAsAppMenu();
     await windowSubmenu.setAsWindowsMenuForNSApp();
   } else {
-    await menu.setAsWindowMenu();
+    await attachWindowMenu(menu);
   }
   await syncUpdateMenuItem();
 }
