@@ -1,7 +1,22 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { closeSchema, createTable, duplicateTable } from "./schemaActions";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+vi.mock("./autoLayout", () => ({ computeAutoLayout: vi.fn() }));
+vi.mock("./log", () => ({ logError: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+
+import {
+  closeSchema,
+  createTable,
+  duplicateTable,
+  handleAutoLayout,
+  handleRedo,
+  handleUndo,
+  replaceSchema,
+} from "./schemaActions";
 import { useSchemaStore, createEmptySchema } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
+import { computeAutoLayout } from "./autoLayout";
+import { setCanvasView, type CanvasView } from "./canvasView";
 
 function resetStore() {
   useSchemaStore.setState({
@@ -154,5 +169,83 @@ describe("closeSchema", () => {
     expect(state.schema.tables).toHaveLength(0);
     expect(state.filePath).toBeNull();
     expect(useViewStore.getState().view).toBe("home");
+  });
+});
+
+describe("framing the canvas", () => {
+  const fitView = vi.fn();
+  const view: CanvasView = {
+    visibleArea: () => ({ x: 0, y: 0, width: 1000, height: 800 }),
+    blockedAreas: () => [],
+    measuredSize: () => null,
+    reveal: vi.fn(),
+    contentBounds: () => null,
+    fitView,
+  };
+
+  beforeEach(() => {
+    resetStore();
+    vi.clearAllMocks();
+    setCanvasView(view);
+  });
+  afterEach(() => setCanvasView(null));
+
+  it("frames a schema opened from the editor", () => {
+    const opened = createEmptySchema("shop", "postgresql");
+    replaceSchema(opened, "/x/shop.soca");
+    expect(fitView).toHaveBeenCalledTimes(1);
+  });
+
+  it("frames the tables where the layout put them", async () => {
+    const id = createTable({ name: "users", position: { x: 0, y: 0 } });
+    vi.mocked(computeAutoLayout).mockResolvedValue({ [id]: { x: 500, y: 300 } });
+    const framed: unknown[] = [];
+    fitView.mockImplementation(() =>
+      framed.push(useSchemaStore.getState().schema.tables[0].position),
+    );
+    await handleAutoLayout();
+    expect(framed).toEqual([{ x: 500, y: 300 }]);
+  });
+
+  it("frames the tables again when an undo leaves none on screen", () => {
+    const id = createTable({ name: "users", position: { x: 5000, y: 5000 } });
+    useSchemaStore.temporal.getState().clear();
+    useSchemaStore.getState().updateTablePositions({ [id]: { x: 100, y: 100 } });
+    handleUndo();
+    expect(useSchemaStore.getState().schema.tables[0].position).toEqual({
+      x: 5000,
+      y: 5000,
+    });
+    expect(fitView).toHaveBeenCalledTimes(1);
+    handleRedo();
+    expect(fitView).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the view when an undo leaves a table on screen", () => {
+    const id = createTable({ name: "users", position: { x: 100, y: 100 } });
+    useSchemaStore.temporal.getState().clear();
+    useSchemaStore.getState().updateTablePositions({ [id]: { x: 5000, y: 5000 } });
+    handleUndo();
+    expect(fitView).not.toHaveBeenCalled();
+    handleRedo();
+    expect(fitView).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the view when an undo moves no table", () => {
+    createTable({ name: "orders", position: { x: 5000, y: 5000 } });
+    useSchemaStore.temporal.getState().clear();
+    createTable({ name: "users", position: { x: 100, y: 100 } });
+    handleUndo();
+    expect(useSchemaStore.getState().schema.tables).toHaveLength(1);
+    handleRedo();
+    handleUndo();
+    expect(fitView).not.toHaveBeenCalled();
+  });
+
+  it("keeps the view when the layout fails", async () => {
+    createTable({ name: "users" });
+    vi.mocked(computeAutoLayout).mockRejectedValue(new Error("layout failed"));
+    await handleAutoLayout();
+    expect(fitView).not.toHaveBeenCalled();
   });
 });

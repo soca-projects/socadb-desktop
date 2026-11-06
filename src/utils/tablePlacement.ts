@@ -141,6 +141,15 @@ export function centreToReveal(rect: Rect, visible: Rect, canvasCentre: Point): 
   };
 }
 
+export function intersectsRect(a: Rect, b: Rect): boolean {
+  return (
+    a.x < b.x + b.width &&
+    b.x < a.x + a.width &&
+    a.y < b.y + b.height &&
+    b.y < a.y + a.height
+  );
+}
+
 export function containsRect(outer: Rect, inner: Rect): boolean {
   return (
     inner.x >= outer.x &&

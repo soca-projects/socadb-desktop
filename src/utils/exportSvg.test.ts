@@ -52,6 +52,7 @@ describe("exportCanvasSvg", () => {
       blockedAreas: () => [],
       measuredSize: () => null,
       reveal: vi.fn(),
+      fitView: vi.fn(),
       contentBounds: () => ({ x: 0, y: 0, width: 920, height: 420 }),
     });
     vi.mocked(toSvg).mockResolvedValue(dataUrl("<svg/>"));

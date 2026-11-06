@@ -5,7 +5,7 @@ import { genId } from "./id";
 import { noteSchemaChange } from "./fieldUndo";
 import { computeAutoLayout } from "./autoLayout";
 import { useViewStore } from "../stores/viewStore";
-import { createTable } from "./schemaActions";
+import { createTable, replaceSchema } from "./schemaActions";
 import { changeColumnType } from "./columnActions";
 import {
   findColumnById,
@@ -229,10 +229,8 @@ const handlers: Record<string, ActionHandler> = {
     if (unsaved) return fail(unsaved);
     const name = parsed.data.name?.trim() || i18next.t("newSchema.untitled");
     const dbType = parsed.data.dbType ?? "postgresql";
-    const store = useSchemaStore.getState();
-    store.setSchema(createEmptySchema(name, dbType));
-    store.setFilePath(null);
-    showSchema();
+    replaceSchema(createEmptySchema(name, dbType), null);
+    useViewStore.getState().showEditor();
     return success({ name, dbType });
   },
 
