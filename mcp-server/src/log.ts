@@ -6,7 +6,7 @@ import { join } from "path";
 const IDENTIFIER = "com.socadb.desktop";
 const MAX_BYTES = 2_000_000;
 const TOKENS =
-  /(sk-|[Bb]earer |gh[pousr]_|github_pat_|glpat-|xox[bp]-|xapp-|AKIA|AIza|eyJ)[A-Za-z0-9_.-]{16,}/g;
+  /(sk-|[Bb]earer |gh[pousr]_|github_pat_|glpat-|xox[bp]-|xapp-|AKIA|AIza|eyJ)[A-Za-z0-9_.*-]{16,}/g;
 const launch = `${Date.now().toString(16)}-${process.pid.toString(16)}`;
 
 type Level = "info" | "warn" | "error";
