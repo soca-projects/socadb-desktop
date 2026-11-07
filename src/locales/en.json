@@ -367,6 +367,9 @@
     "disconnectFailed": "Failed to remove API key. Please try again."
   },
   "chat": {
+    "toolRunning": "Running",
+    "toolDone": "Done",
+    "toolFailed": "Failed",
     "newConversation": "New conversation",
     "newChat": "New chat",
     "closeChat": "Close chat",
@@ -542,20 +545,22 @@
     "permissionDeniedMac": "SocaDB isn't allowed to read this file. Allow it in System Settings › Privacy & Security › Files & Folders."
   },
   "toolCall": {
-    "create_table": "created table",
-    "update_table": "updated table",
-    "delete_table": "deleted table",
-    "add_column": "added column",
-    "update_column": "updated column",
-    "delete_column": "deleted column",
-    "add_index": "added index",
-    "delete_index": "deleted index",
-    "create_relation": "created relation",
-    "delete_relation": "deleted relation",
-    "auto_layout": "auto layout applied",
+    "create_table": "create table",
+    "update_table": "update table",
+    "delete_table": "delete table",
+    "add_column": "add column",
+    "update_column": "update column",
+    "delete_column": "delete column",
+    "add_index": "add index",
+    "delete_index": "delete index",
+    "create_relation": "create relation",
+    "delete_relation": "delete relation",
+    "auto_layout": "auto layout",
     "get_schema": "read schema",
     "get_table": "read table",
-    "get_editor_state": "read editor state"
+    "get_editor_state": "read editor state",
+    "WebSearch": "search the web",
+    "WebFetch": "read web page"
   },
   "exportIssues": {
     "emptyEnum": "Enum {{name}} has no values yet.",
