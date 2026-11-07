@@ -141,7 +141,7 @@ describe("finishResponse", () => {
     isSuccess: result !== null,
   });
 
-  it("settles a tool that never got its result", () => {
+  it("marks a tool that never got its result as interrupted, not failed", () => {
     useChatStore.setState({
       messages: [
         {
@@ -158,7 +158,7 @@ describe("finishResponse", () => {
 
     expect(useChatStore.getState().messages.at(-1)?.toolCalls).toEqual([
       toolCall("done", "ok"),
-      { ...toolCall("cut", ""), isSuccess: false },
+      { ...toolCall("cut", ""), isSuccess: false, interrupted: true },
     ]);
   });
 });

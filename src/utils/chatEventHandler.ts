@@ -63,14 +63,17 @@ export function handleChatEvent(parsed: ChatEvent) {
       });
       break;
 
-    case "tool_result":
+    case "tool_result": {
       if (isStale) break;
+      const interrupted = parsed.interrupted === true;
       store.updateLastToolCall(
         parsed.toolUseId as string,
-        toolResultText(parsed.output),
+        interrupted ? "" : toolResultText(parsed.output),
         !(parsed.isError as boolean),
+        interrupted,
       );
       break;
+    }
 
     case "memory_lost":
       if (isStale) break;
