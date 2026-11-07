@@ -165,7 +165,7 @@ async function runTurn(
             type: "chat_event",
             event: "tool_result",
             toolUseId: item.id,
-            output: item.status === "failed" ? item.error?.message : item.result?.content,
+            output: item.error?.message ?? item.result?.content,
             isError: item.status === "failed",
           });
         }
