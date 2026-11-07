@@ -35,17 +35,25 @@ export function ChatToolCall({ toolCall }: ChatToolCallProps) {
         className="flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[12px] text-tertiary transition-colors hover:bg-surface-muted"
       >
         {isPending ? (
-          <span className="h-3.5 w-3.5 animate-spin rounded-full border border-[var(--color-fg-muted)] border-t-[var(--color-fg-tertiary)]" />
+          <span
+            role="img"
+            aria-label={t("chat.toolRunning")}
+            className="h-3.5 w-3.5 animate-spin rounded-full border border-[var(--color-fg-muted)] border-t-[var(--color-fg-tertiary)]"
+          />
         ) : toolCall.isSuccess ? (
           <CheckCircle
             size={14}
             weight="fill"
+            role="img"
+            aria-label={t("chat.toolDone")}
             className="text-emerald-600 dark:text-emerald-400"
           />
         ) : (
           <WarningCircle
             size={14}
             weight="fill"
+            role="img"
+            aria-label={t("chat.toolFailed")}
             className="text-red-500 dark:text-red-400"
           />
         )}

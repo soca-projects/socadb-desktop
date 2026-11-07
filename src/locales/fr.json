@@ -367,6 +367,9 @@
     "disconnectFailed": "Impossible de supprimer la clé API. Veuillez réessayer."
   },
   "chat": {
+    "toolRunning": "En cours",
+    "toolDone": "Terminé",
+    "toolFailed": "Échec",
     "newConversation": "Nouvelle conversation",
     "newChat": "Nouveau chat",
     "closeChat": "Fermer le chat",
@@ -542,20 +545,22 @@
     "permissionDeniedMac": "SocaDB n'a pas le droit de lire ce fichier. Autorisez-le dans Réglages Système › Confidentialité et sécurité › Fichiers et dossiers."
   },
   "toolCall": {
-    "create_table": "table créée",
-    "update_table": "table modifiée",
-    "delete_table": "table supprimée",
-    "add_column": "colonne ajoutée",
-    "update_column": "colonne mise à jour",
-    "delete_column": "colonne supprimée",
-    "add_index": "index ajouté",
-    "delete_index": "index supprimé",
-    "create_relation": "relation créée",
-    "delete_relation": "relation supprimée",
-    "auto_layout": "réorganisation appliquée",
-    "get_schema": "schéma lu",
-    "get_table": "table lue",
-    "get_editor_state": "état de l'éditeur lu"
+    "create_table": "création de la table",
+    "update_table": "modification de la table",
+    "delete_table": "suppression de la table",
+    "add_column": "ajout de la colonne",
+    "update_column": "modification de la colonne",
+    "delete_column": "suppression de la colonne",
+    "add_index": "ajout de l'index",
+    "delete_index": "suppression de l'index",
+    "create_relation": "création de la relation",
+    "delete_relation": "suppression de la relation",
+    "auto_layout": "réorganisation automatique",
+    "get_schema": "lecture du schéma",
+    "get_table": "lecture de la table",
+    "get_editor_state": "lecture de l'éditeur",
+    "WebSearch": "recherche sur le web",
+    "WebFetch": "lecture de la page web"
   },
   "exportIssues": {
     "emptyEnum": "L'enum {{name}} n'a encore aucune valeur.",
