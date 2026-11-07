@@ -5,6 +5,7 @@ vi.mock("@tauri-apps/api/event", () => ({ emit: vi.fn(() => Promise.resolve()) }
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: vi.fn() }));
 vi.mock("../stores/themeStore", () => ({ useThemeStore: { getState: vi.fn() } }));
 
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createEmptySchema, useSchemaStore } from "../stores/schemaStore";
 import { useViewStore } from "../stores/viewStore";
 import { MENU_SHORTCUTS } from "./menuActions";
@@ -31,6 +32,18 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("minimize shortcut", () => {
+  it("minimizes the window on Ctrl+M, as the menu shows on Windows", async () => {
+    const minimize = vi.fn(() => Promise.resolve());
+    vi.mocked(getCurrentWindow).mockReturnValue({ minimize } as unknown as ReturnType<
+      typeof getCurrentWindow
+    >);
+    expect(MENU_SHORTCUTS.minimize.windowsSignature).toBe("ctrl+m");
+    await MENU_SHORTCUTS.minimize.run();
+    expect(minimize).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("settings shortcut", () => {
