@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -19,6 +19,10 @@ const ROOT = join(import.meta.dir, "..");
 const NSIS = join(ROOT, "src-tauri", "target", "release", "bundle", "nsis");
 const DIST = join(ROOT, "mcp-server", "dist");
 const MCP = "socadb-mcp-windows-x64.exe";
+const LANGUAGE_KEY = "HKCU\\Software\\socadb\\SocaDB";
+const LANGUAGE_VALUE = "Installer Language";
+const ENGLISH_OR_FRENCH = ["1033", "1036"];
+const AN_OLDER_INSTALLS_LANGUAGE = "1031";
 
 const failures: string[] = [];
 
@@ -31,6 +35,17 @@ function finish(): never {
     console.log(process.env.GITHUB_ACTIONS ? `::error::${failure}` : failure);
   }
   process.exit(failures.length ? 1 : 0);
+}
+
+function checkUninstallerLanguage(install: string) {
+  const { stdout } = spawnSync("reg", ["query", LANGUAGE_KEY, "/v", LANGUAGE_VALUE], {
+    encoding: "utf-8",
+  });
+  const language = /REG_SZ\s+(\S+)/.exec(stdout)?.[1];
+  check(
+    language !== undefined && ENGLISH_OR_FRENCH.includes(language),
+    `${install} left the uninstaller ${language ? `language ${language}` : "no language"} instead of the installer's`,
+  );
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -151,6 +166,17 @@ try {
     check(existsSync(join(dir, file)), `the install has no ${file}`);
   }
   check(existsSync(foreign), "a first install deleted files it didn't put there");
+  checkUninstallerLanguage("the first install");
+  const older = spawnSync("reg", [
+    "add",
+    LANGUAGE_KEY,
+    "/v",
+    LANGUAGE_VALUE,
+    "/d",
+    AN_OLDER_INSTALLS_LANGUAGE,
+    "/f",
+  ]);
+  check(older.status === 0, "couldn't save an older install's language");
 
   const leftover = join(dir, "runtime", "node_modules", "left-by-an-older-version");
   mkdirSync(leftover);
@@ -220,6 +246,7 @@ try {
     "the update didn't install the new MCP server",
   );
   check(existsSync(notes), "the update deleted a file in runtime/ that isn't SocaDB's");
+  checkUninstallerLanguage("the update");
   rmSync(notes, { force: true });
   const differences = runtimeDifferences(join(dir, "runtime"), join(DIST, "runtime"));
   check(

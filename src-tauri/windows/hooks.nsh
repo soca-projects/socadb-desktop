@@ -124,6 +124,13 @@ FunctionEnd
   ${EndIf}
 !macroend
 
+!macro NSIS_HOOK_POSTINSTALL
+  ; NSIS saves the uninstaller's language only at the end of an install with
+  ; windows: silent updates would keep the first install's language, and after a
+  ; silent first install the uninstaller would ask for one.
+  WriteRegStr "${MUI_LANGDLL_REGISTRY_ROOT}" "${MUI_LANGDLL_REGISTRY_KEY}" "${MUI_LANGDLL_REGISTRY_VALUENAME}" $LANGUAGE
+!macroend
+
 !macro NSIS_HOOK_POSTUNINSTALL
   !insertmacro SOCADB_REMOVE_RUNTIME
   RMDir "$INSTDIR\runtime"
