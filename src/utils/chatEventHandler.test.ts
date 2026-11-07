@@ -119,4 +119,42 @@ describe("handleChatEvent", () => {
     expect(reply).toContain("GPT-6 Sol");
     expect(reply).toContain("isn't available with your ChatGPT plan");
   });
+
+  describe("tool results", () => {
+    function toolResult(output: unknown) {
+      startTurn();
+      handleChatEvent({
+        type: "chat_event",
+        event: "tool_use",
+        toolName: "mcp__socadb__create_table",
+        toolInput: { name: "products" },
+        toolUseId: "t1",
+      });
+      handleChatEvent({
+        type: "chat_event",
+        event: "tool_result",
+        toolUseId: "t1",
+        output,
+      });
+      return useChatStore.getState().messages.at(-1)?.toolCalls[0]?.result;
+    }
+
+    it("shows the text of an MCP result, not its content blocks", () => {
+      const result = toolResult([
+        { type: "text", text: 'Table "products" created' },
+        { type: "text", text: "SocaDB 1.0.1 is available." },
+      ]);
+      expect(result).toBe('Table "products" created\nSocaDB 1.0.1 is available.');
+    });
+
+    it("shows a text result as it came", () => {
+      expect(toolResult("Table not found")).toBe("Table not found");
+    });
+
+    it("falls back to JSON for a result with no text", () => {
+      expect(toolResult([{ type: "image", data: "iVBOR" }])).toBe(
+        '[{"type":"image","data":"iVBOR"}]',
+      );
+    });
+  });
 });
