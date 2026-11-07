@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { useChatStore } from "../stores/chatStore";
 import type { ChatEvent, ProviderId } from "../types/chat";
 import { PROVIDERS } from "../types/chat";
@@ -7,6 +8,21 @@ import { authErrorText, modelUnavailableText } from "./chatErrors";
 import i18next from "../i18n";
 import { maskQuoted } from "./logPrivacy";
 import { logWarn } from "./log";
+
+const ContentBlocksZ = z.array(
+  z.object({ type: z.string(), text: z.string().optional() }),
+);
+
+function toolResultText(output: unknown): string {
+  if (typeof output === "string") return output;
+  const blocks = ContentBlocksZ.safeParse(output);
+  const texts = blocks.success
+    ? blocks.data.flatMap((b) =>
+        b.type === "text" && b.text !== undefined ? [b.text] : [],
+      )
+    : [];
+  return texts.length > 0 ? texts.join("\n") : JSON.stringify(output ?? "");
+}
 
 function ensureAssistantMessage() {
   const store = useChatStore.getState();
@@ -51,9 +67,7 @@ export function handleChatEvent(parsed: ChatEvent) {
       if (isStale) break;
       store.updateLastToolCall(
         parsed.toolUseId as string,
-        typeof parsed.output === "string"
-          ? parsed.output
-          : JSON.stringify(parsed.output ?? ""),
+        toolResultText(parsed.output),
         !(parsed.isError as boolean),
       );
       break;

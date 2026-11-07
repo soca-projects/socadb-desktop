@@ -19,6 +19,7 @@ const { runCodexExec } = vi.hoisted(() => ({
 }));
 
 import {
+  emit,
   emitDone,
   startRunner,
   type ChatSendCommand,
@@ -78,5 +79,33 @@ describe("Codex runner", () => {
     expect(args.slice(-2)).toEqual(["resume", "thread-1"]);
     expect(input).toContain("Schema: 4 tables");
     expect(emitDone).toHaveBeenCalledWith("Done", "thread-1");
+  });
+
+  describe("a failed tool call", () => {
+    function failedCall(item: object) {
+      runCodexExec.mockImplementation(async function* () {
+        yield { type: "thread.started", thread_id: "thread-1" };
+        yield {
+          type: "item.completed",
+          item: { id: "t1", type: "mcp_tool_call", status: "failed", ...item },
+        };
+      });
+      return send({});
+    }
+
+    function toolResult() {
+      return vi.mocked(emit).mock.calls.find(([e]) => e.event === "tool_result")?.[0];
+    }
+
+    it("passes on what the tool answered", async () => {
+      const content = [{ type: "text", text: 'Table "x" not found' }];
+      await failedCall({ result: { content }, error: null });
+      expect(toolResult()).toMatchObject({ output: content, isError: true });
+    });
+
+    it("passes on why the tool couldn't be reached", async () => {
+      await failedCall({ error: { message: "request timed out" } });
+      expect(toolResult()).toMatchObject({ output: "request timed out", isError: true });
+    });
   });
 });
