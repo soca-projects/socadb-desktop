@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { blockWebContextMenu } from "./contextMenu";
 
 class FakeElement {
-  constructor(private readonly inField = false) {}
-  closest() {
+  constructor(
+    private readonly inField = false,
+    private readonly disabled = false,
+  ) {}
+  closest(selector: string) {
+    if (this.disabled && selector.includes(":not(:disabled)")) return null;
     return this.inField ? this : null;
   }
 }
@@ -40,6 +44,10 @@ function rightClick(target: FakeElement, clientX = 0, clientY = 0) {
 describe("right click", () => {
   it("keeps the web menu in a text field", () => {
     expect(rightClick(new FakeElement(true))).toBe(true);
+  });
+
+  it("blocks the web menu in a disabled field, which has nothing to edit", () => {
+    expect(rightClick(new FakeElement(true, true))).toBe(false);
   });
 
   it("keeps the web menu on selected text", () => {
