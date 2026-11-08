@@ -19,6 +19,7 @@ import {
   getClaudeSessionsDir,
   getMcpBinaryPath,
   getModuleDir,
+  joinReplyBlocks,
   startRunner,
   type ChatSendCommand,
   type ClaudeEffort,
@@ -177,7 +178,7 @@ async function runTurn(prompt: string, options: Options, turn: TurnState) {
     if (message.type === "assistant" && message.message?.content) {
       for (const content of message.message.content) {
         if (content.type === "text") {
-          finalResponse += content.text;
+          finalResponse = joinReplyBlocks(finalResponse, content.text);
         }
         if (content.type === "tool_use" && content.name) {
           emit({
@@ -205,6 +206,15 @@ async function runTurn(prompt: string, options: Options, turn: TurnState) {
           });
         }
       }
+    }
+
+    if (
+      message.type === "stream_event" &&
+      message.event.type === "content_block_start" &&
+      message.event.content_block.type === "text" &&
+      finalResponse
+    ) {
+      emit({ type: "chat_event", event: "text_delta", text: "\n\n" });
     }
 
     if (

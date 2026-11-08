@@ -13,6 +13,7 @@ import {
   getModuleDir,
   isAuthErrorMessage,
   isReconnectNotice,
+  joinReplyBlocks,
   startRunner,
   type ChatSendCommand,
   type CodexEffort,
@@ -158,7 +159,7 @@ async function runTurn(
       case "item.completed": {
         const item = event.item;
         if (item.type === "agent_message") {
-          finalResponse = item.text;
+          finalResponse = joinReplyBlocks(finalResponse, item.text);
         }
         if (item.type === "mcp_tool_call") {
           emit({
