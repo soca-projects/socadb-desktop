@@ -169,6 +169,13 @@ export const LOG_CODES = {
     check:
       "The message. A very old WebView2 runtime lacks this setting: updating it should help.",
   },
+  "window.field_menu.failed": {
+    level: "warn",
+    meaning:
+      "WebView2's right-click menu in fields kept Edge's extra items (Emoji, passwords, writing direction).",
+    check:
+      "Cosmetic. The message: a very old WebView2 runtime lacks this event, and updating it should help.",
+  },
   "window.document_edited.failed": {
     level: "warn",
     meaning: "The unsaved-changes dot in the window's close button could not be updated.",
