@@ -3,6 +3,8 @@ mod chat;
 mod claude_desktop;
 mod codex_config;
 mod conversations;
+#[cfg(any(windows, test))]
+mod field_menu;
 #[cfg(target_os = "macos")]
 mod install_location;
 mod logging;
@@ -354,6 +356,7 @@ pub fn run() {
             #[cfg(windows)]
             if !tauri::is_dev() {
                 windows_webview::disable_browser_shortcuts(app);
+                windows_webview::trim_field_menu(app);
             }
 
             #[cfg(target_os = "macos")]

@@ -17,7 +17,7 @@ export function blockWebContextMenu(
   event: Pick<MouseEvent, "target" | "clientX" | "clientY" | "preventDefault">,
 ) {
   const target = event.target instanceof Element ? event.target : null;
-  if (target?.closest("input, textarea")) return;
+  if (target?.closest("input:not(:disabled), textarea:not(:disabled)")) return;
   if (onSelectedText(event.clientX, event.clientY)) return;
   event.preventDefault();
 }
