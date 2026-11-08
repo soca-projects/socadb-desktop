@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { ChatMarkdown } from "./ChatMarkdown";
 import { ChatToolCall } from "../ChatToolCall/ChatToolCall";
 import { isEmptyMessage, type ChatMessage as ChatMessageType } from "../../types/chat";
 
@@ -41,9 +42,14 @@ export const ChatMessage = memo(function ChatMessage({
       >
         {isEmpty && !isUser ? (
           <ThinkingIndicator />
-        ) : (
+        ) : isUser ? (
           <div className="select-text whitespace-pre-wrap break-words">
             {message.content.trim()}
+          </div>
+        ) : (
+          <div className="select-text space-y-2 break-words">
+            <ChatMarkdown text={message.content.trim()} />
+            {message.error && <ChatMarkdown text={message.error} />}
           </div>
         )}
 

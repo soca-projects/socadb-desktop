@@ -5,6 +5,7 @@ import { PROVIDERS } from "../types/chat";
 import { ChatErrorZ } from "./zodSchemas";
 import { resetAgent } from "./chatCommands";
 import { authErrorText, modelUnavailableText } from "./chatErrors";
+import { escapeMarkdown } from "./chatMarkdown";
 import i18next from "../i18n";
 import { maskQuoted } from "./logPrivacy";
 import { logWarn } from "./log";
@@ -112,25 +113,23 @@ export function handleChatEvent(parsed: ChatEvent) {
         });
 
         if (errorParse.success && errorParse.data.code === "auth") {
-          store.appendAssistantText(
-            authErrorText(providerId, store.providers[providerId]),
-          );
+          store.setAssistantError(authErrorText(providerId, store.providers[providerId]));
         } else if (errorParse.success && errorParse.data.code === "model_unavailable") {
-          store.appendAssistantText(
+          store.setAssistantError(
             modelUnavailableText(errorParse.data.model ?? store.selectedModel),
           );
         } else if (lower.includes("credit balance")) {
-          store.appendAssistantText(
+          store.setAssistantError(
             i18next.t("chatError.creditBalance", {
-              message: errorMsg,
+              message: escapeMarkdown(errorMsg),
               consoleName: i18next.t(`provider.${providerId}.consoleName`),
               consoleUrl: meta.consoleUrl,
             }),
           );
           resetAgent(providerId);
         } else {
-          store.appendAssistantText(
-            i18next.t("chatError.generic", { message: errorMsg }),
+          store.setAssistantError(
+            i18next.t("chatError.generic", { message: escapeMarkdown(errorMsg) }),
           );
         }
       }

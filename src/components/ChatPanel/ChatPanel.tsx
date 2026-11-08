@@ -172,7 +172,7 @@ export function ChatPanel() {
       } catch (e) {
         logError("agent.send.failed", e, { provider: activeProviderId });
         const store = useChatStore.getState();
-        store.appendAssistantText(chatSendErrorText(activeProviderId, e));
+        store.setAssistantError(chatSendErrorText(activeProviderId, e));
         store.finishResponse("");
       }
     },

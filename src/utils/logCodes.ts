@@ -499,6 +499,11 @@ export const LOG_CODES = {
     meaning: "Deleting a conversation's files failed.",
     check: "Permissions on ~/.socadb/conversations or the Claude session store.",
   },
+  "chat.markdown.failed": {
+    level: "warn",
+    meaning: "A reply couldn't be formatted and is shown as plain text.",
+    check: "Markdown nested absurdly deep, or a parser error on unusual text.",
+  },
   "chat.conversation.invalid": {
     level: "warn",
     meaning: "A conversation file doesn't parse and was skipped.",

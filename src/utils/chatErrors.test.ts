@@ -8,6 +8,7 @@ import {
   isReconnectNotice,
 } from "../../mcp-server/src/agent-runner-shared";
 import { authErrorText, chatSendErrorText } from "./chatErrors";
+import { escapeMarkdown } from "./chatMarkdown";
 
 beforeAll(async () => {
   await i18next.changeLanguage("en");
@@ -134,6 +135,12 @@ describe("chatSendErrorText", () => {
   it("passes other errors through", () => {
     expect(chatSendErrorText("claude", new Error("Agent runner not found"))).toBe(
       "Agent runner not found",
+    );
+  });
+
+  it("keeps other errors from being read as Markdown", () => {
+    expect(chatSendErrorText("claude", new Error("C:\\Temp\\_old"))).toBe(
+      escapeMarkdown("C:\\Temp\\_old"),
     );
   });
 });

@@ -1,4 +1,5 @@
 import i18next from "../i18n";
+import { escapeMarkdown } from "./chatMarkdown";
 import {
   getModelDisplayName,
   PROVIDERS,
@@ -38,5 +39,5 @@ export function chatSendErrorText(providerId: ProviderId, error: unknown): strin
   if (message === "keyring_unavailable") {
     return i18next.t("chatError.keyringUnavailable", { name });
   }
-  return message;
+  return escapeMarkdown(message);
 }
