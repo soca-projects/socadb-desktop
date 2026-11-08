@@ -269,6 +269,7 @@ export const ChatMessageZ = z.object({
   id: z.string(),
   role: z.enum(["user", "assistant"]),
   content: z.string(),
+  error: z.string().optional(),
   toolCalls: z.array(ToolCallInfoZ),
   timestamp: z.string(),
 });

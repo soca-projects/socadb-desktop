@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useChatStore } from "../stores/chatStore";
 import { handleChatEvent } from "./chatEventHandler";
+import { escapeMarkdown } from "./chatMarkdown";
 
 vi.mock("./chatCommands", () => ({ resetAgent: vi.fn() }));
 
@@ -25,6 +26,10 @@ function startTurn(text = "hello") {
 
 function done(response: string, sessionId = "s-1") {
   handleChatEvent({ type: "chat_event", event: "done", response, sessionId });
+}
+
+function lastError() {
+  return useChatStore.getState().messages.at(-1)?.error;
 }
 
 function contents() {
@@ -103,6 +108,45 @@ describe("handleChatEvent", () => {
     expect(contents()).toEqual(["hello", "hi"]);
   });
 
+  it("keeps an error apart from the reply it interrupts", () => {
+    startTurn();
+    handleChatEvent({ type: "chat_event", event: "text_delta", text: "| 1 |" });
+    handleChatEvent({
+      type: "chat_event",
+      event: "error",
+      providerId: "claude",
+      message: "Connection reset",
+    });
+
+    expect(contents().at(-1)).toBe("| 1 |");
+    expect(lastError()).toContain("Connection reset");
+  });
+
+  it("keeps a turn that only produced an error", () => {
+    startTurn();
+    handleChatEvent({
+      type: "chat_event",
+      event: "error",
+      providerId: "claude",
+      message: "Connection reset",
+    });
+
+    expect(useChatStore.getState().messages.at(-1)?.role).toBe("assistant");
+    expect(lastError()).toContain("Connection reset");
+  });
+
+  it("shows an error's own text as written, not as Markdown", () => {
+    startTurn();
+    handleChatEvent({
+      type: "chat_event",
+      event: "error",
+      providerId: "claude",
+      message: "EACCES: C:\\Users\\me\\.socadb",
+    });
+
+    expect(lastError()).toContain(escapeMarkdown("C:\\Users\\me\\.socadb"));
+  });
+
   it("explains a model the ChatGPT plan doesn't include", () => {
     startTurn();
     handleChatEvent({
@@ -115,7 +159,7 @@ describe("handleChatEvent", () => {
         "The 'gpt-6-sol' model is not supported when using Codex with a ChatGPT account.",
     });
 
-    const reply = contents().at(-1) ?? "";
+    const reply = lastError() ?? "";
     expect(reply).toContain("GPT-6 Sol");
     expect(reply).toContain("isn't available with your ChatGPT plan");
   });

@@ -69,6 +69,12 @@ describe("conversation files", () => {
     expect(parseConversationFile(serializeConversation(c))).toEqual(c);
   });
 
+  it("keeps the error of a reply", () => {
+    const c = conv();
+    c.messages[0].error = "Error: connection reset";
+    expect(parseConversationFile(serializeConversation(c))).toEqual(c);
+  });
+
   it("rejects files that are not conversations", () => {
     expect(parseConversationFile("{")).toBeNull();
     expect(parseConversationFile(JSON.stringify({ version: 1, id: "x" }))).toBeNull();

@@ -174,12 +174,13 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  error?: string;
   toolCalls: ToolCallInfo[];
   timestamp: string;
 }
 
 export function isEmptyMessage(message: ChatMessage): boolean {
-  return !message.content.trim() && message.toolCalls.length === 0;
+  return !message.content.trim() && !message.error && message.toolCalls.length === 0;
 }
 
 export interface Conversation {

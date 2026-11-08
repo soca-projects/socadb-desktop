@@ -79,6 +79,12 @@ const textDelta = (text: string) => ({
     event: { type: "content_block_delta", delta: { type: "text_delta", text } },
   },
 });
+const textBlockStart = {
+  message: {
+    type: "stream_event",
+    event: { type: "content_block_start", content_block: { type: "text", text: "" } },
+  },
+};
 const init = (id: string) => ({
   message: { type: "system", subtype: "init", session_id: id },
 });
@@ -265,6 +271,27 @@ describe("the Claude runner", () => {
     await running;
 
     expect(emitDone).toHaveBeenCalledWith("the whole reply", undefined);
+  });
+
+  it("separates the text written before and after a tool", async () => {
+    const cli = fakeCli();
+    const running = handleSend(send);
+    cli.push(textBlockStart);
+    cli.push(textDelta("Creating it."));
+    cli.push(assistantText("Creating it."));
+    cli.push(toolUse("t1"));
+    cli.push(toolResult("t1"));
+    cli.push(textBlockStart);
+    cli.push(textDelta("Created."));
+    cli.push(assistantText("Created."));
+    cli.push("end");
+    await running;
+
+    const shown = emitted("text_delta")
+      .map((e) => e.text)
+      .join("");
+    expect(shown).toBe("Creating it.\n\nCreated.");
+    expect(emitDone).toHaveBeenCalledWith("Creating it.\n\nCreated.", undefined);
   });
 
   it("reports the error of a turn nobody stopped", async () => {

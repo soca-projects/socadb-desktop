@@ -81,6 +81,21 @@ describe("Codex runner", () => {
     expect(emitDone).toHaveBeenCalledWith("Done", "thread-1");
   });
 
+  it("keeps every message of a turn, not only the last one", async () => {
+    runCodexExec.mockImplementation(async function* () {
+      yield { type: "thread.started", thread_id: "thread-1" };
+      yield {
+        type: "item.completed",
+        item: { type: "agent_message", text: "Creating it." },
+      };
+      yield { type: "item.completed", item: { type: "agent_message", text: "Created." } };
+    });
+
+    await send({});
+
+    expect(emitDone).toHaveBeenCalledWith("Creating it.\n\nCreated.", "thread-1");
+  });
+
   describe("a failed tool call", () => {
     function failedCall(item: object) {
       runCodexExec.mockImplementation(async function* () {

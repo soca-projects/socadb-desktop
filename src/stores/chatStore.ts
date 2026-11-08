@@ -81,6 +81,7 @@ interface ChatState {
   startAssistantMessage: () => void;
   setAssistantText: (text: string) => void;
   appendAssistantText: (text: string) => void;
+  setAssistantError: (text: string) => void;
   addToolCall: (toolCall: ToolCallInfo) => void;
   updateLastToolCall: (
     toolUseId: string,
@@ -360,6 +361,16 @@ export const useChatStore = create<ChatState>()((set) => ({
       const last = msgs[msgs.length - 1];
       if (last?.role === "assistant") {
         msgs[msgs.length - 1] = { ...last, content: last.content + text };
+      }
+      return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
+    }),
+
+  setAssistantError: (text) =>
+    set((state) => {
+      const msgs = [...state.messages];
+      const last = msgs[msgs.length - 1];
+      if (last?.role === "assistant") {
+        msgs[msgs.length - 1] = { ...last, error: text };
       }
       return { messages: msgs, ...syncToConversation({ ...state, messages: msgs }) };
     }),

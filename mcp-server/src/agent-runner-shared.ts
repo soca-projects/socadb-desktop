@@ -178,6 +178,10 @@ export function emitError(
   });
 }
 
+export function joinReplyBlocks(reply: string, block: string): string {
+  return reply && block ? `${reply}\n\n${block}` : reply + block;
+}
+
 export function emitDone(response: string, sessionId: string | null | undefined) {
   emit({ type: "chat_event", event: "done", response, sessionId });
 }
