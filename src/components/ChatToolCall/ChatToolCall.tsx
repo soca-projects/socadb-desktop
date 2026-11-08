@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   CheckCircleIcon as CheckCircle,
+  MinusCircleIcon as MinusCircle,
   WarningCircleIcon as WarningCircle,
   CaretRightIcon as CaretRight,
 } from "@phosphor-icons/react";
@@ -29,6 +30,14 @@ export function ChatToolCall({ toolCall }: ChatToolCallProps) {
             role="img"
             aria-label={t("chat.toolRunning")}
             className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-[var(--color-fg-muted)] border-t-[var(--color-fg-tertiary)]"
+          />
+        ) : toolCall.interrupted ? (
+          <MinusCircle
+            size={14}
+            weight="fill"
+            role="img"
+            aria-label={t("chat.toolStopped")}
+            className="shrink-0 text-tertiary"
           />
         ) : toolCall.isSuccess ? (
           <CheckCircle

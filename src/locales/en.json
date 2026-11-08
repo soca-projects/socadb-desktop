@@ -370,6 +370,7 @@
     "toolRunning": "Running",
     "toolDone": "Done",
     "toolFailed": "Failed",
+    "toolStopped": "Stopped",
     "newConversation": "New conversation",
     "newChat": "New chat",
     "closeChat": "Close chat",

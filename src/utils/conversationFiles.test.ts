@@ -54,6 +54,21 @@ describe("conversation files", () => {
     expect(parseConversationFile(serializeConversation(c))).toEqual(c);
   });
 
+  it("keeps a tool call's interruption", () => {
+    const c = conv();
+    c.messages[0].toolCalls = [
+      {
+        id: "t1",
+        name: "get_table",
+        input: {},
+        result: "",
+        isSuccess: false,
+        interrupted: true,
+      },
+    ];
+    expect(parseConversationFile(serializeConversation(c))).toEqual(c);
+  });
+
   it("rejects files that are not conversations", () => {
     expect(parseConversationFile("{")).toBeNull();
     expect(parseConversationFile(JSON.stringify({ version: 1, id: "x" }))).toBeNull();

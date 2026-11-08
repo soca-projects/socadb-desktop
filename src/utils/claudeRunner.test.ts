@@ -88,11 +88,13 @@ const toolUse = (id: string) => ({
     message: { content: [{ type: "tool_use", id, name: "get_table", input: {} }] },
   },
 });
-const toolResult = (id: string) => ({
+const toolResult = (id: string, isError = false) => ({
   message: {
     type: "user",
     message: {
-      content: [{ type: "tool_result", tool_use_id: id, content: "cancelled" }],
+      content: [
+        { type: "tool_result", tool_use_id: id, content: "cancelled", is_error: isError },
+      ],
     },
   },
 });
@@ -167,6 +169,31 @@ describe("the Claude runner", () => {
 
     expect(emitted("tool_use").map((e) => e.toolUseId)).toEqual(["running"]);
     expect(emitted("tool_result").map((e) => e.toolUseId)).toEqual(["running"]);
+  });
+
+  it("marks the result the CLI makes up for a tool cut off by Stop as interrupted", async () => {
+    const cli = fakeCli();
+    cli.interrupt.mockImplementation(() => Promise.resolve());
+    const running = handleSend(send);
+    cli.push(toolUse("done"));
+    cli.push(toolResult("done"));
+    cli.push(toolUse("cut"));
+    cli.push(toolUse("finished"));
+    await flush();
+
+    handleStop();
+    cli.push(toolResult("cut", true));
+    cli.push(toolResult("finished"));
+    cli.push("end");
+    await running;
+
+    expect(
+      emitted("tool_result").map((e) => [e.toolUseId, e.isError, e.interrupted]),
+    ).toEqual([
+      ["done", false, false],
+      ["cut", true, true],
+      ["finished", false, false],
+    ]);
   });
 
   it("still reports the session of a turn stopped as it starts", async () => {

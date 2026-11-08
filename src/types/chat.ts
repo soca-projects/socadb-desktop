@@ -167,6 +167,7 @@ export interface ToolCallInfo {
   input: Record<string, unknown>;
   result: string | null;
   isSuccess: boolean;
+  interrupted?: boolean;
 }
 
 export interface ChatMessage {

@@ -262,6 +262,7 @@ const ToolCallInfoZ = z.object({
   input: z.record(z.string(), z.unknown()),
   result: z.string().nullable(),
   isSuccess: z.boolean(),
+  interrupted: z.boolean().optional(),
 });
 
 export const ChatMessageZ = z.object({

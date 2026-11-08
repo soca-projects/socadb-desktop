@@ -151,6 +151,30 @@ describe("handleChatEvent", () => {
       expect(toolResult("Table not found")).toBe("Table not found");
     });
 
+    it("shows a tool cut off by Stop as interrupted, without the CLI's stand-in text", () => {
+      startTurn();
+      handleChatEvent({
+        type: "chat_event",
+        event: "tool_use",
+        toolName: "mcp__socadb__update_column",
+        toolInput: { table: "users", column: "email" },
+        toolUseId: "t1",
+      });
+      handleChatEvent({
+        type: "chat_event",
+        event: "tool_result",
+        toolUseId: "t1",
+        output: "[Request interrupted by user for tool use]",
+        isError: true,
+        interrupted: true,
+      });
+      expect(useChatStore.getState().messages.at(-1)?.toolCalls[0]).toMatchObject({
+        result: "",
+        isSuccess: false,
+        interrupted: true,
+      });
+    });
+
     it("falls back to JSON for a result with no text", () => {
       expect(toolResult([{ type: "image", data: "iVBOR" }])).toBe(
         '[{"type":"image","data":"iVBOR"}]',

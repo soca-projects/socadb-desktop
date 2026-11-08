@@ -201,6 +201,7 @@ async function runTurn(prompt: string, options: Options, turn: TurnState) {
             toolUseId: content.tool_use_id,
             output: content.content,
             isError: content.is_error || false,
+            interrupted: turn.stopped && Boolean(content.is_error),
           });
         }
       }
