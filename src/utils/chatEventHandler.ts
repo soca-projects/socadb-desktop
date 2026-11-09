@@ -4,7 +4,7 @@ import type { ChatEvent, ProviderId } from "../types/chat";
 import { PROVIDERS } from "../types/chat";
 import { ChatErrorZ } from "./zodSchemas";
 import { resetAgent } from "./chatCommands";
-import { authErrorText, modelUnavailableText } from "./chatErrors";
+import { authErrorText, chatSendErrorText, modelUnavailableText } from "./chatErrors";
 import { escapeMarkdown } from "./chatMarkdown";
 import i18next from "../i18n";
 import { maskQuoted } from "./logPrivacy";
@@ -31,6 +31,18 @@ function ensureAssistantMessage() {
   if (!last || last.role !== "assistant") {
     store.startAssistantMessage();
   }
+}
+
+// An error ends the turn, not the conversation: dropping the session here
+// would make the next message start over without the agent's memory.
+function endFailedTurn() {
+  const store = useChatStore.getState();
+  store.finishResponse(store.sessionId ?? "");
+}
+
+export function handleChatSendFailure(providerId: ProviderId, error: unknown) {
+  useChatStore.getState().setAssistantError(chatSendErrorText(providerId, error));
+  endFailedTurn();
 }
 
 export function handleChatEvent(parsed: ChatEvent) {
@@ -133,9 +145,7 @@ export function handleChatEvent(parsed: ChatEvent) {
           );
         }
       }
-      // An error ends the turn, not the conversation: dropping the session here
-      // would make the next message start over without the agent's memory.
-      store.finishResponse(store.sessionId ?? "");
+      endFailedTurn();
       break;
     }
   }

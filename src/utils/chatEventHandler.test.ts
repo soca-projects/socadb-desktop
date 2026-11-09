@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useChatStore } from "../stores/chatStore";
-import { handleChatEvent } from "./chatEventHandler";
+import { handleChatEvent, handleChatSendFailure } from "./chatEventHandler";
 import { escapeMarkdown } from "./chatMarkdown";
 
 vi.mock("./chatCommands", () => ({ resetAgent: vi.fn() }));
@@ -35,6 +35,24 @@ function lastError() {
 function contents() {
   return useChatStore.getState().messages.map((m) => m.content);
 }
+
+describe("handleChatSendFailure", () => {
+  it("keeps the agent's memory of the conversation", () => {
+    startTurn();
+    done("hi", "s-1");
+    const store = useChatStore.getState();
+    store.addUserMessage("again");
+    store.startAssistantMessage();
+
+    handleChatSendFailure("claude", new Error("Agent runner not found"));
+
+    const state = useChatStore.getState();
+    expect(state.isStreaming).toBe(false);
+    expect(state.sessionId).toBe("s-1");
+    expect(state.conversations[0].sessionId).toBe("s-1");
+    expect(lastError()).toContain("Agent runner not found");
+  });
+});
 
 describe("handleChatEvent", () => {
   it("keeps the conversation's session when a turn fails", () => {

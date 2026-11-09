@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { useChatStore } from "../../stores/chatStore";
 import { sendChatMessage, stopChat, initChat } from "../../utils/chatCommands";
-import { chatSendErrorText } from "../../utils/chatErrors";
+import { handleChatSendFailure } from "../../utils/chatEventHandler";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { buildSystemPrompt } from "../../utils/agentPrompt";
 import {
@@ -171,9 +171,7 @@ export function ChatPanel() {
         });
       } catch (e) {
         logError("agent.send.failed", e, { provider: activeProviderId });
-        const store = useChatStore.getState();
-        store.setAssistantError(chatSendErrorText(activeProviderId, e));
-        store.finishResponse("");
+        handleChatSendFailure(activeProviderId, e);
       }
     },
     [
