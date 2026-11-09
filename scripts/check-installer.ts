@@ -14,9 +14,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { z } from "zod";
+import { langStringNames, missingLangStrings } from "../src/utils/nsisLanguage";
 
 const ROOT = join(import.meta.dir, "..");
 const NSIS = join(ROOT, "src-tauri", "target", "release", "bundle", "nsis");
+const NSIS_SOURCES = join(ROOT, "src-tauri", "target", "release", "nsis");
+const FRENCH = join(ROOT, "src-tauri", "windows", "French.nsh");
 const DIST = join(ROOT, "mcp-server", "dist");
 const MCP = "socadb-mcp-windows-x64.exe";
 const LANGUAGE_KEY = "HKCU\\Software\\socadb\\SocaDB";
@@ -48,6 +51,36 @@ function checkUninstallerLanguage(install: string) {
   );
 }
 
+// A text Tauri's installer reads but the French file lacks shows up empty. Tauri
+// writes the files it compiled next to each other: its own English one lists every
+// text of this Tauri version.
+function checkFrenchTexts() {
+  const sources = existsSync(NSIS_SOURCES)
+    ? readdirSync(NSIS_SOURCES).map((arch) => join(NSIS_SOURCES, arch))
+    : [];
+  const dir = sources.find((path) => existsSync(join(path, "English.nsh")));
+  if (!dir || !existsSync(join(dir, "French.nsh"))) {
+    failures.push(`missing the installer's language files in ${NSIS_SOURCES}`);
+    return;
+  }
+  const text = (path: string) =>
+    readFileSync(path, "utf-8").replace(/^\uFEFF/, "").replaceAll("\r\n", "\n");
+  const english = text(join(dir, "English.nsh"));
+  check(
+    text(join(dir, "French.nsh")) === text(FRENCH),
+    "the installer wasn't built with src-tauri/windows/French.nsh",
+  );
+  check(
+    langStringNames(english).length > 0,
+    "found no text in Tauri's English.nsh, so the French file can't be compared to it",
+  );
+  const missing = missingLangStrings(english, text(FRENCH));
+  check(
+    missing.length === 0,
+    `src-tauri/windows/French.nsh lacks texts this Tauri version shows: ${missing.join(", ")}`,
+  );
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function exited(child: ChildProcess): Promise<{ code: number | null; at: number }> {
@@ -64,6 +97,8 @@ if (!installer) {
   failures.push(`missing the installer in ${NSIS}`);
   finish();
 }
+
+checkFrenchTexts();
 
 const work = mkdtempSync(join(tmpdir(), "socadb-installer-"));
 const dir = join(work, "SocaDB");
