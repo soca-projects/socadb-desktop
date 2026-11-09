@@ -76,7 +76,10 @@
         "languages": [
           "English",
           "French"
-        ]
+        ],
+        "customLanguageFiles": {
+          "French": "./windows/French.nsh"
+        }
       }
     },
     "macOS": {
