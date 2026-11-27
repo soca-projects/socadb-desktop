@@ -33,7 +33,7 @@
     "@xyflow/react": "^12.12.0",
     "elkjs": "^0.12.0",
     "html-to-image": "^1.11.13",
-    "i18next": "^25.10.10",
+    "i18next": "^27.2.10",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-i18next": "^16.6.6",
